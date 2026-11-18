@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  rigctld.entitlements: the permissions of the rigctld bundled inside
+  Solid Copy (see tools/bundle-rigctld.sh).
+
+  These two together say "run inside the sandbox of the app that started
+  me, with its permissions and no more". macOS requires exactly these two
+  for a program an app starts. Its real permissions (serial ports, a
+  local network port) come from SolidCopy.entitlements.
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.inherit</key>
+	<true/>
+</dict>
+</plist>

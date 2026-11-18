@@ -1,0 +1,871 @@
+# Solid Copy
+
+A ham radio logging app for the Mac, designed from the start for
+VoiceOver and the keyboard.
+
+"Solid copy" is ham shorthand for "I received everything." It's a working
+title.
+
+## Status
+
+Early. The window opens in the Callsign field, and you can log
+contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
+The log is saved as you go and backed up each time the app opens. See
+[docs/PLAN.md](docs/PLAN.md) for where it's headed.
+
+## Using it
+
+| Key | What it does |
+| --- | --- |
+| Tab, Shift-Tab | Move between Callsign, Name, RST sent, RST received, Comment |
+| Return | Log the contact and go back to Callsign |
+| Escape or Command-K | Clear the form |
+| Command-L | Go to Callsign |
+| Command-I | Go to the newest contact in the log |
+| Command-comma | Settings |
+| Command-0 | Bring back the logging window if it was closed (so does clicking Solid Copy in the Dock) |
+| Command-1 | Spots (who's on the air); see Spots below |
+| Command-backtick, Shift-Command-backtick | Next and previous window (the logging window, Spots and Settings) |
+| Command-F | Search the log (every word, in any field); Return or Down goes to the matches, Escape clears |
+| Option-Command-F | Show only contacts with the call in the form (or the selected call); Escape shows all |
+| Up, Down (in the log) | Move between contacts |
+| Return or Command-E (in the log) | Edit the selected contact |
+| Return / Command-Return / Command-S (in Edit Contact) | Save (in Notes, Return starts a new line) |
+| Escape (in Edit Contact) | Cancel |
+| (in Edit Contact) | QSL statuses and "via" are menus in words (Yes, No, Requested ...; Bureau, Direct ...), and QSL dates are typed like 2025-12-17 |
+| Shift-Up, Shift-Down (in the log) | Select several contacts |
+| Command-C (in the log) | Copy the selected contacts |
+| Command-V (in the log or the form) | With contacts on the clipboard, paste them into the open log (Command-Z takes a paste out) |
+| Command-N, Shift-Command-N | New log, new test log |
+| F1 to F8 | Send CW messages 1 to 8 through the WinKeyer (CW menu) |
+| Escape (while CW is sending) | Stop sending |
+| Left, Right (in the log) | Choose a column; says its name and the selected contact's value ("Date (UTC), 2026-11-16") |
+| Option-Command-Left, Option-Command-Right (in the log) | Move the chosen column; says where it went ("Date (UTC), now column 2 of 8"). Call stays first. The order is saved |
+| Delete or Command-Delete (in the log) | Delete the selected contacts |
+| Up Arrow (in an empty Callsign) | Correct the last contact: it comes back into the form; Up and Down go to older and newer ones; Return saves the change to that contact, Escape leaves it as it was |
+| Command-Z | Undo: right after logging, takes the contact back out of the log and puts it in the form to fix; after clearing, brings the form back; in the log, puts a deleted contact back |
+| Shift-Command-Z | Redo |
+| Escape (in the log) | Go back to Callsign |
+| Tab (in the log) or Option-Command-I | Go to the details of the selected contact |
+| Shift-Tab (in the log) | Go back to the form's Comment field |
+| Up, Down (in the details) | Move between fields |
+| Command-C (in the details) | Copy the selected field's value |
+| Escape, Tab or Shift-Tab (in the details) | Go back to the log |
+
+The log's columns start in the order Call, Name, Date, Time, Band, Frequency, Mode,
+RST Sent, RST Received, Country, Comment. Every other field is in the
+details panel under the log.
+
+## Operating profiles
+
+A profile, such as **Home** or **Portable**, is a logging form plus your
+station's details (callsign, grid, state, county, radio, park, summit…),
+which are added to every contact logged with it. Switch with the
+**Profile** menu or **Option-Command-1, 2, 3…**; the window title says
+which is in use. **Settings > Profiles** (Command-comma, then Command-2) adds,
+renames and deletes profiles and holds each one's station details.
+Portable starts with Band, Mode, Frequency and Power on the form, for when
+the radio or the internet isn't there, with Power starting at 5 watts.
+
+**New Profile** is a menu: a copy of the profile in use, or a fresh one
+from a template: Home, Portable, POTA activation (their park, for park to
+park), SOTA activation (their summit), Field Day (their class and section)
+or State QSO Party (their county or state). A template sets the form; your
+station comes from the profile in use, without its park or summit. Change
+anything afterwards in Logging Form.
+
+## Parks
+
+Park fields search POTA's list of every park, kept on your Mac, so they
+work in a park with no internet: **POTA park** (theirs) on the logging form, and
+**My POTA park** in Settings > Profiles. Type a reference ("US-13"), part of
+a name ("big poc") or a state ("pennsylvania state", or "PA"). After a
+pause you hear how many parks match. **Down and Up Arrow** go through
+them, each said in full ("US-1333, Big Pocono State Park, Pennsylvania. 1
+of 3"). Leaving the field with only one match takes it. Return won't log
+a contact whose park is still a search: it says how many match. For a
+two-fer, put a comma between parks ("US-1333,US-1334").
+
+The list (about 106,000 parks, 10 MB) is fetched the first time you use
+a park field, and again when it's a month old. **Settings > Lookup > Get
+the Park List Now** fetches it whenever you like.
+
+RST sent and RST received take only digits, with a plus or minus in
+front: 59, 599, or -12 for FT8. Anything else beeps and isn't entered.
+
+A contest profile (one with Contest on its form) or a park activation
+(one with your park) warns of a dupe when you leave Callsign: "Dupe:
+W1AW worked on 20 meters CW at 14:32 UTC", said first, with the dupe
+sound, and shown on the lookup line. You can still log it.
+
+## Spots
+
+**Window > Spots** (Command-1) lists who's on the air, newest first, one
+line each, from POTA ("W1AW, 14.062 CW, US-1333 Big Pocono State Park,
+Pennsylvania, 3 minutes ago, worked today") and, once you turn it on in
+**Settings > Spots**, a DX cluster ("VP8XYZ, 14.025 CW, Falkland Islands,
+needed: new country, 2 minutes ago. CQ CQ up 2, spotted by K1ABC"). It
+updates while the window is open (POTA each minute, the cluster every
+10 seconds at most); a new list never moves you or talks.
+
+| Key | What it does |
+| --- | --- |
+| Up, Down | Move between spots |
+| Return | Use the spot: tunes the radio to it (frequency and mode), puts its call and park in the logging form, and goes there. Add the reports and press Return to log |
+| Escape | Back to the logging window (Spots stays open) |
+| Tab | To the filters: Source (POTA, DX cluster), Band (all bands, your radio's current band, or any one band), Mode (CW, phone, data), Hide spots worked today, DX: needed only, and DX: heard near me |
+
+"Worked today" follows POTA's rule: that park, on that band and mode,
+this UTC day. Command-backtick moves between Spots, the logging window
+and Settings.
+
+**DX cluster.** A cluster node passes on spots from hams everywhere,
+thousands an hour. Turn it on in **Settings > Spots** and choose a node:
+VE7CC (dxc.ve7cc.net, port 23) to start with, W3LPL, K3LR, or any other
+by its address and port. Solid Copy logs in with the callsign in the profile in
+use, only while the Spots window is open, and reconnects if it drops.
+Each DX spot says its country (from cty.dat, fetched from
+country-files.com and refreshed monthly) and whether you need it: a new
+country, or a new band or mode for one, worked out from your log. A
+spot's mode is worked out from its comment or where it is on the band.
+**DX: needed only** leaves just those. Many nodes (VE7CC among them)
+send only spots typed by people unless asked: **Include skimmer spots**
+adds CW stations heard by the Reverse Beacon Network's receivers, and
+**Include FT8 and FT4 spots** adds those. Both make many more spots, so
+they start off. A station spotted by several skimmers says so ("heard
+by 12": the more, the stronger and wider it's heard). **DX: heard near
+me** keeps only spots from spotters on your own continent (from your
+callsign in the profile in use), the ones you're likely to hear too.
+**SOTA** spots come from the DX cluster: a cluster spot whose comment
+names a summit ("W4C/CM-001") is listed as a SOTA spot, with its summit,
+and the Source filter can show just those. Return on one fills in their
+summit (SOTA summit). Only spots posted to the cluster are seen, so it's
+most SOTA activations, not all: SOTA's own API doesn't allow AI-assisted
+software without SOTA's approval (its terms, at api-db2.sota.org.uk/docs).
+SOTA's database takes ADIF uploads, so File > Export ADIF makes your
+SOTA log (it has MY_SOTA_REF and SOTA_REF).
+
+## Settings
+
+Settings (Command-comma) is laid out like System Settings: a list of
+sections down the left (Lookup, Profiles, Logging Form, Log Columns,
+Radio, Speech, Spots, Uploads, Clubs, Backups) and the chosen section on the right,
+scrolling if it's tall. Command-1 to Command-9 go straight to a section. In the list, Up and Down
+choose a section and Return or Right Arrow go into it; Tab goes round the
+section and back to the list. Escape or Command-W closes Settings.
+
+## Speech
+
+Solid Copy talks through VoiceOver, so its messages reach a braille
+display too, and nothing is said when VoiceOver is off. Three kinds of
+message come often and can talk over a contact you're copying, so
+**Settings > Speech** lets you choose how much each says:
+
+| Message | Choices |
+| --- | --- |
+| Callsign lookups | Say everything, name only, sound only, or nothing |
+| Logging a contact | Say everything, just "Logged", or sound only |
+| Radio changes you make | Say everything, or sound only |
+| Radio lost or back | Its tone and the words, or the tone only |
+
+Errors and warnings are always said in full. The **Speech** menu brings
+back what you turned down, whenever you want it:
+
+| Key | What it does |
+| --- | --- |
+| Option-Command-period | Quiet Mode: lookups, logging and radio changes down to sounds, until you turn it off (for a pile-up, say) |
+| Option-Command-N | Say the name and place for the call in the form (looks it up if it hasn't been) |
+| Option-Command-L | Say the last contact logged |
+| Command-R (Radio menu) | Say what the radio is doing |
+
+Most sounds are ones every Mac has: Glass for logged, Pop for a lookup
+found, Bottle for not found, Tink for a radio change, Basso for a
+problem. The moments that must stand out have Solid Copy's own sounds,
+made so they sound like nothing else on the Mac, and nothing like a CW
+signal or sidetone:
+
+- **A dupe**: two short low buzzes.
+- **Needed**: two quick bells going up, for a call you type that's a
+  new country, band or mode, and for a needed DX spot as it comes in.
+- **The radio**: two falling notes when it's lost, two rising when it's
+  back.
+
+Choose the dupe and needed sounds in **Settings > Speech**, under
+Sounds (Solid Copy's others, any Mac sound, or none; choosing one plays
+it). **Needed sound for DX spots** is New countries only to start with
+(a young log needs nearly every band and mode), New country, band or
+mode, or No sound. A spot plays it once per call and band, and at most
+every 30 seconds, while the Spots window is getting spots. These sounds
+play whatever the speech levels say, Quiet Mode too.
+
+Logging a contact with no band (most often because the radio dropped
+without your noticing) gives the warning sound and "No band": type the
+band or frequency, or press Return again to log it anyway. A frequency
+typed without a band fills the band in by itself.
+
+## The radio
+
+Solid Copy reads frequency, band, mode and power from the radio, through
+hamlib's `rigctld`, which is built into the app. Add your radios in
+**Settings > Radio** (Command-comma, Command-5): **New Radio**, then its
+manufacturer, model, USB port and speed (the TS-590SG uses 115200, the
+KX3 38400). One radio is in use at a time, whatever the profile.
+
+- **Switch radios** in the middle of a session: **Control-Command-1, 2…**
+  (the Radio menu lists them), or the radio pop-up under the clocks.
+- The radio pop-up's label is the radio and what it's doing:
+  "Kenwood TS-590SG: 7.025241 MHz, CW, 40m, 5 W, menu button". Its menu
+  has your radios, No Radio, and Radio Settings.
+
+- The form's radio fields fill in as you tune. Type in one and yours is
+  kept until the form is cleared. Fields not on the form are still
+  logged from the radio.
+- **Command-R** (Radio > Radio Status) says frequency, mode, filter, band
+  and power, or what's wrong. **Option-Command-R** (Radio Details) says
+  the line at the bottom of the window: keyer speed, RIT, XIT, split,
+  AGC, preamp and attenuator (whichever the radio reports).
+
+### Driving the radio from the keyboard
+
+| Keys | What they do |
+|---|---|
+| Command-T | Go to the tuning control at the bottom of the window |
+| Up, Down (in the tuning control) | Tune 100 Hz |
+| Shift-Up, Shift-Down | Tune 10 Hz |
+| Option-Up, Option-Down | Tune 1 kHz |
+| Tab (in the tuning control) | On to Offset (RIT or XIT), Power, RF gain and Squelch (only in FM), whichever the radio has; then back to Callsign |
+| Up, Down (in the Offset control) | Offset 10 Hz; with Option, 100 Hz |
+| Delete (in the Offset control) | Clear the offset to 0 |
+| Up, Down (in Power) | 1 watt; with Shift a tenth, with Option 5 (up to the radio's most) |
+| Up, Down (in RF gain or Squelch) | 5 percent; with Shift 1, with Option 20 |
+| Escape (in any of them) | Back to Callsign |
+| Control-Command-Up, Down Arrow | Band up and down ("20 meters, 14.03 megahertz, CW"): the radio's own band keys, or back to where you last were on that band, or a usual spot for the mode |
+| Control-Command-W | Dual watch on and off (KX3). Not D: Control-Command-D is macOS's Look Up |
+| Option-Command-S | Say the S-meter ("S 7", "S 9 plus 10 dB") |
+| 14060 or 7.0255, then Return, in Callsign | Tune there (1000 or more is kHz, less is MHz) |
+| CW, USB, LSB, SSB, AM, FM, RTTY or DATA, then Return, in Callsign | Change mode (SSB is LSB below 10 MHz, USB above) |
+| Control-Command-M | Next mode |
+| Control-Command-] and [ | Wider and narrower filter |
+| Control-Command-= (or +) and - | Keyer faster and slower |
+| Control-Command-P | Preamp on and off |
+| Control-Command-A | Attenuator on and off |
+| Control-Command-G | AGC: slow, medium, fast, off (the speeds the radio has) |
+| Control-Command-B | Noise blanker on and off |
+| Control-Command-N | Noise reduction on and off |
+| Control-Command-K | Audio peak filter on and off (KX3) |
+| Control-Command-R | RIT on and off |
+| Control-Command-X | XIT on and off |
+| Control-Command-S | Split on and off |
+| Control-Command-V | Swap VFOs (or use the other VFO) |
+
+The tuning control is a slider to VoiceOver ("Tuning, 7025.30
+kilohertz"); each change is spoken, including turns of the radio's own
+knob while you're there. Each command says what the radio actually did
+("CW, 500 hertz", "Keyer 22 words per minute", "Preamp 12 dB"), or that
+the radio can't ("Elecraft KX3 didn't change its AGC"). If VoiceOver's Quick Nav
+is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
+- Changes are spoken once, naming the radio: "Kenwood TS-590SG
+  connected…", "Elecraft KX3 off or unplugged", "… not answering".
+- Solid Copy never gives up: switch the radio on before or after it, off
+  and on again, or unplug and replug it, and it reconnects by itself.
+  Radio > Reconnect Radio starts afresh if you ever want to.
+- While Solid Copy is open, other programs (WSJT-X, say, set to "Hamlib
+  NET rigctl") can share the radio at 127.0.0.1 port 45320. (Not
+  rigctld's usual 4532, so it can't collide with a rigctld of your own.)
+
+Building needs hamlib from Homebrew (`brew install hamlib`); the build
+copies its rigctld into the app. After `brew upgrade hamlib`, rebuild.
+
+## Choosing the form and the columns
+
+**Settings > Logging Form** (Command-comma, then Command-3) lists every
+field you can put on the profile in use's form after Callsign; the
+Starting value field below it sets what the selected field starts as.
+**Settings > Log Columns** (Command-4) lists the log's columns. In either list, Space
+shows or hides the selected item, which stays where it is, and
+Option-Command-Up and Down move it past the next item in use. QSL
+statuses and dates (cards, LoTW, eQSL, QRZ Logbook) aren't offered for
+the form, since nobody knows them while logging: the QSL menu, syncing
+and Edit Contact set them.
+On the form, a field can be on screen without being a Tab stop: Make Tab
+Stop and Remove Tab Stop are in the Actions rotor (VO-Command-Space) and
+the shortcut menu. Name starts as not a Tab stop, because lookups fill it
+in. Changes show at once. Drag a column heading to change the order; Solid Copy
+remembers it.
+
+## Building
+
+You need Xcode and XcodeGen (`brew install xcodegen`), and your Apple
+Developer team ID in a file named `team.txt` in this folder.
+
+```bash
+bash ~/dev/solid-copy/build.sh install
+```
+
+That builds the app, quits Solid Copy if it's open, and installs it as
+`/Applications/Solid Copy.app`. It doesn't open it: open it yourself from
+the Dock or Spotlight, so it comes up in front and never takes focus
+while you're typing somewhere else.
+
+## Dupes, countries and "needed"
+
+When you leave Callsign:
+
+- **Dupes.** The same call on the same band and mode today (CW, phone
+  and data counted as one mode each) gets a warning, with the warning
+  sound, before the lookup: "Dupe: W 1 A W already worked today on 20
+  meters CW at 14:32 UTC." You can still log it. In a contest log the
+  contest's rule is used instead, and on a park activation the park's.
+- **Country and needed.** The call's country (DXCC entity) comes from
+  cty.dat, the country list nearly every logger uses (fetched monthly).
+  If you need it, you hear it with the lookup: "needed: new country",
+  "new band" or "new mode", counted from the log that's open. The
+  country is said on its own when the lookup gives no place, and it goes
+  in the contact's Country when the lookup doesn't fill it.
+
+## Callsign lookups
+
+Open **Solid Copy > Settings…** (Command-comma), enter your QRZ.com
+username and password, and press **Save and Test**. The password is kept
+in the Keychain. A free QRZ account gives only a few fields (mostly the
+name); a paid XML subscription gives everything. callook.info, free and
+with no account, can fill in US calls. Settings also has your own
+callsign and grid square, added to each new contact.
+
+When you leave the Callsign field, the call is looked up. The result is
+shown under the form and spoken once, for example "W 1 A W, Hiram,
+Newington Connecticut, 282 miles north-east, worked 3 times before."
+Focus doesn't move.
+
+**Distance and bearing** come from the grid square in your profile (My
+grid square, Settings > Profiles) to the station's position from the
+lookup (its latitude and longitude, or its grid). The line also gives the
+bearing in degrees, for pointing an antenna ("282 miles, 53 degrees
+north-east"). Miles or kilometres follows your Mac's region setting. Each
+contact keeps the distance in kilometres (ADIF's DISTANCE).
+
+## Club numbers
+
+SKCC, FISTS, LICW and CWops numbers each have a field, and so do up to
+five clubs of your own (**Settings > Clubs**: name them, such as "NAQCC
+number"). Put the ones you use on the form in Settings > Logging Form.
+
+When you leave Callsign, empty club fields are filled in, and the
+numbers are said with the lookup ("..., SKCC 12345 Tribune, worked
+twice before"):
+
+- **SKCC** from SKCC's own member list. Solid Copy keeps a copy (about
+  2 MB, fetched again each week; Settings > Clubs has Fetch SKCC List
+  Now). It's the authority, so a member's newest award letter (C
+  Centurion, T Tribune, S Senator) is the one logged.
+- **Everything else** from your log: the last contact with the same call
+  that has the number. FISTS and LICW publish no member lists, so this is
+  how they're filled: log a regular's number once, and it's there next
+  time.
+
+**Checking a copied number.** An SKCC number you type is checked against
+the call when you leave the field (or leave Callsign, if you typed the
+number first). If it belongs to someone else, you hear the warning sound
+and whose number it is: "SKCC 12345 is W 1 A B C. W 1 A B D isn't in
+SKCC's list." One of the two was miscopied, and a lookup alone can't
+tell you, because a miscopied call is often a real call. You can still
+log it as it is; SKCC's list may be a few days behind.
+
+## QSLs
+
+A QSL is the other station's confirmation of a contact: a paper card,
+or LoTW, eQSL or QRZ Logbook. The details panel (Tab in the log) says it
+in one line, right after the time: "QSL: Confirmed: card 17 December
+2025, LoTW 23 April 2022. Uploaded to QRZ Logbook." Each QSL field below
+it is in words ("Card received: Yes", not "Y").
+
+The **QSL** menu works on the contacts selected in the log (and the
+log's shortcut menu, VO-Shift-M, has the same marks):
+
+- **Card Requested**: they asked you for a card.
+- **Card Sent** (Shift-Command-S): dated today. A request becomes sent.
+- **Card Received** (Shift-Command-R): dated today.
+- **Show Confirmed**, **Show Not Confirmed**, **Show Card Requests**:
+  narrow the log. Escape shows the whole log again.
+
+A mark on contacts that all have it already takes it off, and Command-Z
+undoes any of them. Select several contacts (Shift-Up, Shift-Down) to
+mark them all at once.
+
+The MacLoggerDX import keeps cards received ("CardC"), LoTW and QRZ
+Logbook confirmations, and QRZ Logbook uploads.
+
+### Scanned cards
+
+**QSL > Attach Cards from a Folder…** takes a folder of scanned cards
+(PDFs or pictures), each named by callsign ("W1AW.pdf"; "W1AW 2.pdf"
+for a second one), and attaches each to its contact. A call with
+several contacts gets the card only if just one of them is already
+marked card received; otherwise the summary lists it, so you can choose
+the contact yourself. Cards are copied into a QSL Cards folder beside
+the log, so the folder you chose can be moved or deleted afterwards, and
+each card counts as received. The text of a searchable scan is kept with
+the contact, so Command-F finds words on a card ("Pottawatomie"). Edit >
+Undo takes the whole lot back off.
+
+For the contact selected in the log:
+
+- **Open Card** (Shift-Command-O): opens it in Preview, where VoiceOver
+  reads the scan's text. Also in the log's shortcut menu.
+- **Attach Card…**: one card, for a contact the folder couldn't match.
+- **Remove Card**: takes it off (still counted as received).
+
+What the other operator wrote on their card goes in **Their card's
+message**, in Edit Contact (Return on a contact).
+
+### Your electronic QSL card
+
+**QSL > Send QSL Card** (Shift-Command-K, also in the log's shortcut
+menu) makes your QSL card for the selected contact. It's a PDF the size
+of a paper card (5.5 by 3.5 inches), with real text VoiceOver reads in
+Preview, and it prints. It's saved in a Sent Cards folder beside the log
+and attached to a new Mail message, addressed to them if the log has
+their email. The message also holds the card's text, for anyone whose
+mail can't show the PDF. Check it and send it yourself. Once Mail has the
+card, the contact is marked Card sent, by electronic means, dated today;
+Edit > Undo takes the mark back. A contact already marked sent (a paper
+card) keeps its mark.
+
+Set the card up in **Settings > QSL Card** (or **QSL > QSL Card
+Settings…**):
+
+- **Fields on the card**: which, and in what order, in the same kind of
+  list as Logging Form (Space shows or hides; Option-Command-Up and Down
+  move). Yours, such as your grid square, go at the top with your
+  details; the rest describe the contact, read as one paragraph:
+  "Date: 14 November 2026. Time: 14:32 UTC. Band: 40m. ..."
+- **Your name**, **Your town or QTH**, **Another line**: up to three
+  lines under your call, such as your club numbers.
+- **Message, when the contact has none**: the contact's QSL message is
+  used if it has one.
+- **Picture**: one picture behind the text (a straight key, your shack),
+  kept faint so the text stays clear, and **What the picture shows**, a
+  description that's the picture's alternative text in the PDF and the
+  card's last line. No picture of your own? **Use the J-38 Picture**
+  puts Solid Copy's photo of a J-38 straight key there, described for
+  you. It's public domain (photo by Lou Sander; see docs/CREDITS.md), so
+  cards need no credit line.
+- **Show Sample Card**: a card for a made-up contact, opened in Preview,
+  so you can hear and see the result without sending anything.
+
+The card is one column, read top to bottom: your call, your lines, "To
+Hiram, W1AW", the contact, the message, "73". If the fields you choose
+don't fit, the text gets smaller, then the card gets taller; nothing is
+ever cut off.
+
+### LoTW
+
+**QSL > Sync with LoTW** (Shift-Command-L) uploads the contacts LoTW
+doesn't have yet, then gets your new confirmations, saying each step as
+it starts and ending with a summary. Set it up in **Settings > Uploads**,
+under Logbook of the World:
+
+- **LoTW username and password**: your LoTW website login, for
+  confirmations. The password is kept in the Keychain.
+- **TQSL station location**: the name of the location in TQSL to sign
+  with, exactly as TQSL shows it ("Anytown, N0CALL").
+- **Upload contacts from**: a day like 2020-01-01, or empty for every
+  contact.
+- **Upload automatically**: see [Automatic uploads](#automatic-uploads).
+- **Choose Folder for TQSL…**: a folder (a new one in Documents is
+  fine) where Solid Copy leaves the contacts for TQSL and TQSL leaves its
+  log. Solid Copy is sandboxed, so it needs a folder you chose.
+- **Install TQSL Script…**: once. A Save dialog opens in the one folder
+  macOS lets a sandboxed app run scripts from; press Save. The script
+  (two lines) only starts TQSL with what Solid Copy passes it. Delete it
+  from that folder to stop.
+
+Uploads need TQSL (the ARRL's TrustedQSL) installed with your callsign
+certificate. TQSL signs and sends; it skips anything LoTW already has,
+so nothing is sent twice. If your certificate has a passphrase, TQSL asks
+for it in its own window; if TQSL can't unlock the certificate, the
+summary says so and nothing is marked uploaded. Contacts TQSL won't sign
+(a band that isn't a band, say) are left unmarked, with TQSL's reason.
+Confirmations are matched to contacts by call and band, within 30
+minutes; any that match nothing in your log are listed.
+
+### QRZ Logbook
+
+**QSL > Sync with QRZ Logbook** (Shift-Command-U) sends the contacts
+your QRZ logbook doesn't have yet, one at a time, and marks each one QRZ
+has as uploaded (Uploaded to QRZ Logbook, with the day). Then it gets
+the contacts QRZ says are confirmed and marks them in your log (QRZ
+Logbook confirmed, with the day), matched as LoTW's are: the same call
+and band, within 30 minutes. Any that match nothing in this log are
+listed. It needs a QRZ subscription. Set it up in **Settings > Uploads**, under QRZ Logbook.
+**QSL > QRZ Logbook API Key…** goes straight to the key field (and
+Sync with QRZ Logbook takes you there itself if no key is saved yet);
+paste the key and press Return. **QSL > Upload Settings…** opens the
+whole Uploads section.
+
+- **API key**: your logbook's key. On qrz.com, open your logbook, then
+  its Settings; copy the key and paste it here. It's kept in the
+  Keychain.
+- **Upload contacts from** and **Upload automatically**, as for LoTW.
+
+A contact QRZ already has counts as uploaded. One QRZ refuses (a date
+outside the logbook's, or a station callsign that isn't the logbook's)
+is listed with QRZ's reason and left unmarked. If the internet is down,
+or the key isn't allowed, it stops and says so. Notes and card scans
+aren't sent.
+
+### Club Log
+
+**QSL > Upload to Club Log** sends the contacts Club Log doesn't have
+yet, about one a second (Club Log allows 60 a minute), and marks each
+one it has (Uploaded to Club Log, with the day). Set it up in **Settings >
+Uploads**, under Club Log; **QSL > Club Log Token…** goes straight to the
+token field.
+
+- **Token**: on clublog.org, open Settings, then the API tab. Give the
+  token a label (Solid Copy), leave Test mode unticked, and choose
+  Create token. Copy it at once (Club Log shows it only once), paste it
+  here, and press Return. It's kept in the Keychain.
+- **Upload contacts from** and **Upload automatically**, as for LoTW.
+
+Each contact goes under its own My callsign (or your profile's, if it has
+none), which must be on the token's Club Log account. A contact Club Log
+refuses is listed with Club Log's reason. A token Club Log doesn't
+accept, or a callsign not on its account, stops the upload at once: Club
+Log can block your internet address for a while if a program keeps
+sending a failing request. The message names the callsign that was sent,
+so you can tell whether My callsign is wrong or Club Log's account is
+missing it (on clublog.org, the account's callsigns are under Settings).
+
+### eQSL
+
+**QSL > Upload to eQSL** sends the contacts eQSL doesn't have yet, one a
+second, and marks each one it has (Uploaded to eQSL, with the day). Your
+card's message is the contact's QSL message. Set it up in **Settings >
+Uploads**, under eQSL; **QSL > eQSL Login…** goes straight there.
+
+- **Username** and **Password**: your eQSL login (the username is
+  usually your callsign). The password is kept in the Keychain.
+- **QTH Nickname**: only if you have more than one eQSL account under
+  the same callsign. Type the nickname of the one to use, as your eQSL
+  profile names it.
+- **Upload contacts from** and **Upload automatically**, as for LoTW.
+
+A contact eQSL refuses (a mode it doesn't take, no band, a date your
+account doesn't cover) is listed in plain words. A wrong login stops the
+upload.
+
+### Uploading just some contacts
+
+In the log, the shortcut menu (VO-Shift-M, or Control-click) has
+**Upload to LoTW**, **Upload to QRZ Logbook**, **Upload to Club Log** and
+**Upload to eQSL**: just the selected
+contacts, now, even ones already sent (you chose them). It says how it
+went.
+
+### Reading or copying an upload message again
+
+Every message window (an upload, an import, an export) has a **Copy**
+button after OK: Tab to it and press Space, and the whole message is on
+the clipboard, ready to paste into an email or a note.
+
+An automatic upload, or one from the log's shortcut menu, only speaks
+its message. **QSL > Show Last Upload Message** shows the last upload or
+sync message again in a window you can read word by word, with Copy.
+
+### Automatic uploads
+
+Each service's **Upload automatically** (Settings > Uploads) is one of:
+
+- **By hand** (the starting choice): only when you ask.
+- **Soon after each contact**: half a minute after you log it, so the
+  lookup has filled it in and a quick correction goes with it.
+- **Five minutes after the last contact**: a run of contacts goes up
+  together, with any corrections. Best for LoTW, which can't change a
+  contact once it has it.
+
+Only contacts you log on the form while Solid Copy is open go up this
+way; older ones and imports wait for Sync or Upload. When it works you
+hear nothing, so logging isn't interrupted. A problem is said once, with
+the warning sound. Without internet, the contacts wait and go with the
+next contact, or ten minutes later. Quitting while contacts wait is
+fine: they go half a minute after you next open Solid Copy.
+
+## CW through a WinKeyer
+
+Solid Copy can send CW through a K1EL WinKeyer (tested with a WinKeyer
+Mini). Set it up in **Settings > CW** (the last section): the WinKeyer's
+port, the speed, your name, and the eight messages.
+
+- **CW > Connect WinKeyer** opens it. Only one app can have the
+  WinKeyer at a time, so quit any other app using it first; if one has
+  it, you hear so. Solid Copy never connects by itself, and lets go when it
+  quits (the WinKeyer goes back to its own settings).
+- **F1 to F8** send the messages. The CW menu lists each one, so reading
+  the menu reminds you what each key sends.
+- **Escape** stops CW that's being sent. When nothing is sending, Escape
+  clears the form as always.
+- **Control-Command-= and -** (Keyer Faster and Slower) change the
+  WinKeyer's speed while it's connected, instead of the radio's keyer.
+
+Each profile has its own messages: Settings > CW edits the ones for the
+profile in use. A profile made from the **Field Day** template starts
+with Field Day's (F1 CQ FD, F2 their call and your class and section,
+F3 TU and your call, and so on).
+
+Messages can use fill-ins: {MYCALL}, {MYNAME}, {MYSTATE} are yours;
+{NR} is your serial number for this contact (see Serial numbers); {SENT} is your exchange, from Exchange sent on the form (Field
+Day's class and section, "1D MDC"); {CALL}, {NAME}, {STATE}, {SKCC} are theirs, from the form (or the
+lookup and SKCC's list); {RST} is the report you're sending, or 599. One
+with nothing to fill it is left out. F1 starts as CQ, F2 as an exchange
+(their call, RST, your name and state), F3 as TU and your call; change
+any of them. (SKCC's own events require a mechanical key,
+so keyer messages aren't for those.)
+
+Sending CW keys your radio. Try new messages with the WinKeyer
+unplugged from the radio, or into a dummy load.
+
+## Contests
+
+Contests are plain text files in Solid Copy's Contests folder (**File >
+Contests > Show Contest Files** opens it, with a README explaining the format). A
+change to a file, or a new file, works at once, with no new version of
+Solid Copy. ARRL Field Day's file is there to start:
+
+```
+name: ARRL Field Day
+id: ARRL-FIELD-DAY
+exchange: class and section
+serial: no
+dupes: band and mode
+messages: CQ FD {MYCALL} {MYCALL} FD | {CALL} {SENT} | TU {MYCALL} FD | ...
+submit: dupe sheet
+```
+
+Only name and id are needed. **exchange** lists what they send (name,
+state, county, rst, zone, grid, skcc, member and others, or any field's
+ADIF name); **serial: yes** adds Serial sent and received; **dupes** is
+once, band, or band and mode (modes grouped as CW, phone and digital);
+**messages** are the CW messages, split by |; **submit: dupe sheet**
+offers Field Day's dupe sheet in File > Export….
+
+- **File > New Log > New Contest Log…** offers each contest file, and "Other: use
+  a profile" for a contest with no file. A contest log comes with a
+  profile built from the file (its form and messages), brings it back
+  whenever it's opened, and warns of dupes by the contest's rule over
+  the whole log.
+- **File > Contests > Save Profile as Contest…** writes the profile in use as a
+  contest file: a contest set up by hand, kept or shared.
+- **File > Export…, Dupe sheet** lists the calls worked by band and
+  mode, headed with the contest and your call: what ARRL asks for with
+  a Field Day entry. (ARRL treats a Cabrillo log as optional for Field
+  Day and publishes no Field Day layout, so there's none yet.)
+
+## Serial numbers
+
+Put **Serial sent** on a profile's form (Settings > Logging Form) and it
+counts itself: a fresh form shows the next number, 1 more than the
+highest logged in this log for the same contest (the form's Contest).
+Each log and contest has its own count, and it stays right after a
+deleted contact or a correction. Type over it to change it. Logging
+says the number ("Logged W 1 A W, number 12"; "Logged, 12" when
+logging speech is brief). Put
+**Serial received** on the form for theirs. CW messages can send the
+number as {NR}; it's logged as Serial sent even if that field isn't on
+the form. None of this needs the keyer.
+
+## Logs
+
+The File menu keeps everything about logs together at the top: **New
+Log** (a submenu: New Log…, New Contest Log…, New Test Log…), **Open
+Log** (a submenu of every log), **Delete This Log…** and **Show Log in
+Finder**. Then Import…, Export… and Back Up Now; then **Contests** (a
+submenu: Show Contest Files, Save Profile as Contest…); then Save
+Contact and Close Window.
+
+Solid Copy starts with one log, the **main log**. You can make more:
+
+- **File > New Log > New Log…** (Command-N): a log of its own, for a special event or a
+  contest kept apart from everyday contacts. It uploads like the main
+  log.
+- **File > New Log > New Contest Log…**: a log for one contest (ARRL Field Day for
+  now), with that contest's profile: its form and CW messages. If you
+  have no profile for it yet, one is made from the contest's template.
+  Opening the log always brings that profile back.
+- **File > New Log > New Test Log…** (Shift-Command-N): for trying layouts, simulating a contest and
+  so on. Nothing in a test log is ever uploaded, by hand or
+  automatically, and its backups stay on this Mac.
+- **File > Open Log**: every log, the open one ticked. Choosing one
+  switches to it and says which log is open and how many contacts it
+  has. The window title always names the open log ("Solid Copy, Main
+  log, Home").
+- **File > Delete This Log…** (any log but the main one): after asking,
+  with how many contacts it has, moves the log, its backups and cards to
+  the Trash and opens the main log. Anything already uploaded stays on
+  LoTW and QRZ. The main log can't be deleted from the menu, on purpose:
+  it's your real logbook. To empty it, select all in its log
+  (Command-A) and press Delete (Command-Z undoes it). To remove it
+  altogether, quit Solid Copy, use File > Show Log in Finder first to
+  find its folder, and move Logbook.sqlite to the Trash (leave the Logs
+  folder: it holds your other logs); the next launch starts an empty
+  main log. Backups, beside the log and in your backup folder, are kept.
+
+**Copying contacts between logs:** select contacts in the log (Shift-Up
+and Shift-Down select several), press Command-C, open the other log,
+move into its log and press Command-V. Every field comes across, Notes
+too; contacts already in that log are skipped, and Command-Z takes the
+paste back out. A scanned card stays with the log it was attached in.
+The copy is ordinary ADIF text, so ADIF copied from elsewhere pastes too.
+Command-V with contacts on the clipboard pastes them into the open log
+from the form too (Callsign or any field), leaving the field as it was,
+so there's no need to move into the log, even an empty one.
+
+Each log remembers the profile last used with it, and opening the log
+brings that profile back, with its form and CW messages: a "Field Day
+2027" log comes back with your Field Day profile, and the main log with
+Home. You hear the profile with the log's name.
+
+Each log has its own contacts, backups and scanned cards. Profiles,
+radios, lookups and your logins are shared by all of them. Switching
+needs an empty form, so a contact you're typing is never lost: log it
+or press Escape first. Solid Copy opens the log you had open when you
+quit.
+
+## Backups
+
+Solid Copy backs up the log each time it opens, and before imports,
+keeping the newest 20 beside the log (File > Show Log in Finder). Those
+go if the Mac or its drive does, so choose a second folder in
+**Settings > Backups** (the last section in the sidebar): **Choose Backup
+Folder…** opens the usual Open dialog, where iCloud Drive is in the
+sidebar and New Folder makes one.
+
+A copy then goes there when Solid Copy opens; while it's open, on the
+schedule in Settings > Backups (**Every 4 hours** to start, or every hour,
+once a day, or never); when it quits; and with **File > Back Up Now**.
+The schedule and quitting only back up if the log changed. They also
+back up beside the log when no folder is chosen.
+The newest 20 are kept there as "Solid Copy log 2026-11-16
+143205Z.sqlite", with your scanned cards in a QSL Cards folder. You hear
+nothing when it works; a problem is said with the warning sound (one at
+quit is said the next time you open Solid Copy).
+
+To restore: quit Solid Copy, then copy a backup over Logbook.sqlite in
+the folder File > Show Log in Finder opens, renaming it Logbook.sqlite.
+
+## Importing and exporting
+
+**File > Import…** (Shift-Command-I) reads ADIF files (.adi, .adif), ADX files (.adx, ADIF
+written as XML) and MacLoggerDX logs
+(`MacLoggerDX.sql`, usually in `Documents/MLDX_Logs`). It works out which
+from the file itself. The file is only read, never changed. Solid Copy
+backs up its own log first, skips contacts it already has, and Edit >
+Undo takes the import back out.
+
+**File > Export…** (Shift-Command-E) saves the whole log as ADIF, as ADX
+or as a CSV spreadsheet. ADIF and ADX carry exactly the same fields; use
+whichever the other program or service asks for. Notes are private, so they're left out unless you tick
+Include Notes.
+
+To check importing and exporting against your MacLoggerDX log, without
+changing your Solid Copy log:
+
+```bash
+bash ~/dev/solid-copy/tools/check-import-export.sh
+```
+
+## Checking the log file code
+
+```bash
+bash ~/dev/solid-copy/tools/check-log-database.sh
+```
+
+And the lookup code (add `--live` to also try callook.info):
+
+```bash
+bash ~/dev/solid-copy/tools/check-lookups.sh
+```
+
+Every line should start with PASS.
+
+## Checks
+
+```bash
+bash ~/dev/solid-copy/tools/check-log-database.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-import-export.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-lookups.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-log-table.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-profiles.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-radio.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-parks.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-spots.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-cards.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-lotw.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-uploads.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-clubs.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-backups.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-distance.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/check-logs.sh
+```
+
+```bash
+bash ~/dev/solid-copy/tools/scale-check.sh 100000
+```
+
+```bash
+bash ~/dev/solid-copy/audit.sh
+```
+
+## Documents
+
+- [docs/PLAN.md](docs/PLAN.md): goals, decisions and phases
+- [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
+  rules for focus and speech the app must keep
+- [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): a guide to the code for
+  beginners
+
+## Licence
+
+Not chosen yet. Until it is, all rights are reserved.

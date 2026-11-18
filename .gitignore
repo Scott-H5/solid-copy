@@ -1,0 +1,6 @@
+# Build output and the generated Xcode project (project.yml is the source).
+build/
+SolidCopy.xcodeproj/
+# Your Apple Developer team ID, read by build.sh.
+team.txt
+.DS_Store

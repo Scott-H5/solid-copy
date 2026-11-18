@@ -1,0 +1,80 @@
+# project.yml
+#
+# Describes the Solid Copy app for XcodeGen, which turns this file into an
+# Xcode project (SolidCopy.xcodeproj). The Xcode project is generated, not
+# stored in git: edit this file instead. build.sh regenerates the project
+# every time it builds.
+#
+# Why XcodeGen? An Xcode project file is long, machine-written and hard
+# to read or review. This file is short, has comments, and is easy to
+# change with a text editor. Crystal Set uses the same approach.
+
+name: SolidCopy
+
+options:
+  # The oldest macOS version the app runs on.
+  deploymentTarget:
+    macOS: "14.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    # Xcode picks the signing certificate and profile automatically. The
+    # team ID is passed in by build.sh from team.txt.
+    CODE_SIGN_STYLE: Automatic
+
+targets:
+  SolidCopy:
+    type: application
+    platform: macOS
+    sources:
+      # All of the Swift code.
+      - Sources
+      - path: macOS
+        # Info.plist and the entitlements file are settings, not files to
+        # copy into the app. They're named in the settings below instead.
+        # Everything else here is copied in: J38Key.jpg is the card
+        # picture anyone can use (docs/CREDITS.md says where it's from).
+        excludes: [Info.plist, SolidCopy.entitlements, rigctld.entitlements]
+    # Creates a scheme, which xcodebuild needs to build the target. The UI
+    # tests (the accessibility audit, run by audit.sh) belong to it.
+    scheme:
+      testTargets: [SolidCopyUITests]
+    settings:
+      base:
+        # Built as SolidCopy.app; build.sh installs it as "Solid Copy.app".
+        PRODUCT_NAME: SolidCopy
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.scott-h5.solidcopy
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: macOS/Info.plist
+        CODE_SIGN_IDENTITY: Apple Development
+        # Security protections Apple requires for apps distributed outside
+        # the App Store, and recommends for all. On from the start, so the
+        # app can be shared or sold later without rework.
+        ENABLE_HARDENED_RUNTIME: YES
+        # The App Sandbox, and the permissions Solid Copy needs. See the
+        # comments in that file.
+        CODE_SIGN_ENTITLEMENTS: macOS/SolidCopy.entitlements
+        # The app icon: the AppIcon set in macOS/Assets.xcassets, drawn by
+        # tools/make-icon.sh.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    # Copies hamlib's rigctld into the app, so Solid Copy can start it.
+    # See the comments in that script.
+    postBuildScripts:
+      - name: Bundle rigctld
+        path: tools/bundle-rigctld.sh
+        basedOnDependencyAnalysis: false
+
+  # Apple's automatic accessibility audit of every screen (see audit.sh).
+  # Not part of the app: a separate test bundle that drives it.
+  SolidCopyUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [UITests]
+    dependencies:
+      - target: SolidCopy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.scott-h5.solidcopy.uitests
+        GENERATE_INFOPLIST_FILE: YES

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements: the permissions the app asks macOS for.
+
+  The App Sandbox keeps the app in its own container, so it can only reach
+  what it has asked for here. The Mac App Store requires it.
+-->
+<plist version="1.0">
+<dict>
+	<!-- Turn on the App Sandbox. -->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<!--
+	  Make outgoing network connections: callsign lookups (QRZ, HamQTH,
+	  callook.info), log uploads, and the radio through rigctld, which
+	  listens on a local network port.
+	-->
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!--
+	  Read and write files you pick in an Open or Save dialog: ADIF
+	  import and export, and the MacLoggerDX import.
+	-->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!--
+	  Remember a folder you chose (Settings > LoTW: where Solid Copy and
+	  TQSL swap files), so it can be used again after a restart.
+	-->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+	<!--
+	  Use the radio's serial (USB) port. Needed by the rigctld bundled in
+	  the app, which runs inside Solid Copy's sandbox.
+	-->
+	<key>com.apple.security.device.serial</key>
+	<true/>
+	<!--
+	  Accept local network connections: rigctld listens on 127.0.0.1
+	  port 4532 for Solid Copy (and any other program you point at it).
+	-->
+	<key>com.apple.security.network.server</key>
+	<true/>
+</dict>
+</plist>
