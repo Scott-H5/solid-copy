@@ -570,6 +570,11 @@ enum Settings {
         get { defaults.string(forKey: "cw.myName") ?? "" }
         set { defaults.set(newValue, forKey: "cw.myName") }
     }
+    // Whether the first-run setup sheet has been answered (FirstRunSheet.swift).
+    static var firstRunDone: Bool {
+        get { defaults.bool(forKey: "firstRunDone") }
+        set { defaults.set(newValue, forKey: "firstRunDone") }
+    }
     // The messages for the profile in use: its own, or (until it has
     // some) the starting set. A set saved before messages were per
     // profile (one day, 17 November 2026) is the starting set instead.

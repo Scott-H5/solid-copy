@@ -53,7 +53,9 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
         newButton.setAccessibilityLabel("New Profile")
         newMenuButton = newButton
         let deleteButton = NSButton(title: "Delete Profile", target: self, action: #selector(deleteProfile(_:)))
-        let buttons = NSStackView(views: [newButton, deleteButton])
+        let setUpButton = NSButton(title: "Set Up Station…", target: self, action: #selector(setUpStation(_:)))
+        setUpButton.setAccessibilityLabel("Set Up Station")
+        let buttons = NSStackView(views: [newButton, deleteButton, setUpButton])
         buttons.spacing = 8
 
         let top = NSGridView(views: [[FieldLabel("Profile in use"), profileMenu],
@@ -69,7 +71,7 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
         note.preferredMaxLayoutWidth = 520
 
         var rows: [[NSView]] = []
-        var order: [NSView] = [profileMenu, nameField, newButton, deleteButton]
+        var order: [NSView] = [profileMenu, nameField, newButton, deleteButton, setUpButton]
         for field in LogField.all where field.group == .myStation {
             let textField = NSTextField(string: "")
             textField.setAccessibilityLabel(field.label)
@@ -181,6 +183,12 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
         onProfileChange?()
         view.window?.makeFirstResponder(nameField)
         Speaker.announce(said)
+    }
+
+    // The setup sheet (FirstRunSheet.swift) for the profile in use.
+    @objc private func setUpStation(_ sender: Any?) {
+        guard let window = view.window else { return }
+        FirstRunSheet.show(over: window) { [weak self] in self?.refresh() }
     }
 
     // Deletes the profile in use, after asking (there's no Undo here), and

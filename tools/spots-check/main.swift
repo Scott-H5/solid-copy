@@ -210,7 +210,7 @@ MainActor.assumeIsolated {
     usa.hertz = 14_200_000
     usa.mode = "SSB"
     check(needs.needed(usa, country: table.country(of: "K5ABC"), log: logbook.contacts) == "new mode", "phone: new mode")
-    // The same for the call in the logging form (CLAUDE.md item 6).
+    // The same for the call in the logging form.
     let k5 = table.country(of: "K5ABC")
     check(needs.needed(country: table.country(of: "VP8XYZ"), band: "20m", modeGroup: "CW", log: logbook.contacts)
           == "new country", "form: a country never worked")
@@ -223,7 +223,7 @@ MainActor.assumeIsolated {
 
     // In the window: the line says the country and that it's needed, and
     // DX: needed only leaves out the rest.
-    // The needed sound as spots come in (CLAUDE.md item 9): a new country
+    // The needed sound as spots come in: a new country
     // chimes, once; a worked one doesn't; a second new one within 30
     // seconds doesn't either.
     UserDefaults.standard.removeObject(forKey: "sound.neededSpots")

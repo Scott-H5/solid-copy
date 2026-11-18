@@ -84,6 +84,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         logEntry?.focusCallsign()
+        // First launch with no callsign: ask for the station's details (FirstRunSheet.swift).
+        if let window { FirstRunSheet.offerIfNeeded(over: window) }
 
         // The CW menu's Connect / Disconnect follows the WinKeyer.
         NotificationCenter.default.addObserver(forName: WinKeyer.didChange, object: nil, queue: .main) { [weak self] _ in

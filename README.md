@@ -10,8 +10,28 @@ title.
 
 Early. The window opens in the Callsign field, and you can log
 contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
-The log is saved as you go and backed up each time the app opens. See
-[docs/PLAN.md](docs/PLAN.md) for where it's headed.
+The log is saved as you go and backed up each time the app opens.
+
+## First setup
+
+The first time Solid Copy opens, with no callsign set, a short sheet asks
+for three things:
+
+- **Callsign**: yours, such as W1AW. Every contact you log carries it, and
+  the uploads (LoTW, QRZ, Club Log, eQSL) need it.
+- **Name**: optional. It's used by the CW messages' {MYNAME}.
+- **Grid square**: optional, 4 or 6 characters, such as FN31 or FN31pr. It's
+  used for distance and bearing, and for LoTW.
+
+Save keeps them. Skip leaves them empty, and then the sheet doesn't come
+back; you can fill them in later under **Settings > Profiles** (callsign
+and grid) and **Settings > CW** (name). **Set Up Station…** in Settings >
+Profiles shows this sheet again at any time. A profile with a callsign
+already never shows the sheet on its own.
+
+Then, to log a contact: type the callsign in the Callsign field and press
+Tab through the fields, then Return to log it. The log keeps every contact
+as you go.
 
 ## Using it
 
@@ -860,7 +880,6 @@ bash ~/dev/solid-copy/audit.sh
 
 ## Documents
 
-- [docs/PLAN.md](docs/PLAN.md): goals, decisions and phases
 - [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
   rules for focus and speech the app must keep
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): a guide to the code for
