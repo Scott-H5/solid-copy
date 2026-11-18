@@ -10,7 +10,7 @@ title.
 
 Early. The window opens in the Callsign field, and you can log
 contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
-The log is saved as you go and backed up each time the app opens.
+The log is saved as you go and backed up each time the app opens. See
 
 ## First setup
 
@@ -880,7 +880,7 @@ bash ~/dev/solid-copy/audit.sh
 
 ## Documents
 
-- [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
+- - [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
   rules for focus and speech the app must keep
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): a guide to the code for
   beginners

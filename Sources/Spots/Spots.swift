@@ -189,7 +189,7 @@ final class SpotList {
     private var pendingPost: Task<Void, Never>?
     // The log, for "needed" (set by the Spots window).
     var log: () -> [QSO] = { [] }
-    // The needed sound for a new DX spot (CLAUDE.md item 9): once per call
+    // The needed sound for a new DX spot: once per call
     // and band, and at most once every 30 seconds, so a burst of spots (as
     // when the cluster first connects) is one sound, not twenty.
     private var chimed: Set<String> = []

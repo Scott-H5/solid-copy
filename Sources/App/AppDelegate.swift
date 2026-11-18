@@ -189,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // "Solid Copy, Main log, Portable": VoiceOver reads the title when you
     // come to the window, so the profile in use is always findable.
     // With the log in use too ("Solid Copy, Contest practice (test log),
-    // Home"), so which log you're in is always findable (CLAUDE.md #12).
+    // Home"), so which log you're in is always findable.
     func updateTitle() {
         window?.title = "Solid Copy, \(logbook?.info.title ?? "Main log"), \(Settings.currentProfile.name)"
     }

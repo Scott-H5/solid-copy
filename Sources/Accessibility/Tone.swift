@@ -3,7 +3,7 @@
 // Solid Copy's own sounds, made here as it runs (a few kilobytes of
 // audio), rather than borrowed from macOS. They're for events that must
 // stand out from every other sound on the Mac, and mean the same on any
-// macOS version (CLAUDE.md, v1 item 9):
+// macOS version:
 //   radioLost  two falling notes (880 then 440 Hz): the radio dropped
 //   radioBack  two rising notes (440 then 880 Hz): it's back
 //   buzz       two short low buzzes: a dupe (the default)

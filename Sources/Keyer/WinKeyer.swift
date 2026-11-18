@@ -6,7 +6,7 @@
 //
 // Connecting happens only when you ask (CW > Connect WinKeyer), never at
 // launch: Keyer Sidetone uses the same WinKeyer, and only one app can hold
-// its port (CLAUDE.md decision, 17 November 2026). If another app has it,
+// its port. If another app has it,
 // you hear so.
 //
 // The WinKeyer's language (K1EL's "WinKeyer3 IC Interface & Operation

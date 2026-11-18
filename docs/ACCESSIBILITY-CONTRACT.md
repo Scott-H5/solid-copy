@@ -256,7 +256,7 @@ it's scheduled for.
     out without your knowing; Open Card opens the scan in Preview, where
     VoiceOver reads its text. *Done (QSL.swift, LogTableViewController.swift,
     ContactDetailsViewController.swift). Edit Contact still shows the
-    letters: see docs/PLAN.md.*
+    letters:*
 
 34. **Syncing with LoTW is one command, and it says how it went.** QSL >
     Sync with LoTW says each step as it starts ("Uploading 12 contacts

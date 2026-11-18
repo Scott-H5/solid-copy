@@ -1355,7 +1355,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         }
         let inContest = formChoices.contains { $0.adif == "contest_id" }
         let park = Settings.currentProfile.station["my_pota_ref"] ?? ""
-        // Everyday logging (CLAUDE.md item 5): the same call, band and mode
+        // Everyday logging: the same call, band and mode
         // (CW, phone, data) on the same UTC day.
         guard inContest || !park.isEmpty else { return everydayDupe(call) }
         // The band and mode now: as typed on the form, or from the radio.
@@ -1403,7 +1403,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         return ("Dupe: \(call)" + rest, "Dupe: \(Callsign.spoken(call))" + rest)
     }
 
-    // MARK: DXCC entity and "needed" (CLAUDE.md item 6)
+    // MARK: DXCC entity and "needed"
     //
     // The call's country (DXCC entity) from cty.dat (Countries.swift), and
     // whether you need it: a new country, a new band for it, or a new mode
@@ -1586,7 +1586,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     }
 
     // A lookup said at its chosen level. A needed call (a new country,
-    // band or mode; CLAUDE.md items 6 and 9) plays the needed sound in
+    // band or mode; plays the needed sound in
     // place of the lookup's own, whatever the level, so it's heard even
     // with lookups set to a sound or nothing.
     private func sayLookupSpeech(full: String, brief: String, cue: Speaker.Cue, needed: Bool) {

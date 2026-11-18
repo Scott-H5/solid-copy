@@ -1,6 +1,6 @@
 // Logs.swift
 //
-// Your logs (CLAUDE.md #12; the list is LogList.swift):
+// Your logs:
 //   File > New Contest Log…  a log for one contest (Contest.swift), with
 //                          that contest's profile (made from its
 //                          template if you have none), which comes back

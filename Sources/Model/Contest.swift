@@ -1,6 +1,6 @@
 // Contest.swift
 //
-// Contests, defined in plain text files (CLAUDE.md, item 7), so a rule
+// Contests, defined in plain text files, so a rule
 // change or a new contest needs no new version of Solid Copy: edit or add
 // a file in the Contests folder (File > Show Contest Files). Solid Copy
 // reads them each time it needs them. Field Day's file is written there

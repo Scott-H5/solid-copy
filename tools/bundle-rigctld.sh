@@ -71,10 +71,13 @@ fi
 # the app itself afterwards. ("-" signs without a certificate, for
 # builds that aren't signed.)
 IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:--}"
+# Apple's notary service needs a secure timestamp on every signed file
+# (release.sh); development builds don't need one.
+if [ "$IDENTITY" = "-" ]; then TIMESTAMP="--timestamp=none"; else TIMESTAMP="--timestamp"; fi
 for library in "$FRAMEWORKS"/*.dylib; do
-    codesign --force --sign "$IDENTITY" --options runtime --timestamp=none "$library"
+    codesign --force --sign "$IDENTITY" --options runtime $TIMESTAMP "$library"
 done
-codesign --force --sign "$IDENTITY" --options runtime --timestamp=none \
+codesign --force --sign "$IDENTITY" --options runtime $TIMESTAMP \
     --entitlements "$SRCROOT/macOS/rigctld.entitlements" "$HELPERS/rigctld"
 
 # 4. Licence.

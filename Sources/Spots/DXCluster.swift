@@ -331,7 +331,7 @@ final class WorkedCountries {
         needed(country: country, band: spot.band, modeGroup: spot.modeGroup, log: log)
     }
 
-    // The same for the call in the logging form (CLAUDE.md item 6), with
+    // The same for the call in the logging form, with
     // the band and mode it's on now. Mode groups as Spot.group: CW,
     // Phone, Data.
     func needed(country: Country?, band: String?, modeGroup: String, log: [QSO]) -> String? {

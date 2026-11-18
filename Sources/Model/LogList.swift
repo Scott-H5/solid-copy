@@ -1,6 +1,6 @@
 // LogList.swift
 //
-// Your logs (CLAUDE.md, v1 item 12): the main log, and any others you
+// Your logs: the main log, and any others you
 // make with File > New Log… or New Test Log…, for a special event, a
 // contest kept apart from rag chews, or trying things out.
 //

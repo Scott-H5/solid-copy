@@ -18,3 +18,26 @@ J-38 Picture") for anyone without a card picture of their own.
   2fee837117e275c3f8d9afb60c6fe3604217525b (matching Commons' record).
 - No credit is required, so cards carry none; it's given here because
   it's fair.
+
+## Hamlib's rigctld, libhamlib and libusb (the radio)
+
+Solid Copy ships three pieces of open-source software, unchanged, inside the
+app (Contents/Helpers and Contents/Frameworks), so it can talk to your radio
+without Homebrew or any other install:
+
+- **rigctld**, from Hamlib (version 4.7.2 when this was written). It's a
+  separate program that Solid Copy starts and talks to over a local
+  connection. Its licence is the GNU General Public License, version 2
+  (Hamlib's COPYING file).
+- **libhamlib**, Hamlib's radio library, which rigctld uses. Licence: GNU
+  Lesser General Public License (Hamlib's COPYING.LIB).
+- **libusb** (1.0), which rigctld uses to reach some radios' USB cables.
+  Licence: GNU Lesser General Public License, version 2.1 or later.
+
+Their licence texts are in the app's Contents/Resources (Hamlib-COPYING.txt,
+Hamlib-NOTICE.txt). Their source code is at https://github.com/Hamlib/Hamlib
+and https://github.com/libusb/libusb. Solid Copy's own source code is
+GPL-3.0. rigctld is a separate program that Solid Copy starts, not code
+linked into Solid Copy, which is how GPL programs are normally shipped
+alongside one another. Have someone check that reading before a wide
+release.

@@ -1,6 +1,6 @@
 // ElectronicCard.swift
 //
-// Your electronic QSL card (CLAUDE.md, v1 item 10): a PDF the size of a
+// Your electronic QSL card: a PDF the size of a
 // paper card (5.5 by 3.5 inches) that confirms one contact, with real
 // text VoiceOver reads, and a picture of your choosing behind it. QSL >
 // Send QSL Card (LogTableViewController) makes one and hands it to Mail.
