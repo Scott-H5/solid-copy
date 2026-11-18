@@ -909,4 +909,5 @@ Nothing else is left behind: the radio helper (rigctld) closes with the app.
 
 ## Licence
 
-Not chosen yet. Until it is, all rights are reserved.
+Solid Copy is licensed under the GNU General Public License, version 3
+(GPL-3.0). The full text is in the LICENSE file.
