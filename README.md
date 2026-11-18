@@ -885,6 +885,28 @@ bash ~/dev/solid-copy/audit.sh
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): a guide to the code for
   beginners
 
+## Removing it
+
+Solid Copy keeps its files in three places. To remove it completely:
+
+1. **The app:** in Finder, drag Solid Copy from Applications to the Trash.
+2. **Your log and settings:** in Finder, choose Go > Go to Folder (Shift-Command-G)
+   and paste `~/Library/Containers/io.github.scott-h5.solidcopy`. Move that
+   whole folder to the Trash. It holds your logs (Logbook.sqlite, and any
+   other logs), backups, QSL cards, settings, the saved member and country
+   lists, and the radio log if you recorded one. Export your logs first
+   (File > Export…) if you want to keep the contacts, because emptying the
+   Trash can't bring them back.
+3. **Passwords:** open Keychain Access, search for "Solid Copy", and delete
+   the entries named "Solid Copy: …" (QRZ.com, LoTW, QRZ Logbook, Club Log,
+   eQSL). Those are the logins for the services you've set up.
+
+Your backups aren't in that folder if you chose another one under Settings >
+Backups, such as a folder in iCloud Drive. Solid Copy doesn't delete them,
+so remove that folder yourself if you don't want the copies.
+
+Nothing else is left behind: the radio helper (rigctld) closes with the app.
+
 ## Licence
 
 Not chosen yet. Until it is, all rights are reserved.
