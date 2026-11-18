@@ -26,38 +26,40 @@ final class FirstRunSheet: NSObject {
     private let nameField = NSTextField()
     private let gridField = NSTextField()
     private let problem = NSTextField(labelWithString: "")
-    private weak var host: NSWindow?
     // Runs when the sheet closes, so Settings can show the new values.
     private var onDone: (() -> Void)?
 
-    // Shows the sheet over the main window if this is the first launch with
-    // no callsign. An existing user with a callsign is marked as done.
-    static func offerIfNeeded(over window: NSWindow) {
+    // Shows the setup window if this is the first launch with no callsign.
+    // An existing user with a callsign is marked as done.
+    static func offerIfNeeded() {
         guard !Settings.firstRunDone else { return }
         guard (Settings.currentProfile.station["station_callsign"] ?? "").isEmpty else {
             Settings.firstRunDone = true
             return
         }
-        show(over: window)
+        show()
     }
 
-    // Shows the sheet at any time, from here or from Settings > Profiles,
+    // Shows the setup window at any time, from here or from Settings > Profiles,
     // filled in with what's already set.
-    static func show(over window: NSWindow, onDone: (() -> Void)? = nil) {
+    static func show(onDone: (() -> Void)? = nil) {
         let made = FirstRunSheet()
         made.onDone = onDone
         showing = made
-        made.present(over: window)
+        made.present()
     }
 
-    private func present(over window: NSWindow) {
-        host = window
+    // A window of its own, not a sheet: a sheet that doesn't attach to its
+    // window can't be closed with Save or Skip.
+    private func present() {
         let station = Settings.currentProfile.station
         callField.stringValue = station["station_callsign"] ?? ""
         gridField.stringValue = station["my_gridsquare"] ?? ""
         nameField.stringValue = Settings.cwMyName
+        panel.title = "Set Up Station"
         panel.contentView = build()
-        window.beginSheet(panel) { _ in }
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
         panel.makeFirstResponder(callField)
     }
 
@@ -147,7 +149,7 @@ final class FirstRunSheet: NSObject {
 
     private func finish() {
         Settings.firstRunDone = true
-        if let host { host.endSheet(panel) }
+        panel.orderOut(nil)
         Self.showing = nil
         onDone?()
     }

@@ -187,8 +187,7 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
 
     // The setup sheet (FirstRunSheet.swift) for the profile in use.
     @objc private func setUpStation(_ sender: Any?) {
-        guard let window = view.window else { return }
-        FirstRunSheet.show(over: window) { [weak self] in self?.refresh() }
+        FirstRunSheet.show { [weak self] in self?.refresh() }
     }
 
     // Deletes the profile in use, after asking (there's no Undo here), and
