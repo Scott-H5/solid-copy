@@ -275,6 +275,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             plus.isHidden = true
             plus.allowsKeyEquivalentWhenHidden = true
         }
+        // Volume: Control-Command-Right and Left Arrow, the radio's audio
+        // level in steps of 5 percent. Arrow keys are "function key" characters.
+        let volumes = [("Volume Up", #selector(volumeUp(_:)), NSRightArrowFunctionKey),
+                       ("Volume Down", #selector(volumeDown(_:)), NSLeftArrowFunctionKey)]
+        for (title, action, key) in volumes {
+            let item = radioMenu.addItem(withTitle: title, action: action,
+                                         keyEquivalent: String(Character(UnicodeScalar(key)!)))
+            item.keyEquivalentModifierMask = [.control, .command]
+            item.target = self
+        }
         // Receive settings, then RIT, XIT, split and VFOs: each on and off
         // (AGC steps through its speeds). The letters match the names.
         let groups: [[(String, Selector, String)]] = [
@@ -366,6 +376,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Radio > Preamp (Control-Command-P), Attenuator (A), AGC (G), Noise
     // Blanker (B), Noise Reduction (N), Audio Peak Filter (K), RIT (R),
     // XIT (X), Split (S), Swap VFOs (V). See RadioControl.swift.
+    @objc func volumeUp(_ sender: Any?) { RadioMonitor.shared.changeLevel(.volume, by: 0.05) }
+    @objc func volumeDown(_ sender: Any?) { RadioMonitor.shared.changeLevel(.volume, by: -0.05) }
     @objc func togglePreamp(_ sender: Any?) { RadioMonitor.shared.togglePreamp() }
     @objc func toggleAttenuator(_ sender: Any?) { RadioMonitor.shared.toggleAttenuator() }
     @objc func nextAGC(_ sender: Any?) { RadioMonitor.shared.nextAGC() }

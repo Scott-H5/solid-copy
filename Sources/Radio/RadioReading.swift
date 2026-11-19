@@ -195,9 +195,10 @@ struct RadioStatus: Equatable {
     var noiseReduction: Bool?
     // The audio peak filter, for CW (the KX3's APF).
     var peakFilter: Bool?
-    // RF gain and squelch, from 0 to 1 (squelch read only in FM).
+    // RF gain, squelch and audio volume, from 0 to 1 (squelch read only in FM).
     var rfGain: Double?
     var squelch: Double?
+    var audioGain: Double?
     // Dual watch: listening on both VFOs (the KX3's SUB).
     var dualWatch: Bool?
 
@@ -240,7 +241,7 @@ struct RadioStatus: Equatable {
             ("preamp", preampDB.map(Self.level)), ("attenuator", attenuatorDB.map(Self.level)),
             ("NB", onOff(noiseBlanker)), ("NR", onOff(noiseReduction)), ("APF", onOff(peakFilter)),
             ("dual watch", onOff(dualWatch)), ("RF gain", rfGain.map(Self.percent)),
-            ("squelch", squelch.map(Self.percent)),
+            ("squelch", squelch.map(Self.percent)), ("volume", audioGain.map(Self.percent)),
         ]
         return parts.compactMap { name, value in value.map { "\(name) \($0)" } }.joined(separator: ", ")
     }

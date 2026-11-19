@@ -89,15 +89,17 @@ final class RadioMonitor {
     // (Tab from Offset). Like tuning, quick presses only move the target,
     // and the radio is sent the latest when it's ready.
     enum Level: CaseIterable {
-        case power, rfGain, squelch
+        case power, rfGain, squelch, volume
 
         // What VoiceOver calls its control, and the words for the radio's
-        // refusal ("The radio didn't take that power").
+        // refusal ("The radio didn't take that power"). Volume has no
+        // slider; its keys are in the Radio menu.
         var name: String {
             switch self {
             case .power: "power"
             case .rfGain: "RF gain"
             case .squelch: "squelch"
+            case .volume: "volume"
             }
         }
     }
@@ -127,6 +129,7 @@ final class RadioMonitor {
         case .power: return reading.watts
         case .rfGain: return status?.rfGain
         case .squelch: return reading.mode.uppercased().contains("FM") ? status?.squelch : nil
+        case .volume: return status?.audioGain
         }
     }
 
@@ -519,6 +522,7 @@ final class RadioMonitor {
         case .power: command = "POWER \(target)"
         case .rfGain: command = "L RF \(target)"
         case .squelch: command = "L SQL \(target)"
+        case .volume: command = "L AF \(target)"
         }
         change(command) { reading in
             let monitor = RadioMonitor.shared

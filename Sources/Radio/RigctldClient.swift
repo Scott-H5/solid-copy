@@ -251,9 +251,10 @@ final class RigctldClient: @unchecked Sendable {
         status.split = try on("+s")
         status.attenuatorDB = try ask("+l ATT")?.first.flatMap(Int.init)
         if mode.uppercased().hasPrefix("CW") { status.peakFilter = try on("+u APF") }
-        // RF gain and squelch: fractions from 0 to 1. Squelch is only asked
-        // about in FM, where it's used (and shown).
+        // RF gain, squelch and audio volume: fractions from 0 to 1. Squelch
+        // is only asked about in FM, where it's used (and shown).
         status.rfGain = try ask("+l RF")?.first.flatMap(Double.init)
+        status.audioGain = try ask("+l AF")?.first.flatMap(Double.init)
         if mode.uppercased().contains("FM") { status.squelch = try ask("+l SQL")?.first.flatMap(Double.init) }
         // The radio's own reading: "NR0;" -> "0", the digits after the
         // command's name.
