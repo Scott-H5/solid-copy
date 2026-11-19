@@ -340,6 +340,10 @@ is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
 - Solid Copy never gives up: switch the radio on before or after it, off
   and on again, or unplug and replug it, and it reconnects by itself.
   Radio > Reconnect Radio starts afresh if you ever want to.
+- A missed answer or two isn't called a lost radio: Solid Copy says
+  "lost" only after 4 seconds without one. Restarting VoiceOver with a
+  USB braille display plugged in can make the radio miss a second's
+  read, which before version 1.1.2 was announced as lost, then back.
 - While Solid Copy is open, other programs (WSJT-X, say, set to "Hamlib
   NET rigctl") can share the radio at 127.0.0.1 port 45320. (Not
   rigctld's usual 4532, so it can't collide with a rigctld of your own.)
