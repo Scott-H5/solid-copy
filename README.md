@@ -40,6 +40,29 @@ it's there in the field too. **Help > Solid Copy on GitHub** opens the
 project's page, with the latest version. In the browser, VO-Command-H
 moves from heading to heading.
 
+## Testing it
+
+Thank you for trying Solid Copy. What's most useful to hear about is how
+it feels to use:
+
+- **Is it intuitive?** Could you find your way around without help, and
+  did things work the way you expected?
+- **Is it easy to navigate?** With VoiceOver and the keyboard: the
+  logging form, the log, the menus and Settings.
+- **Does the layout make logging efficient?** Can you log a contact
+  quickly, without extra steps?
+- **Is saving, changing or editing contacts clear?** Was anything about
+  logging a contact, editing one, or deleting one confusing?
+
+If something goes wrong, please say:
+
+- which radio you're using
+- your version of macOS (Apple menu > About This Mac)
+- what kind of Mac it is (for example, a MacBook Air with an M2)
+
+Reply to the email that invited you, or open an issue at
+https://github.com/Scott-H5/solid-copy/issues.
+
 ## First setup
 
 The first time Solid Copy opens, with no callsign set, a short sheet asks
