@@ -7,9 +7,22 @@ VoiceOver and the keyboard.
 
 ## Status
 
-The window opens in the Callsign field, and you can log
-contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
-The log is saved as you go and backed up each time the app opens.
+Solid Copy is an everyday logger, used on the air with VoiceOver. It:
+
+- logs a contact from the keyboard alone, starting in the Callsign field
+- fills in name, QTH and grid from QRZ (or callook.info)
+- reads frequency, band, mode and power from the radio through hamlib
+  (tested with the Kenwood TS-590SG and Elecraft KX3)
+- uploads to LoTW, QRZ Logbook, Club Log and eQSL, automatically if you
+  like, and brings LoTW and QRZ confirmations back
+- warns about dupes, and says each contact's country and whether it's a
+  new one, band or mode
+- runs contests (ARRL Field Day first), with serial numbers and CW
+  messages through a WinKeyer
+- tracks QSLs and parks, shows spots, and makes an electronic QSL card
+  you can send by email
+- keeps separate logs, imports and exports ADIF, ADX, CSV and
+  MacLoggerDX logs, and backs up to a folder you choose
 
 ## Installing
 
@@ -330,10 +343,11 @@ remembers it.
 ## Building
 
 You need Xcode and XcodeGen (`brew install xcodegen`), and your Apple
-Developer team ID in a file named `team.txt` in this folder.
+Developer team ID in a file named `team.txt` in this folder. From the
+folder you cloned (or downloaded) Solid Copy into:
 
 ```bash
-bash ~/dev/solid-copy/build.sh install
+bash build.sh install
 ```
 
 That builds the app, quits Solid Copy if it's open, and installs it as
@@ -801,96 +815,42 @@ or as a CSV spreadsheet. ADIF and ADX carry exactly the same fields; use
 whichever the other program or service asks for. Notes are private, so they're left out unless you tick
 Include Notes.
 
-To check importing and exporting against your MacLoggerDX log, without
-changing your Solid Copy log:
-
-```bash
-bash ~/dev/solid-copy/tools/check-import-export.sh
-```
-
-## Checking the log file code
-
-```bash
-bash ~/dev/solid-copy/tools/check-log-database.sh
-```
-
-And the lookup code (add `--live` to also try callook.info):
-
-```bash
-bash ~/dev/solid-copy/tools/check-lookups.sh
-```
-
-Every line should start with PASS.
+To check importing and exporting without changing your Solid Copy log,
+run `tools/check-import-export.sh` (see Checks).
 
 ## Checks
 
-```bash
-bash ~/dev/solid-copy/tools/check-log-database.sh
-```
+For anyone changing the code. Each area has its own check; run the ones
+for what you changed, from the folder you cloned Solid Copy into, such
+as `bash tools/check-uploads.sh`. Every line should start with PASS. None
+of them touch your Solid Copy log.
 
-```bash
-bash ~/dev/solid-copy/tools/check-import-export.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-lookups.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-log-table.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-profiles.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-radio.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-parks.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-spots.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-cards.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-lotw.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-uploads.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-clubs.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-backups.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-distance.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/check-logs.sh
-```
-
-```bash
-bash ~/dev/solid-copy/tools/scale-check.sh 100000
-```
-
-```bash
-bash ~/dev/solid-copy/audit.sh
-```
+- `tools/check-log-database.sh`: the log file
+- `tools/check-import-export.sh`: ADIF, ADX, CSV and MacLoggerDX import
+  and export, against a MacLoggerDX log you have (only read, never
+  changed). Give its path, or it looks in Documents/Amateur
+  Radio/MLDX_Logs.
+- `tools/check-lookups.sh`: callsign lookups (add `--live` to also try
+  callook.info)
+- `tools/check-log-table.sh`: the log table
+- `tools/check-profiles.sh`: operating profiles
+- `tools/check-radio.sh`: the radio
+- `tools/check-parks.sh`: parks
+- `tools/check-spots.sh`: spots
+- `tools/check-cards.sh`: scanned and electronic QSL cards
+- `tools/check-lotw.sh`: LoTW
+- `tools/check-cw.sh`: CW messages and what goes to the WinKeyer (no
+  keyer needed; nothing is sent)
+- `tools/check-uploads.sh`: QRZ Logbook, Club Log, eQSL and automatic
+  uploads
+- `tools/check-clubs.sh`: club numbers
+- `tools/check-backups.sh`: backups
+- `tools/check-distance.sh`: distance and bearing
+- `tools/check-logs.sh`: separate logs and test logs
+- `tools/check-activity.sh`: the Window > Activity list
+- `tools/scale-check.sh 100000`: speed with a 100,000-contact log
+- `audit.sh`: Apple's accessibility audit. It takes over the screen for
+  about 9 minutes, so start it when you can leave the Mac alone.
 
 ## Documents
 

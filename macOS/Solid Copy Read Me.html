@@ -21,9 +21,23 @@
 VoiceOver and the keyboard.</p>
 <p>"Solid copy" is ham shorthand for "I received everything."</p>
 <h2 id="status">Status</h2>
-<p>The window opens in the Callsign field, and you can log
-contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
-The log is saved as you go and backed up each time the app opens.</p>
+<p>Solid Copy is an everyday logger, used on the air with VoiceOver. It:</p>
+<ul>
+<li>logs a contact from the keyboard alone, starting in the Callsign field</li>
+<li>fills in name, QTH and grid from QRZ (or callook.info)</li>
+<li>reads frequency, band, mode and power from the radio through hamlib
+(tested with the Kenwood TS-590SG and Elecraft KX3)</li>
+<li>uploads to LoTW, QRZ Logbook, Club Log and eQSL, automatically if you
+like, and brings LoTW and QRZ confirmations back</li>
+<li>warns about dupes, and says each contact's country and whether it's a
+new one, band or mode</li>
+<li>runs contests (ARRL Field Day first), with serial numbers and CW
+messages through a WinKeyer</li>
+<li>tracks QSLs and parks, shows spots, and makes an electronic QSL card
+you can send by email</li>
+<li>keeps separate logs, imports and exports ADIF, ADX, CSV and
+MacLoggerDX logs, and backs up to a folder you choose</li>
+</ul>
 <h2 id="installing">Installing</h2>
 <p>Download the zip from the latest release at
 <a href="https://github.com/Scott-H5/solid-copy/releases">https://github.com/Scott-H5/solid-copy/releases</a> and open it. You get a
@@ -581,8 +595,9 @@ in. Changes show at once. Drag a column heading to change the order; Solid Copy
 remembers it.</p>
 <h2 id="building">Building</h2>
 <p>You need Xcode and XcodeGen (<code>brew install xcodegen</code>), and your Apple
-Developer team ID in a file named <code>team.txt</code> in this folder.</p>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/build.sh install</pre></div>
+Developer team ID in a file named <code>team.txt</code> in this folder. From the
+folder you cloned (or downloaded) Solid Copy into:</p>
+<div class="highlight highlight-source-shell"><pre>bash build.sh install</pre></div>
 <p>That builds the app, quits Solid Copy if it's open, and installs it as
 <code>/Applications/Solid Copy.app</code>. It doesn't open it: open it yourself from
 the Dock or Spotlight, so it comes up in front and never takes focus
@@ -1036,32 +1051,60 @@ Undo takes the import back out.</p>
 or as a CSV spreadsheet. ADIF and ADX carry exactly the same fields; use
 whichever the other program or service asks for. Notes are private, so they're left out unless you tick
 Include Notes.</p>
-<p>To check importing and exporting against your MacLoggerDX log, without
-changing your Solid Copy log:</p>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-import-export.sh</pre></div>
-<h2 id="checking-the-log-file-code">Checking the log file code</h2>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-log-database.sh</pre></div>
-<p>And the lookup code (add <code>--live</code> to also try callook.info):</p>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-lookups.sh</pre></div>
-<p>Every line should start with PASS.</p>
+<p>To check importing and exporting without changing your Solid Copy log,
+run <code>tools/check-import-export.sh</code> (see Checks).</p>
 <h2 id="checks">Checks</h2>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-log-database.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-import-export.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-lookups.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-log-table.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-profiles.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-radio.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-parks.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-spots.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-cards.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-lotw.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-uploads.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-clubs.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-backups.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-distance.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/check-logs.sh</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/tools/scale-check.sh 100000</pre></div>
-<div class="highlight highlight-source-shell"><pre>bash <span class="pl-k">~</span>/dev/solid-copy/audit.sh</pre></div>
+<p>For anyone changing the code. Each area has its own check; run the ones
+for what you changed, from the folder you cloned Solid Copy into, such
+as <code>bash tools/check-uploads.sh</code>. Every line should start with PASS. None
+of them touch your Solid Copy log.</p>
+<ul>
+<li>
+<code>tools/check-log-database.sh</code>: the log file</li>
+<li>
+<code>tools/check-import-export.sh</code>: ADIF, ADX, CSV and MacLoggerDX import
+and export, against a MacLoggerDX log you have (only read, never
+changed). Give its path, or it looks in Documents/Amateur
+Radio/MLDX_Logs.</li>
+<li>
+<code>tools/check-lookups.sh</code>: callsign lookups (add <code>--live</code> to also try
+callook.info)</li>
+<li>
+<code>tools/check-log-table.sh</code>: the log table</li>
+<li>
+<code>tools/check-profiles.sh</code>: operating profiles</li>
+<li>
+<code>tools/check-radio.sh</code>: the radio</li>
+<li>
+<code>tools/check-parks.sh</code>: parks</li>
+<li>
+<code>tools/check-spots.sh</code>: spots</li>
+<li>
+<code>tools/check-cards.sh</code>: scanned and electronic QSL cards</li>
+<li>
+<code>tools/check-lotw.sh</code>: LoTW</li>
+<li>
+<code>tools/check-cw.sh</code>: CW messages and what goes to the WinKeyer (no
+keyer needed; nothing is sent)</li>
+<li>
+<code>tools/check-uploads.sh</code>: QRZ Logbook, Club Log, eQSL and automatic
+uploads</li>
+<li>
+<code>tools/check-clubs.sh</code>: club numbers</li>
+<li>
+<code>tools/check-backups.sh</code>: backups</li>
+<li>
+<code>tools/check-distance.sh</code>: distance and bearing</li>
+<li>
+<code>tools/check-logs.sh</code>: separate logs and test logs</li>
+<li>
+<code>tools/check-activity.sh</code>: the Window &gt; Activity list</li>
+<li>
+<code>tools/scale-check.sh 100000</code>: speed with a 100,000-contact log</li>
+<li>
+<code>audit.sh</code>: Apple's accessibility audit. It takes over the screen for
+about 9 minutes, so start it when you can leave the Mac alone.</li>
+</ul>
 <h2 id="documents">Documents</h2>
 <ul>
 <li>
