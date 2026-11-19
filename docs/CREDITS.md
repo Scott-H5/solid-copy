@@ -28,7 +28,8 @@ without Homebrew or any other install:
 - **rigctld**, from Hamlib (version 4.7.2 when this was written). It's a
   separate program that Solid Copy starts and talks to over a local
   connection. Its licence is the GNU General Public License, version 2
-  (Hamlib's COPYING file).
+  or (at your option) any later version (Hamlib's COPYING file), so it
+  can ship alongside Solid Copy's GPL-3.0.
 - **libhamlib**, Hamlib's radio library, which rigctld uses. Licence: GNU
   Lesser General Public License (Hamlib's COPYING.LIB).
 - **libusb** (1.0), which rigctld uses to reach some radios' USB cables.
@@ -36,8 +37,16 @@ without Homebrew or any other install:
 
 Their licence texts are in the app's Contents/Resources (Hamlib-COPYING.txt,
 Hamlib-NOTICE.txt). Their source code is at https://github.com/Hamlib/Hamlib
-and https://github.com/libusb/libusb. Solid Copy's own source code is
+(each version's own source is on its release page, such as
+https://github.com/Hamlib/Hamlib/releases/tag/4.7.2) and
+https://github.com/libusb/libusb. Solid Copy's own source code is
 GPL-3.0. rigctld is a separate program that Solid Copy starts, not code
 linked into Solid Copy, which is how GPL programs are normally shipped
-alongside one another. Have someone check that reading before a wide
-release.
+alongside one another. Hamlib's maintainers were asked (Hamlib-developer
+mailing list, 19 November 2026): a maintainer saw no issue, noting the
+"or any later version" clause, and said a mention and link back to
+Hamlib is welcomed. Solid Copy credits Hamlib, with a link, in its Read
+Me and in the notice inside the app.
+
+With thanks to the Hamlib project and its contributors:
+https://hamlib.github.io/

@@ -87,7 +87,12 @@ VERSION=$("$HAMLIB/bin/rigctld" --version 2>/dev/null | head -1 || true)
 cat > "$RESOURCES/Hamlib-NOTICE.txt" <<EOF
 Solid Copy includes rigctld and libhamlib from Hamlib ($VERSION), and
 libusb, unchanged. Hamlib's rigctld is licensed under the GNU General
-Public License and libhamlib and libusb under the GNU Lesser General
-Public License; see Hamlib-COPYING.txt. Their source code is available
-from https://github.com/Hamlib/Hamlib and https://github.com/libusb/libusb.
+Public License, version 2 or any later version, and libhamlib and libusb
+under the GNU Lesser General Public License; see Hamlib-COPYING.txt.
+Their source code is available from https://github.com/Hamlib/Hamlib
+(each version's source is on its release page) and
+https://github.com/libusb/libusb.
+
+With thanks to the Hamlib project and its contributors:
+https://hamlib.github.io/
 EOF

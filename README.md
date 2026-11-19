@@ -911,3 +911,9 @@ Nothing else is left behind: the radio helper (rigctld) closes with the app.
 
 Solid Copy is licensed under the GNU General Public License, version 3
 (GPL-3.0). The full text is in the LICENSE file.
+
+Solid Copy talks to radios through Hamlib's rigctld, which is bundled
+inside the app. Thank you to the Hamlib project and its contributors:
+https://hamlib.github.io/ (source code at
+https://github.com/Hamlib/Hamlib). docs/CREDITS.md lists everything
+Solid Copy includes and its licence.
