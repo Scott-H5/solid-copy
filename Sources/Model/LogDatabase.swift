@@ -52,7 +52,7 @@ final class LogDatabase {
         CREATE INDEX qso_by_time ON qso (qso_date, time_on);
         """,
         // 2: name, location, radio, awards, QSL, contest and my-station
-        // fields, matching what MacLoggerDX logs hold (2026-11-14).
+        // fields, matching what SQL log files hold (2026-11-14).
         addColumns([
             "name", "email", "web", "band", "mode", "submode",
             "freq", "band_rx", "freq_rx", "tx_pwr", "sat_name", "qth",
@@ -65,7 +65,7 @@ final class LogDatabase {
             "my_sig", "my_sig_info",
         ]),
         // 3: end time, my state and county, LoTW and QRZ Logbook status,
-        // and MacLoggerDX's own fields, for the MacLoggerDX import
+        // and the SQL log format's own fields, for the SQL log import
         // (2026-11-14).
         addColumns([
             "qso_date_off", "time_off", "my_state", "my_cnty",
@@ -76,7 +76,7 @@ final class LogDatabase {
         // 4: FISTS (official ADIF fields), and LICW and CWops numbers
         // (Solid Copy's own fields, as ADIF has none) (2026-11-14).
         addColumns(["fists", "fists_cc", "app_solidcopy_licw", "app_solidcopy_cwops"]),
-        // 5: MacLoggerDX's own fields taken out again (2026-11-15). Checked
+        // 5: The SQL log format's own fields taken out again (2026-11-15). Checked
         // against the author's log: its QSL text was a bulk mark ("CardC" with
         // one date on every contact) plus what's already in the LoTW and
         // QRZ Logbook fields; extra value 3 only repeated the state, and 4
@@ -91,7 +91,7 @@ final class LogDatabase {
         // message, LoTW and eQSL sent and received, and QRZ Logbook
         // confirmations (ADIF 3.1.6 names) (2026-11-16). Step 5 was wrong
         // about "CardC": those are real paper cards (the author, 16 November),
-        // now imported as cards received (MacLoggerDXImport.swift). Its
+        // now imported as cards received (SQLLogImport.swift). Its
         // dropped column was never needed: the import reads the original.
         addColumns([
             "qslsdate", "qsl_sent_via", "qslrdate", "qsl_rcvd_via", "qslmsg_rcvd",

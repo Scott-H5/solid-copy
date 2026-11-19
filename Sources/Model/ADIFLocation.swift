@@ -3,7 +3,7 @@
 // Converts latitude and longitude between the two ways they're written.
 //
 // Solid Copy keeps them as decimal degrees ("43.604166", "-116.375"), which
-// is what MacLoggerDX stores and what maps and distance sums use. ADIF
+// is what SQL log files store and what maps and distance sums use. ADIF
 // writes them as a hemisphere letter, three-digit degrees and minutes:
 // "N043 36.250" and "W116 22.500".
 

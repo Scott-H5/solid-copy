@@ -3,7 +3,7 @@
 // The one place that reads a log file from another program. It looks at
 // the file to see what it is, and hands it to the right reader:
 //   - an SQLite database (it starts with "SQLite format 3") is read as a
-//     MacLoggerDX log (MacLoggerDXImport.swift);
+//     log file in the SQL format (SQLLogImport.swift);
 //   - XML with an <ADX> element is read as ADX (ADXImport.swift). It's
 //     checked before ADIF, since an ADX file can mention ADIF's tags;
 //   - text with ADIF fields is read as ADIF (ADIFImport.swift).
@@ -35,7 +35,7 @@ enum LogImport {
         let data = try Data(contentsOf: url, options: .mappedIfSafe)
 
         if data.starts(with: Array("SQLite format 3\u{0}".utf8)) {
-            let log = try MacLoggerDXImport.read(from: url)
+            let log = try SQLLogImport.read(from: url)
             return Result(format: "SQL log file", contacts: log.contacts, unreadable: log.unreadable,
                           repeated: repeats(in: log.contacts), leftOut: [])
         }

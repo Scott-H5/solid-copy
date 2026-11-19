@@ -36,7 +36,7 @@ MainActor.assumeIsolated {
   check(tv.numberOfRows == 3 && table.callFilter == nil, "showing everything again")
 
   // Deleting several at once, then Undo and Redo. Two of them are exact
-  // repeats (same call and time), like some MacLoggerDX entries.
+  // repeats (same call and time), like some imported entries.
   let repeatTime = Date(timeIntervalSince1970: 1794667000)
   try! book.add(QSO(call: "VE3XYZ", timeOn: repeatTime))
   try! book.add(QSO(call: "VE3XYZ", timeOn: repeatTime))

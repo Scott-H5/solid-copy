@@ -1,13 +1,13 @@
-// MacLoggerDXImport.swift
+// SQLLogImport.swift
 //
-// Reads a MacLoggerDX log and turns each row into a Solid Copy contact.
+// Reads a log file in the SQL format (.sql) and turns each row into a
+// Solid Copy contact.
 //
-// MacLoggerDX keeps its log in an SQLite file (MacLoggerDX.sql, usually in
-// ~/Documents/MLDX_Logs), with one table, "qso_table_v008" in the version
-// this was written against. The file is opened strictly read-only (see
+// The file is an SQLite database, named .sql, with one table,
+// "qso_table_v008" in the version this was written against. The file is opened strictly read-only (see
 // Database.init(readOnlyURL:)), so the original is never changed.
 //
-// How MacLoggerDX stores things, and what each becomes (worked out from
+// How the format stores things, and what each becomes (worked out from
 // the author's own log, 2026-11-14):
 //   - qso_start and qso_done are Unix time (seconds since 1 January 1970,
 //     UTC). They become the contact's time, and End date and End time.
@@ -28,10 +28,10 @@
 //       "QRZLogbook:date"        QRZ Logbook confirmed, and its date
 //       "CardC:date" received    a paper card received, and its date
 //       "Uploaded to (or Updated in) QRZ Logbook date"  uploaded there
-//     "CardC" is a card MacLoggerDX was told came in. In the author's log it's
+//     "CardC" is a card the logger was told came in. In the author's log it's
 //     the old paper cards he and his wife entered by hand on 17 December
 //     2025 (an earlier reading took it for a bulk mark: it isn't, as the
-//     contacts without cards from the same years show). MacLoggerDX puts
+//     contacts without cards from the same years show). The format puts
 //     the same "CardC" in qsl_sent too, which says nothing about a card
 //     going out, so it isn't taken as one. A bare date at the start of
 //     qsl_received repeats the first confirmation's, so it's skipped.
@@ -45,7 +45,7 @@
 
 import Foundation
 
-enum MacLoggerDXImport {
+enum SQLLogImport {
 
     struct Result {
         // The contacts read, oldest first.
@@ -54,7 +54,7 @@ enum MacLoggerDXImport {
         var unreadable: Int
     }
 
-    // Reads every contact in a MacLoggerDX log file.
+    // Reads every contact in an SQL log file.
     static func read(from url: URL) throws -> Result {
         let database = try Database(readOnlyURL: url)
 
@@ -81,7 +81,7 @@ enum MacLoggerDXImport {
         return Result(contacts: contacts, unreadable: unreadable)
     }
 
-    // Turns one MacLoggerDX row into a contact, or nil if it has no
+    // Turns one row into a contact, or nil if it has no
     // callsign or start time.
     static func contact(from row: [String: String]) -> QSO? {
         func text(_ column: String) -> String {
@@ -97,7 +97,7 @@ enum MacLoggerDXImport {
 
         let call = Callsign.normalized(text("call"))
         guard !call.isEmpty, let start = Double(text("qso_start")), start > 0 else { return nil }
-        // Whole seconds only. A few MacLoggerDX times carry a fraction of a
+        // Whole seconds only. A few of the file's times carry a fraction of a
         // second, which ADIF can't hold; dropping it means a contact's time
         // is the same however it arrives (directly, or through ADIF).
         var qso = QSO(call: call, timeOn: Date(timeIntervalSince1970: start.rounded(.down)))
@@ -214,7 +214,7 @@ enum MacLoggerDXImport {
         return text[match].filter(\.isNumber)
     }
 
-    // The date after "Service:" in MacLoggerDX's QSL text, such as
+    // The date after "Service:" in the file's QSL text, such as
     // "LoTW:20220423", or nil if that service isn't mentioned.
     static func servicePart(_ service: String, in text: String) -> String? {
         for part in text.components(separatedBy: ",") {

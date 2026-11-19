@@ -14,7 +14,7 @@ extension AppDelegate {
 
     // MARK: - Import
 
-    // File > Import…: pick an ADIF or ADX file or a MacLoggerDX log and add its
+    // File > Import…: pick an ADIF or ADX file or an SQL log file and add its
     // contacts. The file is only read, never changed. The log is backed up
     // first, contacts already in the log are skipped, and Edit > Undo takes
     // the whole import back out.

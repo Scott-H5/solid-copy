@@ -5,7 +5,7 @@
 //
 // This one list drives everything: the log file's columns, the details
 // panel, the Edit Contact sheet, the log table's columns, and (soon) ADIF
-// import and export and the MacLoggerDX import. To add a field, add it
+// import and export and the SQL log import. To add a field, add it
 // here, and add its column to the log file (a new entry in
 // LogDatabase.migrations).
 //

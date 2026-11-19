@@ -401,8 +401,8 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
             qso["band"] = band
         }
         // No band at all: most likely the radio dropped without your
-        // noticing (the author's VE6AAA, December 2025, logged while MacLoggerDX
-        // had the radio). LoTW won't take a contact without one, and
+        // noticing (the author's VE6AAA, December 2025, logged while another
+        // logger had the radio). LoTW won't take a contact without one, and
         // awards need it. Warn once; Return again logs it anyway.
         if qso["band"].isEmpty, noBandWarnedFor != call {
             noBandWarnedFor = call

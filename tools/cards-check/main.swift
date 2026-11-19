@@ -11,7 +11,7 @@
 //   - your electronic card (ElectronicCard.swift): what it says, in what
 //     order, that the PDF's text reads back whole and in that order,
 //     the picture, a card too full for its size, and the Card sent mark;
-//   - with the author's card folder and MacLoggerDX log (both only read): how
+//   - with the author's card folder and SQL log file (both only read): how
 //     many attach, which don't, and why.
 //
 // Run it with:  bash tools/check-cards.sh
@@ -204,7 +204,7 @@ MainActor.assumeIsolated {
 
     // the author's own cards and log, if they're here.
     guard fm.fileExists(atPath: realCards.path), fm.fileExists(atPath: realLog.path) else {
-        return print("     (No card folder or MacLoggerDX log here: the real-cards checks were skipped.)")
+        return print("     (No card folder or SQL log file here: the real-cards checks were skipped.)")
     }
     let imported = try! LogImport.read(from: realLog).contacts
     let realFiles = try! fm.contentsOfDirectory(at: realCards, includingPropertiesForKeys: [.contentModificationDateKey],

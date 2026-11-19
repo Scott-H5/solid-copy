@@ -1,6 +1,6 @@
 // tools/import-export-check/main.swift
 //
-// Checks importing and exporting, using a real MacLoggerDX log:
+// Checks importing and exporting, using a real log file in the SQL format:
 //   1. imports it into a throwaway Solid Copy log (the original is only
 //      read) and reports how many contacts have each field;
 //   2. exports those contacts as ADIF, imports that ADIF into a second
@@ -12,7 +12,7 @@
 //      field Solid Copy doesn't have, hostile files, and the CSV
 //      export's quoting.
 //
-// Run it with:  bash tools/check-import-export.sh [path to MacLoggerDX.sql]
+// Run it with:  bash tools/check-import-export.sh [path to a .sql log]
 
 import Foundation
 
@@ -24,24 +24,26 @@ MainActor.assumeIsolated {
         try Logbook(database: LogDatabase(fileURL: work.appendingPathComponent(name)))
     }
     do {
-        // 1. MacLoggerDX.
+        // 1. The SQL log file.
         let before = try FileManager.default.attributesOfItem(atPath: source.path)[.modificationDate] as? Date
         let result = try LogImport.read(from: source)
         check(result.format == "SQL log file", "recognised as an SQL log file")
         print("     \(result.contacts.count) contacts; \(result.unreadable) unreadable; repeated: \(result.repeated.joined(separator: "; "))")
-        let logbook = try freshLog("FromMLDX.sqlite")
+        let logbook = try freshLog("FromSQL.sqlite")
         let first = try logbook.importContacts(result.contacts)
         check(first.added.count == result.contacts.count, "imports all \(first.added.count)")
         check(try logbook.importContacts(result.contacts).added.isEmpty, "importing again adds nothing")
         let after = try FileManager.default.attributesOfItem(atPath: source.path)[.modificationDate] as? Date
-        check(before == after, "the MacLoggerDX file wasn't changed")
-        // QSLs: cards, LoTW and QRZ Logbook, from MacLoggerDX's QSL text.
+        check(before == after, "the SQL log file wasn't changed")
+        // QSLs: cards, LoTW and QRZ Logbook, from the file's QSL text.
         // (Counts are for the author's log; another log just reports them.)
         let imported = logbook.contacts
         func count(_ field: String) -> Int { imported.filter { $0[field] == "Y" }.count }
         let qsls = "cards \(count("qsl_rcvd")), LoTW \(count("lotw_qsl_rcvd")), QRZ confirmed "
             + "\(count("qrzcom_qso_download_status")), QRZ uploaded \(count("qrzcom_qso_upload_status"))"
-        if source.path.hasSuffix("MLDX_Logs/MacLoggerDX.sql") {
+        // SOLID_COPY_AUTHOR_LOG=1 (tools/checks.local) says the file is the
+        // author's, whose counts are known.
+        if ProcessInfo.processInfo.environment["SOLID_COPY_AUTHOR_LOG"] == "1" {
             check(qsls == "cards 85, LoTW 11, QRZ confirmed 5, QRZ uploaded 71", "QSLs kept: \(qsls)")
             check(imported.allSatisfy { $0["qsl_rcvd"] != "Y" || $0["qslrdate"] == "20251217" }
                   && imported.allSatisfy { $0["qsl_sent"].isEmpty }, "cards dated when entered; none taken as sent")
@@ -72,7 +74,7 @@ MainActor.assumeIsolated {
                 }
             }
             differences.prefix(10).forEach { print("     " + $0) }
-            check(differences.isEmpty, "every field of every contact survives MacLoggerDX → \(name) → Solid Copy")
+            check(differences.isEmpty, "every field of every contact survives SQL log → \(name) → Solid Copy")
         }
         try roundTrip(.adif, "ADIF")
         // the author's log has no Solid Copy APP fields or multi-line text worth

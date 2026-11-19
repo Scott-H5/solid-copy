@@ -47,7 +47,7 @@ each file does and why, and has recipes for common changes.
     follow the same rules. Refuses a DOCTYPE (how hostile XML hides
     entity bombs) and any file that isn't valid XML, rather than
     importing half of it.
-  - `MacLoggerDXImport.swift`: reads a log file in the SQL format
+  - `SQLLogImport.swift`: reads a log file in the SQL format
     (read-only) and turns each row into a contact. The comments at the
     top list how every column is mapped, and why.
 - `Sources/Export`

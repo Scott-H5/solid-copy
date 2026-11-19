@@ -4,3 +4,5 @@ SolidCopy.xcodeproj/
 # Your Apple Developer team ID, read by build.sh.
 team.txt
 .DS_Store
+# Your own paths for the checks (tools/checks.local), never committed.
+tools/checks.local

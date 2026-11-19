@@ -6,7 +6,7 @@
 //
 // Why SQLite? It keeps the whole log in one file, it's very reliable (a
 // contact written is a contact kept, even if the Mac loses power), and it's
-// the same kind of file MacLoggerDX uses. Why no add-on library? SQLite's
+// the same kind of file other loggers use. Why no add-on library? SQLite's
 // own interface is enough for what Solid Copy needs, and it means one less
 // thing to keep up to date.
 //
@@ -38,7 +38,7 @@ final class Database {
         try execute("PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL;")
     }
 
-    // Opens someone else's database (such as a MacLoggerDX log) strictly
+    // Opens someone else's database (such as an SQL log file) strictly
     // for reading. "immutable" tells SQLite the file won't change while
     // it's open, so it never writes anything, not even its usual side
     // files (-wal, -journal). The original is never touched.

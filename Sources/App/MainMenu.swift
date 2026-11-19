@@ -72,7 +72,7 @@ enum MainMenu {
         menu.addItem(withTitle: "Show Log in Finder", action: #selector(AppDelegate.showLogInFinder(_:)),
                      keyEquivalent: "").target = appDelegate
         menu.addItem(.separator())
-        // Import… reads ADIF and ADX files and MacLoggerDX logs (it works
+        // Import… reads ADIF and ADX files and SQL log files (it works
         // out which). Shift-Command-I, to pair with Export's Shift-Command-E
         // (the author, 17 November 2026); Command-I is Show Last Contact and
         // Option-Command-I Show Details.
