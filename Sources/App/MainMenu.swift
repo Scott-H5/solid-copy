@@ -24,6 +24,7 @@ enum MainMenu {
         menuBar.addItem(submenu: appDelegate.cwMenu)
         menuBar.addItem(submenu: speechMenu(logEntry: logEntry, appDelegate: appDelegate))
         menuBar.addItem(submenu: windowMenu(appDelegate: appDelegate))
+        menuBar.addItem(submenu: helpMenu(appDelegate: appDelegate))
         return menuBar
     }
 
@@ -320,6 +321,21 @@ enum MainMenu {
         // macOS lists the open windows (Solid Copy, Settings) after these.
         menu.addItem(.separator())
         NSApp.windowsMenu = menu
+        return menu
+    }
+
+    // Help: the Read Me, which is inside the app, so it opens with no
+    // internet (in the field, say), and the project's page on GitHub
+    // for the latest version and downloads. Being NSApp.helpMenu, macOS
+    // adds its Search field at the top, which finds menu items too.
+    private static func helpMenu(appDelegate: AppDelegate) -> NSMenu {
+        let menu = NSMenu(title: "Help")
+        // Command-? (Shift-Command-slash), the Mac's usual Help shortcut.
+        menu.addItem(withTitle: "Solid Copy Help", action: #selector(AppDelegate.showHelp(_:)),
+                     keyEquivalent: "?").target = appDelegate
+        menu.addItem(withTitle: "Solid Copy on GitHub", action: #selector(AppDelegate.showWebsite(_:)),
+                     keyEquivalent: "").target = appDelegate
+        NSApp.helpMenu = menu
         return menu
     }
 }

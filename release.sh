@@ -4,7 +4,9 @@
 # Makes the download: a Release build of Solid Copy, signed with your
 # Developer ID, sent to Apple to be notarized (checked for malware, so
 # people can open it without warnings), then packed as a zip with a
-# checksum in build/release/. It doesn't upload anything; you publish the
+# checksum in build/release/. The zip holds one folder, "Solid Copy
+# <version>", with the app and "Solid Copy Read Me.html" side by side,
+# so the Read Me is the first thing people find when they unzip it. It doesn't upload anything; you publish the
 # zip yourself, on GitHub.
 #
 # Before the first run, once:
@@ -36,6 +38,16 @@ if ! xcrun notarytool history --keychain-profile "$PROFILE" >/dev/null 2>&1; the
   echo "No notary credentials named \"$PROFILE\". See the notes at the top of release.sh." >&2
   exit 1
 fi
+
+# The Read Me, fresh (it's also copied into the app, for Help > Solid
+# Copy Help). It's always made from the public repo's README.md, beside
+# this folder in ~/dev/solid-copy-public when you release from the
+# private one: the private README has personal details (a town) that
+# don't belong in a download. Run from the public repo, that path is
+# its own README.
+README_SOURCE="../solid-copy-public/README.md"
+[ -f "$README_SOURCE" ] || README_SOURCE="README.md"
+bash tools/make-readme-html.sh "$README_SOURCE"
 
 # A clean Release build, signed by hand with the Developer ID (the
 # project's own settings are for development builds).
@@ -71,11 +83,17 @@ if ! grep -q "status: Accepted" <<<"$RESULT"; then
   exit 1
 fi
 
-# Attach the notary ticket to the app, so it opens offline, then pack again.
+# Attach the notary ticket to the app, so it opens offline, then pack
+# the download: the app and the Read Me in one folder. (Only the app
+# needs notarizing; the Read Me is a document.)
 xcrun stapler staple "$APP"
 spctl --assess --type execute --verbose=2 "$APP"
 rm -f "$ZIP"
-ditto -c -k --keepParent "$APP" "$ZIP"
+FOLDER="$OUT/Solid Copy $VERSION"
+mkdir -p "$FOLDER"
+ditto "$APP" "$FOLDER/Solid Copy.app"
+cp "macOS/Solid Copy Read Me.html" "$FOLDER/"
+ditto -c -k --keepParent "$FOLDER" "$ZIP"
 shasum -a 256 "$ZIP" > "$ZIP.sha256"
 
 echo

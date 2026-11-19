@@ -10,7 +10,22 @@ title.
 
 Early. The window opens in the Callsign field, and you can log
 contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
-The log is saved as you go and backed up each time the app opens. See
+The log is saved as you go and backed up each time the app opens.
+
+## Installing
+
+Download the zip from the latest release at
+https://github.com/Scott-H5/solid-copy/releases and open it. You get a
+folder with two things in it: **Solid Copy.app** and this Read Me
+(**Solid Copy Read Me.html**). Drag Solid Copy.app to your Applications
+folder, then open it. It's signed and notarized, so macOS opens it
+without warnings. It needs macOS 14 (Sonoma) or later.
+
+This Read Me is also inside the app: **Help > Solid Copy Help**
+(Command-?) opens it in your web browser, with no internet needed, so
+it's there in the field too. **Help > Solid Copy on GitHub** opens the
+project's page, with the latest version. In the browser, VO-Command-H
+moves from heading to heading.
 
 ## First setup
 
@@ -880,7 +895,7 @@ bash ~/dev/solid-copy/audit.sh
 
 ## Documents
 
-- - [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
+- [docs/ACCESSIBILITY-CONTRACT.md](docs/ACCESSIBILITY-CONTRACT.md): the
   rules for focus and speech the app must keep
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): a guide to the code for
   beginners

@@ -502,6 +502,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         settingsWindow?.show()
     }
 
+    // Help > Solid Copy Help (Command-?): the Read Me inside the app
+    // (made from README.md by tools/make-readme-html.sh), in your web
+    // browser, where VoiceOver can move by heading. It's in the app, so
+    // it needs no internet.
+    @objc func showHelp(_ sender: Any?) {
+        guard let url = Bundle.main.url(forResource: "Solid Copy Read Me", withExtension: "html") else {
+            NSSound.beep()
+            return Speaker.announce("The Read Me is missing from this copy of Solid Copy. Help > Solid Copy on "
+                                    + "GitHub has it online.")
+        }
+        if !NSWorkspace.shared.open(url) {
+            NSSound.beep()
+            Speaker.announce("The Read Me couldn't be opened. Is a web browser set as the default?")
+        }
+    }
+
+    // Help > Solid Copy on GitHub: the project's page, with the latest
+    // Read Me and downloads.
+    @objc func showWebsite(_ sender: Any?) {
+        NSWorkspace.shared.open(URL(string: "https://github.com/Scott-H5/solid-copy")!)
+    }
+
     // File > Show Log in Finder: opens the folder with the log file and its
     // Backups folder, with the log file selected.
     @objc func showLogInFinder(_ sender: Any?) {
