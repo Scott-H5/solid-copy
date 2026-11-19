@@ -27,7 +27,7 @@ MainActor.assumeIsolated {
         // 1. MacLoggerDX.
         let before = try FileManager.default.attributesOfItem(atPath: source.path)[.modificationDate] as? Date
         let result = try LogImport.read(from: source)
-        check(result.format == "MacLoggerDX log", "recognised as a MacLoggerDX log")
+        check(result.format == "SQL log file", "recognised as an SQL log file")
         print("     \(result.contacts.count) contacts; \(result.unreadable) unreadable; repeated: \(result.repeated.joined(separator: "; "))")
         let logbook = try freshLog("FromMLDX.sqlite")
         let first = try logbook.importContacts(result.contacts)

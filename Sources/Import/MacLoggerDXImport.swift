@@ -63,7 +63,7 @@ enum MacLoggerDXImport {
         let tables = try database.query(
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'qso_table_v%' ORDER BY name DESC")
         guard let table = tables.first?["name"] else {
-            throw DatabaseError(message: "This doesn't look like a MacLoggerDX log: it has no contacts table.")
+            throw DatabaseError(message: "This .sql file isn't a log Solid Copy can read: it has no contacts table.")
         }
 
         var contacts: [QSO] = []

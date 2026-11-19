@@ -36,7 +36,7 @@ enum LogImport {
 
         if data.starts(with: Array("SQLite format 3\u{0}".utf8)) {
             let log = try MacLoggerDXImport.read(from: url)
-            return Result(format: "MacLoggerDX log", contacts: log.contacts, unreadable: log.unreadable,
+            return Result(format: "SQL log file", contacts: log.contacts, unreadable: log.unreadable,
                           repeated: repeats(in: log.contacts), leftOut: [])
         }
         if ADXImport.looksLikeADX(data) {
@@ -52,7 +52,7 @@ enum LogImport {
                           repeated: repeats(in: contacts), leftOut: log.leftOut)
         }
         throw DatabaseError(message: "Solid Copy can import ADIF files (.adi or .adif), ADX files (.adx) and "
-            + "MacLoggerDX logs (.sql). This file doesn't look like any of them.")
+            + "log files in the SQL format (.sql). This file doesn't look like any of them.")
     }
 
     // Contacts with exactly the same call and time (to the second) as an

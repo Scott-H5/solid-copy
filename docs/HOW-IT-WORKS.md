@@ -47,9 +47,9 @@ each file does and why, and has recipes for common changes.
     follow the same rules. Refuses a DOCTYPE (how hostile XML hides
     entity bombs) and any file that isn't valid XML, rather than
     importing half of it.
-  - `MacLoggerDXImport.swift`: reads a MacLoggerDX log (read-only) and
-    turns each row into a contact. The comments at the top list how
-    every MacLoggerDX column is mapped, and why.
+  - `MacLoggerDXImport.swift`: reads a log file in the SQL format
+    (read-only) and turns each row into a contact. The comments at the
+    top list how every column is mapped, and why.
 - `Sources/Export`
   - `LogExport.swift`: writes ADIF, ADX and CSV. ADIF and ADX share
     one list of a contact's values (`values`), so they can't drift apart. Add new formats to
@@ -144,7 +144,7 @@ each file does and why, and has recipes for common changes.
   searched or shown.
 - `tools/check-lookups.sh`: checks the lookup code with sample QRZ and
   callook.info replies (add `--live` to ask callook.info about W1AW).
-- `tools/check-import-export.sh`: imports your MacLoggerDX log into a
+- `tools/check-import-export.sh`: imports your SQL log file into a
   throwaway log, exports it as ADIF and as ADX, imports each again, and
   checks every field of every contact comes back the same. It also feeds
   both readers damaged and hostile files.

@@ -22,8 +22,8 @@ extension AppDelegate {
         guard let window, window.attachedSheet == nil else { return }
         let panel = NSOpenPanel()
         panel.title = "Import"
-        panel.message = "Choose an ADIF file (.adi or .adif), an ADX file (.adx) or a MacLoggerDX log "
-            + "(MacLoggerDX.sql)."
+        panel.message = "Choose an ADIF file (.adi or .adif), an ADX file (.adx) or a log file in "
+            + "the SQL format (.sql)."
         panel.prompt = "Import"
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
