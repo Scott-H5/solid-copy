@@ -35,8 +35,9 @@ new one, band or mode</li>
 messages through a WinKeyer</li>
 <li>tracks QSLs and parks, shows spots, and makes an electronic QSL card
 you can send by email</li>
-<li>keeps separate logs, imports and exports ADIF, ADX, CSV and
-MacLoggerDX logs, and backs up to a folder you choose</li>
+<li>keeps separate logs, imports ADIF, ADX and log files in the SQL
+format (.sql), exports ADIF, ADX and CSV, and backs up to a folder
+you choose</li>
 </ul>
 <h2 id="installing">Installing</h2>
 <p>Download the zip from the latest release at
@@ -684,7 +685,7 @@ narrow the log. Escape shows the whole log again.</li>
 <p>A mark on contacts that all have it already takes it off, and Command-Z
 undoes any of them. Select several contacts (Shift-Up, Shift-Down) to
 mark them all at once.</p>
-<p>The MacLoggerDX import keeps cards received ("CardC"), LoTW and QRZ
+<p>Importing a log file in the SQL format keeps cards received ("CardC"), LoTW and QRZ
 Logbook confirmations, and QRZ Logbook uploads.</p>
 <h3 id="scanned-cards">Scanned cards</h3>
 <p><strong>QSL &gt; Attach Cards from a Folder…</strong> takes a folder of scanned cards
@@ -1042,8 +1043,7 @@ quit is said the next time you open Solid Copy).</p>
 the folder File &gt; Show Log in Finder opens, renaming it Logbook.sqlite.</p>
 <h2 id="importing-and-exporting">Importing and exporting</h2>
 <p><strong>File &gt; Import…</strong> (Shift-Command-I) reads ADIF files (.adi, .adif), ADX files (.adx, ADIF
-written as XML) and MacLoggerDX logs
-(<code>MacLoggerDX.sql</code>, usually in <code>Documents/MLDX_Logs</code>). It works out which
+written as XML) and log files in the SQL format (.sql). It works out which
 from the file itself. The file is only read, never changed. Solid Copy
 backs up its own log first, skips contacts it already has, and Edit &gt;
 Undo takes the import back out.</p>
@@ -1062,10 +1062,9 @@ of them touch your Solid Copy log.</p>
 <li>
 <code>tools/check-log-database.sh</code>: the log file</li>
 <li>
-<code>tools/check-import-export.sh</code>: ADIF, ADX, CSV and MacLoggerDX import
-and export, against a MacLoggerDX log you have (only read, never
-changed). Give its path, or it looks in Documents/Amateur
-Radio/MLDX_Logs.</li>
+<code>tools/check-import-export.sh</code>: ADIF, ADX, CSV and SQL log file
+import and export, against a log file in the SQL format that you
+have (only read, never changed). Give its path.</li>
 <li>
 <code>tools/check-lookups.sh</code>: callsign lookups (add <code>--live</code> to also try
 callook.info)</li>

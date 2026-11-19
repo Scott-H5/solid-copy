@@ -21,8 +21,9 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   messages through a WinKeyer
 - tracks QSLs and parks, shows spots, and makes an electronic QSL card
   you can send by email
-- keeps separate logs, imports and exports ADIF, ADX, CSV and
-  MacLoggerDX logs, and backs up to a folder you choose
+- keeps separate logs, imports ADIF, ADX and log files in the SQL
+  format (.sql), exports ADIF, ADX and CSV, and backs up to a folder
+  you choose
 
 ## Installing
 
@@ -440,7 +441,7 @@ A mark on contacts that all have it already takes it off, and Command-Z
 undoes any of them. Select several contacts (Shift-Up, Shift-Down) to
 mark them all at once.
 
-The MacLoggerDX import keeps cards received ("CardC"), LoTW and QRZ
+Importing a log file in the SQL format keeps cards received ("CardC"), LoTW and QRZ
 Logbook confirmations, and QRZ Logbook uploads.
 
 ### Scanned cards
@@ -804,8 +805,7 @@ the folder File > Show Log in Finder opens, renaming it Logbook.sqlite.
 ## Importing and exporting
 
 **File > Import…** (Shift-Command-I) reads ADIF files (.adi, .adif), ADX files (.adx, ADIF
-written as XML) and MacLoggerDX logs
-(`MacLoggerDX.sql`, usually in `Documents/MLDX_Logs`). It works out which
+written as XML) and log files in the SQL format (.sql). It works out which
 from the file itself. The file is only read, never changed. Solid Copy
 backs up its own log first, skips contacts it already has, and Edit >
 Undo takes the import back out.
@@ -826,10 +826,9 @@ as `bash tools/check-uploads.sh`. Every line should start with PASS. None
 of them touch your Solid Copy log.
 
 - `tools/check-log-database.sh`: the log file
-- `tools/check-import-export.sh`: ADIF, ADX, CSV and MacLoggerDX import
-  and export, against a MacLoggerDX log you have (only read, never
-  changed). Give its path, or it looks in Documents/Amateur
-  Radio/MLDX_Logs.
+- `tools/check-import-export.sh`: ADIF, ADX, CSV and SQL log file
+  import and export, against a log file in the SQL format that you
+  have (only read, never changed). Give its path.
 - `tools/check-lookups.sh`: callsign lookups (add `--live` to also try
   callook.info)
 - `tools/check-log-table.sh`: the log table
