@@ -173,6 +173,14 @@ final class RadioMonitor {
     // first time, the second, and every time after that. (The check in
     // tools/radio-check shortens these.)
     static var restartDelays: [TimeInterval] = [10, 30, 60]
+    // How long a connected radio may go without answering before it's
+    // called lost. A radio sometimes misses one read and answers the
+    // next: restarting VoiceOver with a USB braille display plugged in
+    // makes a TS-590SG miss about one second's read (watched 19 November
+    // 2026: the USB port stayed, rigctld kept it, one read timed out),
+    // and calling that "lost" then "back" is a false alarm. A radio
+    // really switched off is still said within a few seconds.
+    static var missedAnswerGrace: TimeInterval = 4
     // Without a reading for this long, look every slowEvery seconds.
     static var slowAfter: TimeInterval = 60
     static var slowEvery = 15
@@ -594,6 +602,9 @@ final class RadioMonitor {
                     notAnsweringSince = nil
                     silentRestarts += 1
                 }
+                // Still connected, as far as anyone hears, for a missed
+                // read or two (missedAnswerGrace).
+                if case .connected = state, Date().timeIntervalSince(since) < Self.missedAnswerGrace { return }
                 set(.notAnswering)
             } else {
                 notAnsweringSince = nil
