@@ -79,7 +79,7 @@ struct LogField {
         LogField(adif: "rst_sent", label: "RST sent", group: .contact),
         LogField(adif: "rst_rcvd", label: "RST received", group: .contact),
         LogField(adif: "comment", label: "Comment", group: .contact),
-        LogField(adif: "notes", label: "Notes", group: .contact, multiline: true),
+        LogField(adif: "notes", label: "QSO notes", group: .contact, multiline: true),
         // When the contact ended, in ADIF form: YYYYMMDD and HHMMSS (UTC).
         LogField(adif: "qso_date_off", label: "End date (UTC)", group: .contact),
         LogField(adif: "time_off", label: "End time (UTC)", group: .contact),
@@ -190,12 +190,16 @@ struct LogField {
     ]
 
     // Looks up a field by its ADIF name.
-    // Whether it can go on the logging form: a one-line field you'd type
-    // as you log. Not the QSL statuses and dates, which nobody knows yet
-    // when logging; syncing, the QSL menu and Edit Contact set them.
+    // Whether it can go on the logging form: a field you'd type as you
+    // log. Not the QSL statuses and dates, which nobody knows yet when
+    // logging; syncing, the QSL menu and Edit Contact set them. Multi-line
+    // fields are kept off the form, except QSO notes, which go on as one
+    // line (Edit Contact has the full box for line breaks).
     var canGoOnForm: Bool {
-        editable && !multiline && !Self.setLater.contains(adif) && !isUnnamedClubField
+        editable && (!multiline || Self.multilineOnForm.contains(adif))
+            && !Self.setLater.contains(adif) && !isUnnamedClubField
     }
+    private static let multilineOnForm: Set<String> = ["notes"]
 
     // The club membership numbers: SKCC, FISTS, LICW, CWops and your own
     // club fields. A member keeps their number, so Solid Copy fills these

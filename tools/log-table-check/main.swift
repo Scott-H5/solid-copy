@@ -147,8 +147,11 @@ MainActor.assumeIsolated {
         "hiding an item leaves it where it is too")
   check(LogField.named("name")!.canGoOnForm && !LogField.named("lotw_qsl_rcvd")!.canGoOnForm
         && !LogField.named("qslrdate")!.canGoOnForm && !LogField.named("app_solidcopy_qsl_card")!.canGoOnForm
-        && LogField.named("qsl_via")!.canGoOnForm && !LogField.named("notes")!.canGoOnForm,
+        && LogField.named("qsl_via")!.canGoOnForm && !LogField.named("address")!.canGoOnForm,
         "QSL statuses, dates and the card file can't go on the logging form; QSL via can")
+  check(LogField.named("notes")!.canGoOnForm && LogField.named("notes")!.label == "QSO notes"
+        && LogField.named("notes")!.multiline,
+        "QSO notes go on the logging form (one line there), named QSO notes; Address stays off")
   // Edit Contact's QSL menus and dates (16 November 2026).
   check(QSL.choices(for: "lotw_qsl_rcvd")?.map(\.value) == ["", "Y", "N", "R", "Q", "I", "V"]
         && QSL.choices(for: "qsl_rcvd_via")?.first?.title == "Not set"

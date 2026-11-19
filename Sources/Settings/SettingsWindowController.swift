@@ -544,8 +544,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                                               note: Self.startingNote(choice.startingValue))
             }
         }
+        // QSO notes start out not a Tab stop, so Tab keeps going through the
+        // fields you log with; click in it or use VoiceOver to reach it.
         items += candidates.filter { field in !inUse.contains { $0.adif == field.adif } }.map {
-            ChoiceListViewController.Item(id: $0.adif, title: $0.label, shown: false, tabStop: true)
+            ChoiceListViewController.Item(id: $0.adif, title: $0.label, shown: false, tabStop: $0.adif != "notes")
         }
         let list = ChoiceListViewController(items: items, listName: "Fields on the logging form, after Callsign",
                                             shownWord: "on the form", hiddenWord: "not on the form",

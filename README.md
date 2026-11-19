@@ -88,7 +88,7 @@ as you go.
 
 | Key | What it does |
 | --- | --- |
-| Tab, Shift-Tab | Move between Callsign, Name, RST sent, RST received, Comment |
+| Tab, Shift-Tab | Move between Callsign, Name, RST sent, RST received (and any other fields you add in Settings) |
 | Return | Log the contact and go back to Callsign |
 | Escape or Command-K | Clear the form |
 | Command-L | Go to Callsign |
@@ -101,7 +101,8 @@ as you go.
 | Option-Command-F | Show only contacts with the call in the form (or the selected call); Escape shows all |
 | Up, Down (in the log) | Move between contacts |
 | Return or Command-E (in the log) | Edit the selected contact |
-| Return / Command-Return / Command-S (in Edit Contact) | Save (in Notes, Return starts a new line) |
+| Return / Command-Return / Command-S (in Edit Contact) | Save (in QSO notes, Return starts a new line) |
+| Tab, Shift-Tab (on the form, with QSO notes added in Settings) | QSO notes isn't a Tab stop: click in it or reach it with VoiceOver. Return logs the contact, as in every form field |
 | Escape (in Edit Contact) | Cancel |
 | (in Edit Contact) | QSL statuses and "via" are menus in words (Yes, No, Requested ...; Bureau, Direct ...), and QSL dates are typed like 2025-12-17 |
 | Shift-Up, Shift-Down (in the log) | Select several contacts |
@@ -118,14 +119,19 @@ as you go.
 | Shift-Command-Z | Redo |
 | Escape (in the log) | Go back to Callsign |
 | Tab (in the log) or Option-Command-I | Go to the details of the selected contact |
-| Shift-Tab (in the log) | Go back to the form's Comment field |
+| Shift-Tab (in the log) | Go back to the form's last Tab stop |
 | Up, Down (in the details) | Move between fields |
 | Command-C (in the details) | Copy the selected field's value |
 | Escape, Tab or Shift-Tab (in the details) | Go back to the log |
 
 The log's columns start in the order Call, Name, Date, Time, Band, Frequency, Mode,
-RST Sent, RST Received, Country, Comment. Every other field is in the
+RST Sent, RST Received, Country, QSO notes. Every other field is in the
 details panel under the log.
+
+**QSO notes** is for your own use. It is never uploaded to LoTW, QRZ Logbook,
+Club Log or eQSL, and it is left out of exports unless you tick Include QSO
+notes. The Comment field is different: it goes out with the contact, so use
+it only for what you want the other station and the services to see.
 
 ## Operating profiles
 

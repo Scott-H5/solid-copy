@@ -182,7 +182,7 @@ extension AppDelegate {
 final class ExportOptions: NSObject {
     private weak var panel: NSSavePanel?
     private let formatMenu = NSPopUpButton()
-    private let notesBox = NSButton(checkboxWithTitle: "Include Notes", target: nil, action: nil)
+    private let notesBox = NSButton(checkboxWithTitle: "Include QSO notes", target: nil, action: nil)
 
     var format: ExportFormat { ExportFormat.allCases[max(formatMenu.indexOfSelectedItem, 0)] }
     var includeNotes: Bool { notesBox.state == .on }

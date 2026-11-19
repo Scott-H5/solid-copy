@@ -168,7 +168,6 @@ enum Settings {
         FormFieldChoice(adif: "name", tabStop: false),
         FormFieldChoice(adif: "rst_sent", tabStop: true),
         FormFieldChoice(adif: "rst_rcvd", tabStop: true),
-        FormFieldChoice(adif: "comment", tabStop: true),
     ]
 
     // The Portable form, for when the radio or the internet isn't there:
@@ -182,7 +181,6 @@ enum Settings {
         FormFieldChoice(adif: "tx_pwr", tabStop: true, startingValue: "5"),
         FormFieldChoice(adif: "rst_sent", tabStop: true),
         FormFieldChoice(adif: "rst_rcvd", tabStop: true),
-        FormFieldChoice(adif: "comment", tabStop: true),
     ]
 
     // Ready-made forms a new profile can start from (Settings > Profiles >
@@ -201,7 +199,7 @@ enum Settings {
     }
 
     static let templates: [Template] = [
-        Template(name: "Home", about: "name, reports and comment", formFields: defaultFormFields),
+        Template(name: "Home", about: "name and reports", formFields: defaultFormFields),
         Template(name: "Portable", about: "band, mode, frequency and power typed, for no radio or internet",
                  formFields: portableFormFields),
         Template(name: "POTA activation", about: "their park, for park to park", formFields: [
@@ -210,14 +208,12 @@ enum Settings {
             FormFieldChoice(adif: "rst_rcvd", tabStop: true),
             FormFieldChoice(adif: "state", tabStop: false),
             FormFieldChoice(adif: "pota_ref", tabStop: true),
-            FormFieldChoice(adif: "comment", tabStop: true),
         ]),
         Template(name: "SOTA activation", about: "their summit, for summit to summit", formFields: [
             FormFieldChoice(adif: "name", tabStop: false),
             FormFieldChoice(adif: "rst_sent", tabStop: true),
             FormFieldChoice(adif: "rst_rcvd", tabStop: true),
             FormFieldChoice(adif: "sota_ref", tabStop: true),
-            FormFieldChoice(adif: "comment", tabStop: true),
         ]),
         Template(name: "Field Day", about: "their class and section, typed as one", formFields: [
             FormFieldChoice(adif: "srx_string", tabStop: true),
@@ -328,7 +324,7 @@ enum Settings {
     // The log's columns, in order, by ID: "call", "date" and "time", or a
     // field's ADIF name.
     static let defaultLogColumns = ["call", "name", "date", "time", "band", "freq", "mode",
-                                    "rst_sent", "rst_rcvd", "country", "comment"]
+                                    "rst_sent", "rst_rcvd", "country", "notes"]
 
     static var logColumns: [String] {
         get { decoded(Key.logColumns) ?? defaultLogColumns }

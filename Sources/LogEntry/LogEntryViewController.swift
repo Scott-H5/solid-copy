@@ -1264,7 +1264,16 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         let old = logbook.contacts[index]
         var updated = old
         updated.call = call
-        for choice in formChoices { updated[choice.adif] = field(for: choice.adif).stringValue }
+        for choice in formChoices {
+            let typed = field(for: choice.adif).stringValue
+            // QSO notes with line breaks (from Edit Contact) show on one line
+            // here, so the field may not match them exactly. If you didn't
+            // change them, keep the contact's own notes rather than lose the breaks.
+            if choice.adif == "notes", typed == old.notes || typed == old.notes.replacingOccurrences(of: "\n", with: " ") {
+                continue
+            }
+            updated[choice.adif] = typed
+        }
         // The band in ADIF's terms, as when logging; one that isn't a band
         // is kept as typed rather than lost.
         for adif in ["band", "band_rx"] {

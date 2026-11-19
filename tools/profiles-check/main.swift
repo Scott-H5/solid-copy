@@ -92,7 +92,7 @@ MainActor.assumeIsolated {
     Settings.useProfile(profiles[1].id)
     // Name is on Portable's form but not a Tab stop (lookups fill it).
     check(tabOrder() == ["Callsign", "Band", "Mode", "Frequency (MHz)", "Power (watts)",
-                         "RST sent", "RST received", "Comment"], "Portable's Tab order: \(tabOrder())")
+                         "RST sent", "RST received"], "Portable's Tab order: \(tabOrder())")
     check(field("Power (watts)")?.stringValue == "5", "Power starts at 5 on Portable")
 
     // Log a contact with Portable; it gets Portable's station details.
