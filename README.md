@@ -3,12 +3,11 @@
 A ham radio logging app for the Mac, designed from the start for
 VoiceOver and the keyboard.
 
-"Solid copy" is ham shorthand for "I received everything." It's a working
-title.
+"Solid copy" is ham shorthand for "I received everything."
 
 ## Status
 
-Early. The window opens in the Callsign field, and you can log
+The window opens in the Callsign field, and you can log
 contacts with the keyboard, see UTC and local time, see them in a log table, and edit or delete them.
 The log is saved as you go and backed up each time the app opens.
 
