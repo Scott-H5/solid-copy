@@ -61,6 +61,10 @@ final class RigctlServer {
     // Told when listening fails (another program has the port, say), and
     // when it starts and stops; the app speaks and lists these.
     var onEvent: (String, Bool) -> Void = { _, _ in }
+    // Told when a program connects (true) or goes (false), with how many
+    // are connected now, so you can tell iDigi has really reached the
+    // radio.
+    var onConnection: (Bool, Int) -> Void = { _, _ in }
 
     init(radio: RigctlRadio) { self.radio = radio }
 
@@ -118,10 +122,13 @@ final class RigctlServer {
         let client = Client(connection: connection, server: self)
         connections[ObjectIdentifier(client)] = client
         client.start()
+        onConnection(true, connections.count)
     }
 
     fileprivate func closed(_ client: Client) {
-        connections[ObjectIdentifier(client)] = nil
+        // (A connection can report closing more than once; count it once.)
+        guard connections.removeValue(forKey: ObjectIdentifier(client)) != nil else { return }
+        onConnection(false, connections.count)
     }
 
     // MARK: - Answers

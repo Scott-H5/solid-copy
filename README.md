@@ -414,8 +414,10 @@ network server **127.0.0.1** and port **4532**. That's all.
   and off. They can't transmit through Solid Copy yet: PTT is refused,
   so key the radio another way (VOX, say) for now.
 - If another program, such as a rigctld, already has port 4532, Solid
-  Copy says so and doesn't share the radio. Window > Activity lists when
-  sharing starts and stops.
+  Copy says so and doesn't share the radio.
+- Solid Copy says when a program connects ("A program connected to the
+  radio through Solid Copy") and when it goes. Window > Activity lists
+  those, and when sharing starts and stops.
 
 ## Choosing the form and the columns
 

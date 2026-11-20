@@ -498,6 +498,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Activity.shared.record("Radio", "Sharing", ok: ok, latest: text)
             if !ok { Speaker.announce(text) }
         }
+        // A program connecting or going is said and listed, since nothing
+        // else shows it.
+        RigctlServer.shared.onConnection = { connected, count in
+            let text = connected
+                ? "A program connected to the radio through Solid Copy" + (count > 1 ? ", \(count) now." : ".")
+                : "A program disconnected from the radio" + (count > 0 ? ", \(count) still connected." : ".")
+            Activity.shared.record("Radio", "Sharing", ok: true, latest: text)
+            Speaker.announce(text)
+        }
         RigctlServer.shared.run(Self.sharesRadio)
     }
 

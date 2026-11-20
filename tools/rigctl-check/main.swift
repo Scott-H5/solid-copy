@@ -83,6 +83,8 @@ MainActor.assumeIsolated {
     let server = RigctlServer(radio: radio)
     var events: [(String, Bool)] = []
     server.onEvent = { events.append(($0, $1)) }
+    var connected: [Int] = []
+    server.onConnection = { _, count in connected.append(count) }
     server.run(true, port: port)
     check(wait(5) { events.contains { $0.1 } }, "the server listens on 127.0.0.1 port \(port): \(events.map(\.0))")
 
@@ -162,6 +164,8 @@ MainActor.assumeIsolated {
     check(result.out == "14074000\n", "a second program is answered while the first stays connected")
     try? otherIn.fileHandleForWriting.close()
     _ = wait(5) { !other.isRunning }
+    check(wait(3) { connected.last == 0 } && connected.contains(2),
+          "each program connecting and going is told, with the count (2 at once, then 0): \(connected.suffix(4))")
 
     // A line far too long isn't a command: the connection is closed.
     result = run("/usr/bin/nc", ["127.0.0.1", "\(port)"], input: String(repeating: "a", count: 10_000))
