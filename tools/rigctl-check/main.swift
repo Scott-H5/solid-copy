@@ -87,6 +87,8 @@ MainActor.assumeIsolated {
     server.onEvent = { events.append(($0, $1)) }
     var connected: [Int] = []
     server.onConnection = { _, count in connected.append(count) }
+    var refusals: [String] = []
+    server.onRefused = { text, _ in refusals.append(text) }
     var transmitSaid: [String] = []
     server.onTransmit = { text, speak in if speak { transmitSaid.append(text) } }
     server.run(true, port: port)
@@ -171,6 +173,13 @@ MainActor.assumeIsolated {
     _ = wait(5) { !other.isRunning }
     check(wait(3) { connected.last == 0 } && connected.contains(2),
           "each program connecting and going is told, with the count (2 at once, then 0): \(connected.suffix(4))")
+
+    // Refused and unknown commands are reported once per program and kind.
+    refusals = []
+    result = run("/usr/bin/nc", ["127.0.0.1", "\(port)"], input: "G TUNE\nG TUNE\nT 1\nT 1\nq\n")
+    check(refusals.count == 2 && refusals[0].contains("\"G TUNE\"") && refusals[0].contains("doesn't know")
+          && refusals[1] == "A program tried to transmit, but Let them transmit is off.",
+          "each refused or unknown command is reported once, with its text: \(refusals)")
 
     // A line far too long isn't a command: the connection is closed.
     result = run("/usr/bin/nc", ["127.0.0.1", "\(port)"], input: String(repeating: "a", count: 10_000))

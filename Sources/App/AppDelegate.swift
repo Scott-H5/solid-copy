@@ -520,6 +520,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Activity.shared.record("Radio", "Transmitting", ok: true, latest: text)
             if speak { Speaker.announce(text) }
         }
+        // Commands a program sent that Solid Copy refused or didn't know:
+        // listed (with the command), and a refused transmit said.
+        RigctlServer.shared.onRefused = { text, speak in
+            Activity.shared.record("Radio", "Sharing", ok: false, latest: text)
+            if speak { Speaker.announce(text) }
+        }
         RigctlServer.shared.allowTransmit = Settings.shareRadioTransmit
         RigctlServer.shared.run(Self.sharesRadio)
     }

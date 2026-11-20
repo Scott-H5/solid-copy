@@ -84,6 +84,11 @@ final class RigctlServer {
     // first transmission from a program, and every unkeying Solid Copy did
     // itself) or only list it.
     var onTransmit: (String, Bool) -> Void = { _, _ in }
+    // Told about a command Solid Copy refused or didn't know, once per
+    // program and kind of command (not every poll): what to say, and
+    // whether to speak it (a refused transmit) or only list it. For
+    // finding out what a program wants that isn't here yet.
+    var onRefused: (String, Bool) -> Void = { _, _ in }
 
     // Settings > Radio, "Let them transmit". Checked on each "T 1", so a
     // change takes effect at once, with no reconnecting; turning it off
@@ -330,6 +335,26 @@ final class RigctlServer {
         radio.receiveNow()
     }
 
+    // A refusal, put in words (see onRefused). `reply` is "RPRT -n".
+    fileprivate func refused(_ line: String, reply: String) {
+        let words = line.split(separator: " ")
+        let transmit = words.first == "T" && words.count == 2 && words[1] != "0"
+        let why: String
+        switch reply.trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "RPRT -4": why = "Solid Copy doesn't know that command"
+        case "RPRT -11": why = transmit ? "Let them transmit is off" : "Solid Copy can't do that"
+        case "RPRT -9": why = transmit ? "another program is transmitting, or the radio said no" : "the radio said no"
+        case "RPRT -5": why = "the radio isn't answering"
+        case "RPRT -1": why = "the value wasn't understood"
+        default: why = "it was refused (\(reply.trimmingCharacters(in: .whitespacesAndNewlines)))"
+        }
+        if transmit {
+            onRefused("A program tried to transmit, but \(why).", true)
+        } else {
+            onRefused("A program asked for \"\(line)\", but \(why).", false)
+        }
+    }
+
     private func change(_ command: String, _ done: @escaping @MainActor (String?) -> Void) {
         guard radio.reading != nil else { return done(Self.timedOut) }
         radio.send(command) { worked in done(worked ? Self.ok : Self.refused) }
@@ -398,6 +423,9 @@ private final class Client {
     private var lines: [String] = []
     private var busy = false
     private var closing = false
+    // Kinds of command already reported as refused (the first word, and
+    // for T its value), so a program polling one doesn't flood Activity.
+    private var reportedRefusals: Set<String> = []
 
     // A line longer than this isn't a rigctl command; the program is closed.
     private static let longestLine = 4096
@@ -474,6 +502,11 @@ private final class Client {
             }
             if !reply.isEmpty {
                 self.connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in })
+            }
+            if reply.hasPrefix("RPRT -") {
+                let words = line.split(separator: " ")
+                let kind = words.first == "T" ? words.prefix(2).joined(separator: " ") : String(words.first ?? "")
+                if self.reportedRefusals.insert(kind).inserted { self.server?.refused(line, reply: reply) }
             }
             self.next()
         }
