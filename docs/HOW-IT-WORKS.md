@@ -77,7 +77,8 @@ each file does and why, and has recipes for common changes.
   - `RigctlServer.swift`: the other way round: Solid Copy answering
     rigctld's network commands at 127.0.0.1 port 4532, so iDigi or
     WSJT-X can use the radio through the built-in driver (Settings >
-    Radio, "Share the radio with other programs"). Questions are answered
+    Radio, "Share the radio with other programs"; "Let them transmit"
+    adds PTT, with the safeguards listed in its comments). Questions are answered
     from the reading Solid Copy already has; changes go through
     RadioMonitor's queue. The comments show the protocol, recorded
     between hamlib's own rigctl and rigctld. It only knows the small

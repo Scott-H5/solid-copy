@@ -411,8 +411,21 @@ network server **127.0.0.1** and port **4532**. That's all.
   (With Hamlib NET rigctl, the rigctld you run shares the radio itself.)
 - Only programs on this Mac can connect; nothing on your network can.
 - They can tune the radio, change its mode and VFO, and turn split on
-  and off. They can't transmit through Solid Copy yet: PTT is refused,
-  so key the radio another way (VOX, say) for now.
+  and off.
+- **Let them transmit** (under it, off until you turn it on) lets them
+  key the radio too (PTT). On the TS-590 they transmit from its data
+  input, the USB audio they play; set the program's PTT method to CAT.
+  Programs already connected must reconnect to see this change. Try it
+  into a dummy load first.
+- Solid Copy keeps the radio from being left on the air. It goes back to
+  receive if the program that keyed it goes (quits, crashes, loses its
+  connection), if sharing or Let them transmit is turned off, if you
+  choose another radio, when Solid Copy quits, and after 5 minutes of
+  one transmission. Each of those is said.
+- One program transmits at a time. A program's first transmission is
+  said ("A program is transmitting through Solid Copy"); later ones
+  aren't, since FT8 keys every 15 seconds. A program saying "receive"
+  never cuts off you transmitting with your own microphone.
 - If another program, such as a rigctld, already has port 4532, Solid
   Copy says so and doesn't share the radio.
 - Solid Copy says when a program connects ("A program connected to the

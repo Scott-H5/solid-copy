@@ -401,6 +401,15 @@ enum Settings {
             NotificationCenter.default.post(name: didChange, object: nil)
         }
     }
+    // Settings > Radio, "Let them transmit": programs sharing the radio
+    // may key it (PTT), with RigctlServer's safeguards. Off until turned on.
+    static var shareRadioTransmit: Bool {
+        get { defaults.bool(forKey: "radio.share.transmit") }
+        set {
+            defaults.set(newValue, forKey: "radio.share.transmit")
+            NotificationCenter.default.post(name: didChange, object: nil)
+        }
+    }
     static var clusterEnabled: Bool {
         get { defaults.bool(forKey: "cluster.enabled") }
         set { defaults.set(newValue, forKey: "cluster.enabled") }

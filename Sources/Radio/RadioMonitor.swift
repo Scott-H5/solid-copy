@@ -354,7 +354,11 @@ final class RadioMonitor {
     // again, so they're up to date when `done` says what changed.
     func change(_ commands: [String], done: @escaping @MainActor (RadioReading?, String?) -> Void) {
         guard let client, case .connected = state else { return done(nil, nil) }
-        let wantsStatus = !commands.allSatisfy { $0.hasPrefix("F ") || $0.hasPrefix("M ") || $0.hasPrefix("W ") }
+        // (Transmit too: keying must be quick, and nothing on the status
+        // line changes.)
+        let wantsStatus = !commands.allSatisfy {
+            $0.hasPrefix("F ") || $0.hasPrefix("M ") || $0.hasPrefix("W ") || $0.hasPrefix("T ")
+        }
         queue.async {
             let taken = try? client.setFirst(of: commands)
             let reading = taken != nil ? try? client.reading() : nil
@@ -369,6 +373,14 @@ final class RadioMonitor {
                 }
             }
         }
+    }
+
+    // Back to receive, waiting for the radio (at most a few seconds, the
+    // driver's time limits): for quitting, when there's no later to wait
+    // for (RigctlServer.unkeyNow).
+    func receiveNow() {
+        guard let client else { return }
+        queue.sync { _ = try? client.setFirst(of: ["T 0"]) }
     }
 
     // Tunes to a frequency, in hertz. The screen follows at once.

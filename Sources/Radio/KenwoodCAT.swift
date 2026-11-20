@@ -166,6 +166,20 @@ enum KenwoodCAT {
             case "VFOB": return ["FR1"]
             default: throw RadioFailure.rejected
             }
+        case ("T", 2):
+            // Transmit, only for a program sharing the radio (RigctlServer),
+            // never for Solid Copy's own keys. hamlib's values: 0 receive, 1
+            // transmit, 2 from the microphone, 3 from the data input.
+            // TS-590: TX0 sends the microphone, TX1 the data input (the USB
+            // audio a digital-mode program plays), so 1 and 3 are TX1. The
+            // KX3 and K3 have one TX. RX goes back to receive. (Not yet
+            // checked on a radio: try it into a dummy load first.)
+            switch words[1] {
+            case "0": return ["RX"]
+            case "1", "3": return [radio.isElecraft ? "TX" : "TX1"]
+            case "2": return [radio.isElecraft ? "TX" : "TX0"]
+            default: throw RadioFailure.rejected
+            }
         case ("POWER", 2):
             // Watts, sent as three digits. Rounded to the whole watt, since
             // the command takes no tenths (not yet checked on the KX3, which

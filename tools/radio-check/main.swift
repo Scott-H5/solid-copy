@@ -90,6 +90,10 @@ MainActor.assumeIsolated {
     check(kenwood590.maxWatts == 100 && elecraftKX3.maxWatts == 15, "TS-590SG 100 watts, KX3 15")
     check(sent("F 7025300", kenwood590) == ["FA00007025300"] && sent("F 7025300", kenwood590, vfoB: true) == ["FB00007025300"],
           "tuning sends eleven digits to the receiving VFO")
+    check(sent("T 1", kenwood590) == ["TX1"] && sent("T 3", kenwood590) == ["TX1"] && sent("T 2", kenwood590) == ["TX0"]
+          && sent("T 0", kenwood590) == ["RX"] && sent("T 1", elecraftKX3) == ["TX"] && sent("T 0", elecraftKX3) == ["RX"]
+          && sent("T 4", kenwood590) == nil,
+          "transmit: TS-590 TX1 from the data input (TX0 microphone), KX3 TX, RX to receive")
     check(sent("SCAN 1", kenwood590) == ["SC1"] && sent("SCAN 0", kenwood590) == ["SC0"] && sent("SCAN 2", kenwood590) == nil,
           "the radio's own band scan: SC1 up, SC0 stop")
     check(sent("W 100", kenwood590) == ["FW0100"] && sent("W 80", kenwood590) == ["FW0080"]

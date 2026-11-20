@@ -23,6 +23,8 @@ final class PretendRadio: RigctlRadio {
     var model = 2037
     var maxWatts = 100.0
     var sent: [String] = []
+    var receivedNow = 0
+    func receiveNow() { receivedNow += 1; sent.append("T 0 (waited)") }
     func send(_ command: String, done: @escaping @MainActor (Bool) -> Void) {
         sent.append(command)
         let words = command.split(separator: " ").map(String.init)
@@ -85,6 +87,8 @@ MainActor.assumeIsolated {
     server.onEvent = { events.append(($0, $1)) }
     var connected: [Int] = []
     server.onConnection = { _, count in connected.append(count) }
+    var transmitSaid: [String] = []
+    server.onTransmit = { text, speak in if speak { transmitSaid.append(text) } }
     server.run(true, port: port)
     check(wait(5) { events.contains { $0.1 } }, "the server listens on 127.0.0.1 port \(port): \(events.map(\.0))")
 
@@ -172,6 +176,89 @@ MainActor.assumeIsolated {
     check(result.out.isEmpty, "a 10,000-character line is refused (connection closed)")
     result = run("/usr/bin/nc", ["127.0.0.1", "\(port)"], input: "f\nq\n")
     check(result.out == "14074000\nRPRT 0\n", "the server still answers after that, and q says goodbye")
+
+    // Transmitting, with "Let them transmit" on.
+    check(!server.dumpState().contains("ptt_type=0x1"), "transmit off: \\dump_state offers no PTT")
+    server.allowTransmit = true
+    check(server.dumpState().contains("ptt_type=0x1"), "transmit on: \\dump_state offers PTT (RIG_PTT_RIG)")
+    let programA = ObjectIdentifier(PretendRadio.self), programB = ObjectIdentifier(RigctlServer.self)
+    radio.sent = []
+    server.answer("T 0", from: programA) { said = $0 }
+    check(said == "RPRT 0\n" && radio.sent.isEmpty,
+          "T 0 when no program keyed the radio: nothing sent (your own PTT isn't cut off)")
+    said = nil
+    server.answer("T 1", from: programA) { said = $0 }
+    check(wait(2) { said == "RPRT 0\n" } && radio.sent == ["T 1"] && server.isTransmitting,
+          "a program keys the radio: T 1 sent: \(said ?? "nil"), sent \(radio.sent), reading \(radio.reading != nil)")
+    check(transmitSaid == ["A program is transmitting through Solid Copy."], "its first transmission is said")
+    server.answer("t") { said = $0 }
+    check(said == "1\n", "t says transmitting")
+    said = nil
+    server.answer("T 1", from: programB) { said = $0 }
+    check(wait(2) { said != nil } && said == "RPRT -9\n" && radio.sent == ["T 1"],
+          "a second program can't key it while the first is transmitting")
+    said = nil
+    server.answer("T 0", from: programB) { said = $0 }
+    check(wait(2) { said == "RPRT 0\n" } && radio.sent == ["T 1", "T 0"] && !server.isTransmitting,
+          "any program's T 0 puts it back to receive")
+    said = nil
+    server.answer("T 1", from: programA) { said = $0 }
+    check(wait(2) { said != nil } && transmitSaid.count == 1, "a program's later transmissions aren't said again")
+    server.answer("T 0", from: programA) { _ in }
+    _ = wait(1) { !server.isTransmitting }
+
+    // The time limit.
+    server.transmitLimit = 0.3
+    radio.sent = []
+    server.answer("T 1", from: programA) { _ in }
+    check(wait(3) { radio.sent == ["T 1", "T 0"] } && !server.isTransmitting
+          && transmitSaid.last?.contains("Solid Copy's limit") == true,
+          "after the time limit, Solid Copy unkeys and says so: \(transmitSaid.last ?? "")")
+    server.transmitLimit = 300
+
+    // Turning Let them transmit off while transmitting unkeys.
+    radio.sent = []
+    server.answer("T 1", from: programA) { _ in }
+    _ = wait(2) { server.isTransmitting }
+    server.allowTransmit = false
+    check(wait(2) { radio.sent == ["T 1", "T 0"] } && !server.isTransmitting,
+          "Let them transmit turned off while transmitting: back to receive")
+    server.answer("T 1", from: programA) { said = $0 }
+    check(said == "RPRT -11\n", "and transmit is refused again")
+    server.allowTransmit = true
+
+    // Quitting while transmitting: back to receive, waiting for the radio.
+    server.answer("T 1", from: programA) { _ in }
+    _ = wait(2) { server.isTransmitting }
+    server.unkeyNow()
+    check(radio.receivedNow == 1 && !server.isTransmitting, "quitting while transmitting: unkeyed before Solid Copy goes")
+
+    // hamlib's rigctl keys the radio, then goes: Solid Copy unkeys.
+    radio.sent = []
+    result = run(rigctl, ["-m", "2", "-r", address, "T", "1", "t"])
+    // (rigctl may choose a VFO first, so only the transmit commands count.)
+    check(result.out.hasSuffix("1\n") && wait(3) { radio.sent.filter { $0.hasPrefix("T") } == ["T 1", "T 0"] }
+          && !server.isTransmitting
+          && transmitSaid.last?.contains("went") == true,
+          "rigctl keys the radio, then quits: back to receive, and said: \(result.out.debugDescription), sent \(radio.sent)")
+
+    // Sharing turned off while a program transmits: back to receive.
+    let holder = Process()
+    holder.executableURL = URL(fileURLWithPath: rigctl)
+    holder.arguments = ["-m", "2", "-r", address]
+    let holderIn = Pipe()
+    holder.standardInput = holderIn
+    holder.standardOutput = FileHandle.nullDevice
+    try? holder.run()
+    holderIn.fileHandleForWriting.write(Data("T 1\n".utf8))
+    radio.sent = []
+    check(wait(5) { server.isTransmitting }, "a connected program keys the radio")
+    server.run(false)
+    check(wait(3) { radio.sent.filter { $0.hasPrefix("T") } == ["T 1", "T 0"] } && !server.isTransmitting,
+          "sharing turned off while it transmits: back to receive")
+    try? holderIn.fileHandleForWriting.close()
+    _ = wait(5) { !holder.isRunning }
+    if holder.isRunning { holder.terminate() }
 
     server.run(false)
     check(wait(3) { !server.isRunning }, "turned off, it stops listening")

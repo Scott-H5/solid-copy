@@ -46,6 +46,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let netPortField = NSTextField(string: "")
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
     private let shareBox = NSButton(checkboxWithTitle: "Share the radio with other programs", target: nil, action: nil)
+    private let transmitBox = NSButton(checkboxWithTitle: "Let them transmit", target: nil, action: nil)
     private var details: NSStackView!
     private var grid: NSGridView!
 
@@ -113,14 +114,28 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             "With this on, programs that can use Hamlib NET rigctl, such as iDigi and WSJT-X, can use the "
             + "radio through Solid Copy while you log, with no rigctld to run. In the other program, choose "
             + "the radio Hamlib NET rigctl, network "
-            + "server 127.0.0.1, port 4532. They can tune the radio and change its mode, but can't transmit "
-            + "through Solid Copy yet. It works with the built-in driver; with Hamlib NET rigctl, your own "
-            + "rigctld shares the radio instead.")
+            + "server 127.0.0.1, port 4532. They can tune the radio and change its mode. It works with the "
+            + "built-in driver; with Hamlib NET rigctl, your own rigctld shares the radio instead.")
         shareNote.preferredMaxLayoutWidth = 520
         shareNote.isSelectable = true
         shareBox.setAccessibilityLinkedUIElements([shareNote])
 
-        let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote])
+        // Transmit (PTT) is its own choice, off until turned on, with its own
+        // note on the safeguards.
+        transmitBox.target = self
+        transmitBox.action = #selector(toggleTransmit(_:))
+        let transmitNote = NSTextField(wrappingLabelWithString:
+            "With this on too, those programs can key the radio through Solid Copy (on the TS-590, from "
+            + "its data input: the USB audio they play). Solid Copy puts the radio back to receive if the "
+            + "program goes, if sharing is turned off or the radio changed, when Solid Copy quits, and "
+            + "after 5 minutes of one transmission. A program's first transmission is said. Programs "
+            + "already connected must reconnect to see this change. Try it into a dummy load first.")
+        transmitNote.preferredMaxLayoutWidth = 520
+        transmitNote.isSelectable = true
+        transmitBox.setAccessibilityLinkedUIElements([transmitNote])
+
+        let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote, transmitBox,
+                                        transmitNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
@@ -132,7 +147,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
         // Tab order, top to bottom (the pop-ups and buttons only when
         // Keyboard navigation is on in System Settings).
-        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox]
+        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox]
         for (index, item) in order.enumerated() {
             item.nextKeyView = order[(index + 1) % order.count]
         }
@@ -156,8 +171,16 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     }
 
     // Shows your radios and the one in use.
+    @objc private func toggleTransmit(_ sender: NSButton) {
+        Settings.shareRadioTransmit = sender.state == .on
+        Speaker.announce(sender.state == .on
+            ? "Programs sharing the radio may transmit. Programs already connected must reconnect."
+            : "Programs sharing the radio can't transmit.")
+    }
+
     @objc private func toggleSharing(_ sender: NSButton) {
         Settings.shareRadio = sender.state == .on
+        transmitBox.isEnabled = sender.state == .on
         // (Trouble, such as another program on port 4532, is said by the
         // server itself.)
         let text = sender.state == .off ? "The radio isn't shared with other programs."
@@ -168,6 +191,8 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     func refresh() {
         shareBox.state = Settings.shareRadio ? .on : .off
+        transmitBox.state = Settings.shareRadioTransmit ? .on : .off
+        transmitBox.isEnabled = Settings.shareRadio
         let radios = Settings.radios
         let radio = Settings.currentRadio
         shownID = radio?.id

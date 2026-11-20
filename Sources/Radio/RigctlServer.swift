@@ -10,9 +10,21 @@
 // Only this Mac can connect (127.0.0.1): nothing on the network can tune
 // your radio.
 //
-// Stage 1 (now): frequency, mode, VFO and split, read and set. Transmit
-// (PTT, "T 1") is refused, so a program can't key the radio through Solid
-// Copy yet; "T 0" (stop transmitting) is accepted, since it's harmless.
+// Programs can read and set frequency, mode, VFO and split. Transmit
+// (PTT, "T 1") only when "Let them transmit" is also on (allowTransmit);
+// otherwise it's refused and nothing is sent. When it is on, these keep
+// the radio from being left transmitting:
+//   - only one program keys it at a time, and any "T 0" unkeys it;
+//   - the program that keyed it going (closing, crashing, a lost
+//     connection) unkeys it;
+//   - sharing turned off, the radio changed, or Solid Copy quitting unkeys
+//     it (at quit, waiting for the radio: unkeyNow);
+//   - after transmitLimit (5 minutes, longer than any digital-mode
+//     transmission a program makes in one go) it's unkeyed anyway, and
+//     that's said.
+// The first transmission from each program is said, so the radio never
+// goes on the air without you knowing; later ones aren't, since FT8 keys
+// every 15 seconds.
 //
 // The protocol, as hamlib 4.7's network client (netrigctl) speaks it,
 // recorded on 20 November 2026 between rigctl -m 2 and rigctld -m 1:
@@ -45,8 +57,11 @@ protocol RigctlRadio: AnyObject {
     var model: Int { get }
     // The radio's most power, in watts (for \dump_state's transmit range).
     var maxWatts: Double { get }
-    // Sends one change ("F 7074000", "M PKTUSB 0"); `done` says if it worked.
+    // Sends one change ("F 7074000", "M PKTUSB 0", "T 1"); `done` says if
+    // it worked.
     func send(_ command: String, done: @escaping @MainActor (Bool) -> Void)
+    // Back to receive now, waiting for the radio: for quitting.
+    func receiveNow()
 }
 
 @MainActor
@@ -65,6 +80,33 @@ final class RigctlServer {
     // are connected now, so you can tell iDigi has really reached the
     // radio.
     var onConnection: (Bool, Int) -> Void = { _, _ in }
+    // Told about transmitting: what to say, and whether to speak it (the
+    // first transmission from a program, and every unkeying Solid Copy did
+    // itself) or only list it.
+    var onTransmit: (String, Bool) -> Void = { _, _ in }
+
+    // Settings > Radio, "Let them transmit". Programs read it when they
+    // connect (\dump_state's ptt_type), so turning it on takes effect when
+    // they connect again; turning it off unkeys at once.
+    var allowTransmit = false {
+        didSet {
+            guard !allowTransmit else { return }
+            keying = nil
+            unkey(saying: "Transmitting stopped: other programs may no longer transmit.")
+        }
+    }
+    // The longest one transmission may last before Solid Copy unkeys.
+    var transmitLimit: TimeInterval = 300
+    // The program that keyed the radio, while it's transmitting.
+    private var keyedBy: ObjectIdentifier?
+    // The program whose "T 1" is on its way to the radio. Cleared if it
+    // goes (or sharing stops) meanwhile, so the radio is then unkeyed.
+    private var keying: ObjectIdentifier?
+    private var limitTimer: Timer?
+    // Programs whose first transmission has been said.
+    private var announced: Set<ObjectIdentifier> = []
+
+    var isTransmitting: Bool { keyedBy != nil }
 
     init(radio: RigctlRadio) { self.radio = radio }
 
@@ -96,6 +138,8 @@ final class RigctlServer {
     }
 
     private func stop() {
+        keying = nil
+        unkey(saying: "Transmitting stopped: the radio isn't shared now.")
         listener?.cancel()
         listener = nil
         listeningPort = nil
@@ -128,6 +172,11 @@ final class RigctlServer {
     fileprivate func closed(_ client: Client) {
         // (A connection can report closing more than once; count it once.)
         guard connections.removeValue(forKey: ObjectIdentifier(client)) != nil else { return }
+        announced.remove(ObjectIdentifier(client))
+        if keying == ObjectIdentifier(client) { keying = nil }
+        if keyedBy == ObjectIdentifier(client) {
+            unkey(saying: "Transmitting stopped: the program that was transmitting went.")
+        }
         onConnection(false, connections.count)
     }
 
@@ -149,9 +198,11 @@ final class RigctlServer {
         "\\set_split_mode": "X", "\\quit": "q",
     ]
 
-    // One command line's answer. `done` gets the text to send back, or nil
-    // to close the connection ("q").
-    func answer(_ line: String, done: @escaping @MainActor (String?) -> Void) {
+    // One command line's answer, from `client` (the program that sent it).
+    // `done` gets the text to send back, or nil to close the connection
+    // ("q").
+    func answer(_ line: String, from client: ObjectIdentifier? = nil,
+                done: @escaping @MainActor (String?) -> Void) {
         var words = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
         guard !words.isEmpty else { return done("") }
         if let short = Self.longNames[words[0]] { words[0] = short }
@@ -180,14 +231,15 @@ final class RigctlServer {
             guard reading != nil else { return done(Self.timedOut) }
             return done(radio.status?.split == true ? "1\nVFOB\n" : "0\nNone\n")
         case "t":
-            return done("0\n")
+            return done(isTransmitting ? "1\n" : "0\n")
         case "l":
             guard words.count == 2, words[1] == "KEYSPD" else { return done(Self.unavailable) }
             return done("\(radio.status?.keyerWPM ?? 0)\n")
         case "T":
-            // Stage 1: no transmitting through Solid Copy. Stopping is fine.
-            guard words.count == 2 else { return done(Self.invalid) }
-            return done(words[1] == "0" ? Self.ok : Self.unavailable)
+            guard words.count == 2, let value = Int(words[1]), (0...3).contains(value) else {
+                return done(Self.invalid)
+            }
+            return value == 0 ? receive(done) : transmit(value, from: client ?? ObjectIdentifier(self), done)
         case "F":
             // "F 7074000.000000": hertz, sometimes with decimals.
             guard words.count == 2, let hertz = Double(words[1]), hertz > 0, hertz < 1e10 else {
@@ -210,6 +262,72 @@ final class RigctlServer {
         default:
             return done(Self.notImplemented)
         }
+    }
+
+    // MARK: - Transmitting
+
+    private func transmit(_ value: Int, from client: ObjectIdentifier,
+                          _ done: @escaping @MainActor (String?) -> Void) {
+        guard allowTransmit else { return done(Self.unavailable) }
+        guard radio.reading != nil else { return done(Self.timedOut) }
+        // Another program is on the air: one at a time.
+        if let keyedBy, keyedBy != client { return done(Self.refused) }
+        keying = client
+        radio.send("T \(value)") { [self] worked in
+            // The program went (or sharing stopped) while the radio was
+            // being keyed: back to receive at once.
+            guard keying == client else {
+                if worked { radio.send("T 0") { _ in } }
+                return done(Self.refused)
+            }
+            keying = nil
+            guard worked else { return done(Self.refused) }
+            keyedBy = client
+            limitTimer?.invalidate()
+            let timer = Timer(timeInterval: transmitLimit, repeats: false) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let minutes = Int((self.transmitLimit / 60).rounded())
+                    self.unkey(saying: "Transmitting stopped after \(minutes) minutes, Solid Copy's limit.")
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            limitTimer = timer
+            let first = announced.insert(client).inserted
+            if first { onTransmit("A program is transmitting through Solid Copy.", true) }
+            done(Self.ok)
+        }
+    }
+
+    // "T 0". Only sent to the radio if a program keyed it here: a program
+    // saying "receive" mustn't cut off you transmitting with the
+    // microphone's own PTT.
+    private func receive(_ done: @escaping @MainActor (String?) -> Void) {
+        guard keyedBy != nil else { return done(Self.ok) }
+        keyedBy = nil
+        limitTimer?.invalidate()
+        limitTimer = nil
+        radio.send("T 0") { worked in done(worked ? Self.ok : Self.refused) }
+    }
+
+    // Solid Copy unkeys the radio itself (a safeguard), and says why.
+    private func unkey(saying why: String) {
+        guard keyedBy != nil else { return }
+        keyedBy = nil
+        limitTimer?.invalidate()
+        limitTimer = nil
+        radio.send("T 0") { _ in }
+        onTransmit(why, true)
+    }
+
+    // At quit: back to receive, waiting for the radio, since there's no
+    // later.
+    func unkeyNow() {
+        guard keyedBy != nil else { return }
+        keyedBy = nil
+        limitTimer?.invalidate()
+        limitTimer = nil
+        radio.receiveNow()
     }
 
     private func change(_ command: String, _ done: @escaping @MainActor (String?) -> Void) {
@@ -251,7 +369,9 @@ final class RigctlServer {
             "0x0", "0x0",                // levels
             "0x0", "0x0",                // parameters
             "vfo_ops=0x0",
-            "ptt_type=0x0",              // no transmit through Solid Copy (stage 1)
+            // 1 (RIG_PTT_RIG): the program may key the radio through Solid
+            // Copy; 0: it can't (Let them transmit is off).
+            "ptt_type=\(allowTransmit ? "0x1" : "0x0")",
             "targetable_vfo=0x0",
             "has_set_vfo=1", "has_get_vfo=1", "has_set_freq=1", "has_get_freq=1",
             "has_set_conf=0", "has_get_conf=0", "has_power2mW=0", "has_mW2power=0",
@@ -338,7 +458,7 @@ private final class Client {
         guard !busy, !closing, !lines.isEmpty, let server else { return }
         busy = true
         let line = lines.removeFirst()
-        server.answer(line) { [weak self] reply in
+        server.answer(line, from: ObjectIdentifier(self)) { [weak self] reply in
             guard let self else { return }
             self.busy = false
             guard let reply else {

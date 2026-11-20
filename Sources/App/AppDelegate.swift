@@ -99,7 +99,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             MainActor.assumeIsolated {
                 self?.updateTitle()
                 // The radio in use (nothing happens if it's the same).
+                // Another radio chosen while a program is transmitting:
+                // unkey the old one before letting go of it.
+                if Settings.currentRadio != RadioMonitor.shared.settingsInUse { RigctlServer.shared.unkeyNow() }
                 RadioMonitor.shared.use(Settings.currentRadio)
+                RigctlServer.shared.allowTransmit = Settings.shareRadioTransmit
                 RigctlServer.shared.run(AppDelegate.sharesRadio)
                 // The log in use remembers the profile in use (Logs.swift).
                 if let log = self?.logbook?.info { LogList.setProfile(Settings.currentProfile.id, for: log.id) }
@@ -441,6 +445,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Stops the radio check, so the radio's port is let go.
     func applicationWillTerminate(_ notification: Notification) {
+        // A program transmitting through Solid Copy: back to receive first,
+        // waiting for the radio, so it's never left on the air.
+        RigctlServer.shared.unkeyNow()
         RadioMonitor.shared.stop()
         // Host close: the WinKeyer goes back to its own settings, free for
         // Keyer Sidetone.
@@ -507,6 +514,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Activity.shared.record("Radio", "Sharing", ok: true, latest: text)
             Speaker.announce(text)
         }
+        // Transmitting: each time Solid Copy unkeys the radio itself (a
+        // safeguard), and a program's first transmission, are said.
+        RigctlServer.shared.onTransmit = { text, speak in
+            Activity.shared.record("Radio", "Transmitting", ok: true, latest: text)
+            if speak { Speaker.announce(text) }
+        }
+        RigctlServer.shared.allowTransmit = Settings.shareRadioTransmit
         RigctlServer.shared.run(Self.sharesRadio)
     }
 
