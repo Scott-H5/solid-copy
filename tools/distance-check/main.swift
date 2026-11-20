@@ -39,7 +39,7 @@ check(near(ny.km, 5570, 15) && near(ny.bearing, 51.2, 1), "New York to London: \
 let back = GreatCircle.path(from: london, to: newYork)
 check(near(back.km, ny.km, 0.001) && near(back.bearing, 288, 1.5), "and back: the same distance, a different bearing")
 let home = GreatCircle.path(myGrid: "EM10", fields: ["gridsquare": "FN31pr"])!
-check(near(home.km, 454, 5) && near(home.bearing, 53, 3), "EM10 to W1AW: \(Int(home.km)) km at \(Int(home.bearing))°")
+check(near(home.km, 2501, 5) && near(home.bearing, 53, 3), "EM10 to W1AW: \(Int(home.km)) km at \(Int(home.bearing))°")
 check(GreatCircle.path(myGrid: "", fields: ["gridsquare": "FN31pr"]) == nil
       && GreatCircle.path(myGrid: "EM10", fields: [:]) == nil, "an unknown end: no path")
 let precise = GreatCircle.path(myGrid: "EM10", fields: ["lat": "41.714", "lon": "-72.727", "gridsquare": "JO01"])!
