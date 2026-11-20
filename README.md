@@ -361,10 +361,10 @@ is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
   "lost" only after 4 seconds without one. Restarting VoiceOver with a
   USB braille display plugged in can make the radio miss a second's
   read, which before version 1.1.2 was announced as lost, then back.
-- A program such as WSJT-X can use the radio through a rigctld you run,
-  set to "Hamlib NET rigctl" at 127.0.0.1 port 4532. For a Kenwood or
-  Elecraft radio, the built-in driver holds the radio's USB port itself,
-  so a rigctld can't use that radio at the same time.
+- Other programs, such as digital-mode programs, can use the radio through Solid
+  Copy while you log: see "Sharing the radio with other programs" below.
+  The built-in driver holds the radio's USB port itself, so a rigctld
+  you run can't open that radio at the same time.
 
 ### Hamlib NET rigctl: a rigctld you run yourself
 
@@ -390,6 +390,32 @@ rigctld -m 2037 -r /dev/cu.usbserial-XXXX -s 115200 -t 4532
 
 Leave that running while you log. Hamlib's own instructions, and its
 full list of radios, are at https://hamlib.github.io/.
+
+To change from the built-in driver to a rigctld you run without
+restarting anything: choose Hamlib NET rigctl in Settings > Radio first
+(that lets go of the radio's port), then start rigctld. To go back, quit
+rigctld (Control-C) first, then choose the built-in driver.
+
+### Sharing the radio with other programs
+
+**Settings > Radio > Share the radio with other programs** lets other
+programs that can use Hamlib NET rigctl, such as digital-mode programs,
+use the radio through Solid Copy while you keep
+logging, with no rigctld to run and no switching. Solid Copy answers
+them the way hamlib's rigctld would.
+
+In the other program, choose the radio **Hamlib NET rigctl**, with the
+network server **127.0.0.1** and port **4532**. That's all.
+
+- It works while the radio in use connects through the built-in driver.
+  (With Hamlib NET rigctl, the rigctld you run shares the radio itself.)
+- Only programs on this Mac can connect; nothing on your network can.
+- They can tune the radio, change its mode and VFO, and turn split on
+  and off. They can't transmit through Solid Copy yet: PTT is refused,
+  so key the radio another way (VOX, say) for now.
+- If another program, such as a rigctld, already has port 4532, Solid
+  Copy says so and doesn't share the radio. Window > Activity lists when
+  sharing starts and stops.
 
 ## Choosing the form and the columns
 
@@ -901,6 +927,8 @@ of them touch your Solid Copy log.
 - `tools/check-log-table.sh`: the log table
 - `tools/check-profiles.sh`: operating profiles
 - `tools/check-radio.sh`: the radio
+- `tools/check-rigctl.sh`: sharing the radio with other programs, with
+  hamlib's rigctl as the other program (needs `brew install hamlib`)
 - `tools/check-parks.sh`: parks
 - `tools/check-spots.sh`: spots
 - `tools/check-cards.sh`: scanned and electronic QSL cards

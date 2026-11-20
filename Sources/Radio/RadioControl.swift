@@ -11,8 +11,8 @@
 // Also: a frequency or mode typed in the Callsign field. A callsign always
 // has both letters and a digit, so "14060", "7.0255" (numbers only) and
 // "CW", "USB" (letters only) can't be callsigns, and Return tunes the
-// radio or changes its mode instead of logging. (Contest loggers such as
-// N1MM work the same way.)
+// radio or changes its mode instead of logging. (Many contest loggers
+// work the same way.)
 
 import AppKit
 

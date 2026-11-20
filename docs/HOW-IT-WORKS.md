@@ -74,6 +74,17 @@ each file does and why, and has recipes for common changes.
     RadioControl's commands ("F 7025300", "M CW 500") into Kenwood's
     ("FA00007025300", "MD3", "FW0050"), and reads answers. Kept apart so
     `tools/radio-check` can test it with canned answers.
+  - `RigctlServer.swift`: the other way round: Solid Copy answering
+    rigctld's network commands at 127.0.0.1 port 4532, so digital-mode
+    programs can use the radio through the built-in driver (Settings >
+    Radio, "Share the radio with other programs"). Questions are answered
+    from the reading Solid Copy already has; changes go through
+    RadioMonitor's queue. The comments show the protocol, recorded
+    between hamlib's own rigctl and rigctld. It only knows the small
+    RigctlRadio interface, so `tools/check-rigctl.sh` tests it with a
+    pretend radio and hamlib's rigctl as the client.
+  - `RigctlSharing.swift`: joins the server to RadioMonitor (the real
+    RigctlRadio).
   - `RadioReading.swift`: frequency, band, mode and power in ADIF's
     terms, and in words.
   - `RadioSettings.swift`: one radio's settings, and the built-in

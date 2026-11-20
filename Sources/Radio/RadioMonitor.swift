@@ -257,6 +257,8 @@ final class RadioMonitor {
 
     // The radio's name: "Kenwood TS-590SG".
     var radioName: String { settings?.name ?? "Radio" }
+    // The radio in use's settings (the rigctl server reports its model).
+    var settingsInUse: RadioSettings? { settings }
 
     // The TS-590 has no audio peak filter (the Elecraft radios do).
     var hasPeakFilter: Bool { !(settings.map { [2031, 2037].contains($0.model) } ?? false) }

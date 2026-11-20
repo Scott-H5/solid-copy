@@ -20,6 +20,10 @@
 //     - IP address and Network port: only for Hamlib NET rigctl, with the
 //       defaults 127.0.0.1 and 4532 (rigctld's usual port).
 //     - Status: what the radio is doing now, kept up to date.
+//   - Share the radio with other programs: digital-mode programs and
+//     others that speak Hamlib NET rigctl use the radio through Solid Copy, as "Hamlib NET rigctl" at 127.0.0.1
+//     port 4532 (RigctlServer.swift), while the built-in driver is in use.
+//     Its note says how to set those programs up.
 //
 // Every change is saved at once, and Solid Copy reconnects with it.
 
@@ -41,6 +45,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let ipField = NSTextField(string: "")
     private let netPortField = NSTextField(string: "")
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
+    private let shareBox = NSButton(checkboxWithTitle: "Share the radio with other programs", target: nil, action: nil)
     private var details: NSStackView!
     private var grid: NSGridView!
 
@@ -100,18 +105,34 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             + "switched on before or after it.")
         note.preferredMaxLayoutWidth = 520
 
-        let stack = NSStackView(views: [top, buttons, details, note])
+        shareBox.target = self
+        shareBox.action = #selector(toggleSharing(_:))
+        // Instructions are a note you can read again and copy (contract
+        // rule 40), linked to the checkbox (VO-Command-J).
+        let shareNote = NSTextField(wrappingLabelWithString:
+            "With this on, other programs that can use Hamlib NET rigctl, such as digital-mode programs, can "
+            + "use the radio through Solid Copy while you log, with no rigctld to run. In the other program, "
+            + "choose the radio Hamlib NET rigctl, network "
+            + "server 127.0.0.1, port 4532. They can tune the radio and change its mode, but can't transmit "
+            + "through Solid Copy yet. It works with the built-in driver; with Hamlib NET rigctl, your own "
+            + "rigctld shares the radio instead.")
+        shareNote.preferredMaxLayoutWidth = 520
+        shareNote.isSelectable = true
+        shareBox.setAccessibilityLinkedUIElements([shareNote])
+
+        let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
         stack.setCustomSpacing(24, after: buttons)
         stack.setCustomSpacing(20, after: details)
+        stack.setCustomSpacing(20, after: note)
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         view = stack
 
         // Tab order, top to bottom (the pop-ups and buttons only when
         // Keyboard navigation is on in System Settings).
-        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1)
+        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox]
         for (index, item) in order.enumerated() {
             item.nextKeyView = order[(index + 1) % order.count]
         }
@@ -135,7 +156,18 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     }
 
     // Shows your radios and the one in use.
+    @objc private func toggleSharing(_ sender: NSButton) {
+        Settings.shareRadio = sender.state == .on
+        // (Trouble, such as another program on port 4532, is said by the
+        // server itself.)
+        let text = sender.state == .off ? "The radio isn't shared with other programs."
+            : Settings.currentRadio?.builtIn == true ? "Sharing the radio at 127.0.0.1 port 4532."
+            : "Sharing starts when the radio in use connects through the built-in driver."
+        Speaker.announce(text)
+    }
+
     func refresh() {
+        shareBox.state = Settings.shareRadio ? .on : .off
         let radios = Settings.radios
         let radio = Settings.currentRadio
         shownID = radio?.id

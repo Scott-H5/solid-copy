@@ -78,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // also the first read of the radio list, which moves radios saved
         // in profiles by an earlier version into the list.)
         RadioMonitor.shared.use(Settings.currentRadio)
+        startSharingRadio()
         fillRadioMenu()
         // POTA's park list, if you have one and it's a month old.
         ParkList.shared.updateIfStale()
@@ -99,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.updateTitle()
                 // The radio in use (nothing happens if it's the same).
                 RadioMonitor.shared.use(Settings.currentRadio)
+                RigctlServer.shared.run(AppDelegate.sharesRadio)
                 // The log in use remembers the profile in use (Logs.swift).
                 if let log = self?.logbook?.info { LogList.setProfile(Settings.currentProfile.id, for: log.id) }
                 // A new CW speed from Settings > CW.
@@ -482,6 +484,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Read Me and downloads.
     @objc func showWebsite(_ sender: Any?) {
         NSWorkspace.shared.open(URL(string: "https://github.com/Scott-H5/solid-copy")!)
+    }
+
+    // Settings > Radio, "Share the radio with other programs", with the
+    // built-in driver in use (a rigctld you run shares the radio itself).
+    static var sharesRadio: Bool { Settings.shareRadio && Settings.currentRadio?.builtIn == true }
+
+    // The rigctl server (RigctlServer.swift): started now if it's wanted,
+    // and from then on started and stopped with Settings. Trouble (another
+    // program has the port) is said; every change is in Window > Activity.
+    private func startSharingRadio() {
+        RigctlServer.shared.onEvent = { text, ok in
+            Activity.shared.record("Radio", "Sharing", ok: ok, latest: text)
+            if !ok { Speaker.announce(text) }
+        }
+        RigctlServer.shared.run(Self.sharesRadio)
     }
 
     // File > Show Log in Finder: opens the folder with the log file and its

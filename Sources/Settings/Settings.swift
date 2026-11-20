@@ -391,6 +391,16 @@ enum Settings {
     // Settings > Spots: the DX cluster, off until turned on, and its node
     // (VE7CC unless you choose another; the same as DXCluster.nodes[0],
     // written out so this file doesn't need the Spots code).
+    // Settings > Radio, "Share the radio with other programs": Solid
+    // Copy answers Hamlib NET rigctl at 127.0.0.1 port 4532 (RigctlServer)
+    // while the built-in driver is in use. Off until turned on.
+    static var shareRadio: Bool {
+        get { defaults.bool(forKey: "radio.share") }
+        set {
+            defaults.set(newValue, forKey: "radio.share")
+            NotificationCenter.default.post(name: didChange, object: nil)
+        }
+    }
     static var clusterEnabled: Bool {
         get { defaults.bool(forKey: "cluster.enabled") }
         set { defaults.set(newValue, forKey: "cluster.enabled") }
