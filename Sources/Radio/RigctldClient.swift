@@ -107,6 +107,13 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // Throws if the radio doesn't take it.
     func set(_ command: String) throws {
         if socket < 0 { try connect() }
+        // "W 100": a filter width for the mode in use. rigctld has no width-only
+        // command, so the mode is read and sent with it (as "M").
+        if command.hasPrefix("W "), let width = Int(command.dropFirst(2)) {
+            guard let mode = try values("+m").first, !mode.isEmpty else { throw Failure.rejected }
+            _ = try values("+M \(mode) \(width)")
+            return
+        }
         // "POWER 5": watts, as the fraction of the radio's most power on
         // this band that hamlib's RFPOWER level takes. Worked out here, not
         // with hamlib's mW2power: for the KX3 that assumes 10 watts at most

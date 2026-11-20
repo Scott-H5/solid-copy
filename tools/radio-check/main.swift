@@ -90,7 +90,11 @@ MainActor.assumeIsolated {
     check(kenwood590.maxWatts == 100 && elecraftKX3.maxWatts == 15, "TS-590SG 100 watts, KX3 15")
     check(sent("F 7025300", kenwood590) == ["FA00007025300"] && sent("F 7025300", kenwood590, vfoB: true) == ["FB00007025300"],
           "tuning sends eleven digits to the receiving VFO")
-    check(sent("M CW 500", kenwood590) == ["MD3", "FW0050"] && sent("M CW 500", elecraftKX3) == ["MD3", "BW0050"]
+    check(sent("SCAN 1", kenwood590) == ["SC1"] && sent("SCAN 0", kenwood590) == ["SC0"] && sent("SCAN 2", kenwood590) == nil,
+          "the radio's own band scan: SC1 up, SC0 stop")
+    check(sent("W 100", kenwood590) == ["FW0100"] && sent("W 80", kenwood590) == ["FW0080"]
+          && sent("W 2500", elecraftKX3) == ["BW0250"], "a filter width alone, no mode (for the TS-590 that's just FW)")
+    check(sent("M CW 500", kenwood590) == ["MD3", "FW0500"] && sent("M CW 500", elecraftKX3) == ["MD3", "BW0050"]
           && sent("M CW 0", elecraftKX3) == ["MD3"], "mode, then the filter in tens of hertz (width 0 sends no filter)")
     check(sent("M PKTUSB 0", elecraftKX3) == ["MD6"] && sent("M RTTY 0", kenwood590) == ["MD6"], "data is 6 on the KX3, RTTY 6 on the TS-590")
     check(sent("L KEYSPD 22", kenwood590) == ["KS022"], "keyer speed, three digits")
@@ -138,7 +142,8 @@ MainActor.assumeIsolated {
           && KenwoodCAT.mode("6", elecraftKX3) == "PKTUSB" && KenwoodCAT.mode("6", kenwood590) == "RTTY"
           && KenwoodCAT.mode("9", elecraftKX3) == "PKTLSB" && KenwoodCAT.mode("12", elecraftKX3) == nil,
           "modes from their numbers, which differ between the two families")
-    check(KenwoodCAT.passband("0050") == 500 && KenwoodCAT.passband("0000") == nil, "filter width from tens of hertz")
+    check(KenwoodCAT.passband("0050", unit: 10) == 500 && KenwoodCAT.passband("0050", unit: 1) == 50
+          && KenwoodCAT.passband("0000", unit: 1) == nil, "filter width in hertz on the TS-590, tens on the Elecraft")
     check(KenwoodCAT.watts("100") == 100 && KenwoodCAT.watts("000") == nil, "power from PC, nil when zero")
     check(KenwoodCAT.offset("+0100") == 100 && KenwoodCAT.offset("-0050") == -50, "signed RIT offset")
     check(KenwoodCAT.isOn("10") && !KenwoodCAT.isOn("00") && !KenwoodCAT.isOn("0") && KenwoodCAT.isOn("2"),
@@ -465,6 +470,9 @@ MainActor.assumeIsolated {
     // However it went down, every lost is followed by one back.
     check(tones.count.isMultiple(of: 2) && tones.enumerated().allSatisfy { $1 == ($0.isMultiple(of: 2) ? .radioLost : .radioBack) },
           "lost and back tones take turns: \(tones)")
+
+    // Band scan (Control-Command-C) is the radio's own, on the TS-590 only.
+    check(!monitor.scanning, "no band scan before one is started")
 
     monitor.stop()
     check((try? RigctldClient(host: "127.0.0.1", port: 4600).reading()) != nil,

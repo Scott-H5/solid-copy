@@ -46,7 +46,7 @@ targets:
         PRODUCT_NAME: SolidCopy
         PRODUCT_BUNDLE_IDENTIFIER: io.github.scott-h5.solidcopy
         MARKETING_VERSION: "1.3"
-        CURRENT_PROJECT_VERSION: "4"
+        CURRENT_PROJECT_VERSION: "5"
         INFOPLIST_FILE: macOS/Info.plist
         CODE_SIGN_IDENTITY: Apple Development
         # Security protections Apple requires for apps distributed outside

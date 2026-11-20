@@ -68,6 +68,10 @@ struct KenwoodRadio: Equatable {
     // The filter width command. "BW" on Elecraft, "FW" on the TS-590 (not
     // yet checked on a radio). Both are in tens of hertz: BW0050 is 500 Hz.
     var filterCode: String { isElecraft ? "BW" : "FW" }
+    // The filter width's unit in hertz: the Elecraft counts tens of hertz
+    // (BW0050 is 500 Hz), the TS-590 counts hertz (FW0050 is 50 Hz, as its
+    // knob shows).
+    var filterUnit: Int { isElecraft ? 10 : 1 }
 }
 
 enum KenwoodCAT {
@@ -127,7 +131,15 @@ enum KenwoodCAT {
             guard let code = modeCode(words[1], radio), let width = Int(words[2]) else { throw RadioFailure.rejected }
             // The mode first: a filter width is for the mode in use. Width 0
             // is the radio's usual one for the mode, so it isn't sent.
-            return ["MD\(code)"] + (width > 0 ? [radio.filterCode + pad(width / 10, 4)] : [])
+            return ["MD\(code)"] + (width > 0 ? [radio.filterCode + pad(width / radio.filterUnit, 4)] : [])
+        case ("SCAN", 2):
+            // The radio's own band scan: 1 scans up, 0 stops (see RadioMonitor).
+            guard words[1] == "1" || words[1] == "0" else { throw RadioFailure.rejected }
+            return ["SC" + words[1]]
+        case ("W", 2):
+            // A filter width alone, for the mode in use (see RadioControl).
+            guard let width = Int(words[1]), width > 0 else { throw RadioFailure.rejected }
+            return [radio.filterCode + pad(width / radio.filterUnit, 4)]
         case ("L", 3):
             return try levels(words[1], words[2], radio)
         case ("U", 3):
@@ -241,10 +253,10 @@ enum KenwoodCAT {
         Int(body).flatMap { modeName($0, radio) }
     }
 
-    // The filter width in hertz from "0050" (the body of "BW" or "FW"), in
-    // tens of hertz. nil if zero.
-    static func passband(_ body: String) -> Int? {
-        Int(body).flatMap { $0 > 0 ? $0 * 10 : nil }
+    // The filter width in hertz from "0050" (the body of "BW" or "FW"),
+    // multiplied by the radio's unit (see filterUnit). nil if zero.
+    static func passband(_ body: String, unit: Int) -> Int? {
+        Int(body).flatMap { $0 > 0 ? $0 * unit : nil }
     }
 
     // Watts from "100" (the body of "PC"), or nil if zero.

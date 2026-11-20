@@ -51,7 +51,7 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         guard let mode = KenwoodCAT.mode(modeBody, radio) else { throw RadioFailure.notAnswering }
         // The filter width and power are optional: a radio that doesn't say
         // them is not a failure, so an error here is simply no answer.
-        let passband = (try? ask(radio.filterCode)).flatMap(KenwoodCAT.passband)
+        let passband = (try? ask(radio.filterCode)).flatMap { KenwoodCAT.passband($0, unit: radio.filterUnit) }
         let watts = (try? ask("PC")).flatMap(KenwoodCAT.watts)
         return RadioReading(hertz: hertz, mode: mode, watts: watts, passband: passband,
                             maxWatts: watts == nil ? nil : radio.maxWatts)
@@ -108,8 +108,10 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         status.xitHertz = offset
         // Split: the transmit VFO (FT) isn't the receive VFO.
         if let transmit = try value("FT"), let receive { status.split = transmit != receive }
-        status.attenuatorDB = try value("RA").map { KenwoodCAT.isOn($0) ? radio.attenuatorDB : 0 }
-        status.preampDB = try value("PA").map { KenwoodCAT.isOn($0) ? radio.preampDB : 0 }
+        // "RA01" is on and "RA00" off, so the whole number is read: the body
+        // "01" starts with a 0 and would read as off by its first digit.
+        status.attenuatorDB = try value("RA").flatMap { Int($0) }.map { $0 > 0 ? radio.attenuatorDB : 0 }
+        status.preampDB = try value("PA").flatMap { Int($0) }.map { $0 > 0 ? radio.preampDB : 0 }
         // The AGC: the TS-590's GC (0 off, 1 slow, 2 fast), or the Elecraft's
         // GT, whose first three digits are the speed (2 fast, 4 slow).
         if radio.isElecraft {
@@ -128,7 +130,11 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         // RF gain, volume and squelch: fractions from 0 to 1 of the radio's
         // largest number for each (see KenwoodRadio).
         status.rfGain = try value("RG").flatMap { Int($0) }.map { Double($0) / Double(radio.rfGainMax) }
-        status.audioGain = try value("AG").flatMap { Int($0) }.map { Double($0) / Double(radio.audioMax) }
+        // The TS-590 reads volume as "AG0;" (the 0 is the main receiver, and
+        // its setting is "AG0nnn;"); a bare "AG;" is refused, which left the
+        // volume unknown and the slider silent.
+        status.audioGain = try value(radio.isElecraft ? "AG" : "AG0").flatMap { Int($0) }
+            .map { Double($0) / Double(radio.audioMax) }
         if mode.uppercased().contains("FM") {
             status.squelch = try value("SQ").flatMap { Int($0) }.map { Double($0) / Double(radio.squelchMax) }
         }

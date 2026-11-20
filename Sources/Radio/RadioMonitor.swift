@@ -198,6 +198,7 @@ final class RadioMonitor {
     // Nothing happens if it's the same as before.
     func use(_ newSettings: RadioSettings?) {
         guard newSettings != settings else { return }
+        stopScan(saying: false)
         settings = newSettings
         client = newSettings.flatMap { settings -> RadioLink? in
             if settings.builtIn {
@@ -248,6 +249,7 @@ final class RadioMonitor {
 
     // Stops the radio check, when Solid Copy quits.
     func stop() {
+        stopScan(saying: false)
         timer?.invalidate()
     }
 
@@ -255,6 +257,13 @@ final class RadioMonitor {
 
     // The radio's name: "Kenwood TS-590SG".
     var radioName: String { settings?.name ?? "Radio" }
+
+    // The TS-590 has no audio peak filter (the Elecraft radios do).
+    var hasPeakFilter: Bool { !(settings.map { [2031, 2037].contains($0.model) } ?? false) }
+
+    // The TS-590 refuses the width command in SSB (checked on the radio), so
+    // its SSB width is set on the radio.
+    var canSetSSBWidth: Bool { !(settings.map { [2031, 2037].contains($0.model) } ?? false) }
 
     // For the screen and for Command-R.
     var stateText: String {
@@ -343,7 +352,7 @@ final class RadioMonitor {
     // again, so they're up to date when `done` says what changed.
     func change(_ commands: [String], done: @escaping @MainActor (RadioReading?, String?) -> Void) {
         guard let client, case .connected = state else { return done(nil, nil) }
-        let wantsStatus = !commands.allSatisfy { $0.hasPrefix("F ") || $0.hasPrefix("M ") }
+        let wantsStatus = !commands.allSatisfy { $0.hasPrefix("F ") || $0.hasPrefix("M ") || $0.hasPrefix("W ") }
         queue.async {
             let taken = try? client.setFirst(of: commands)
             let reading = taken != nil ? try? client.reading() : nil
@@ -366,6 +375,38 @@ final class RadioMonitor {
         tuneTarget = hertz
         NotificationCenter.default.post(name: Self.didChange, object: nil)
         if !tuneUnderWay { sendTune() }
+    }
+
+    // Band scan (Radio > Band Scan, Control-Command-C): the radio's own scan
+    // ("SC1" scans up, "SC0" stops). The radio scans without a command for
+    // each step, so it doesn't speak each frequency (checked on the TS-590).
+    // Only the built-in driver for the TS-590 can do it so far.
+    private(set) var scanning = false
+
+    func toggleScan() {
+        if scanning { stopScan(saying: true) } else { startScan() }
+    }
+
+    private func startScan() {
+        guard let reading else { return Speaker.announce(notConnectedText) }
+        guard settings?.builtIn == true, settings.map({ [2031, 2037].contains($0.model) }) == true else {
+            return Speaker.announce("\(radioName) can't band scan from Solid Copy.")
+        }
+        change("SCAN 1") { [self] newReading in
+            guard newReading != nil else { return Speaker.announce("The radio didn't start its scan.") }
+            scanning = true
+            Speaker.announce("Scanning \(reading.band ?? "this band"), \(RadioReading.trimmedMegahertz(reading.hertz)) megahertz.")
+        }
+    }
+
+    // Ends the scan. `saying`: when the user stops it (not when the radio is lost).
+    func stopScan(saying: Bool) {
+        guard scanning else { return }
+        scanning = false
+        change("SCAN 0") { newReading in
+            guard saying else { return }
+            Speaker.announce("Scan stopped" + (newReading.map { " at \(RadioReading.trimmedMegahertz($0.hertz)) megahertz" } ?? "") + ".")
+        }
     }
 
     private func sendTune() {
@@ -523,6 +564,8 @@ final class RadioMonitor {
     private func set(_ newState: State) {
         guard newState != state else { return }
         state = newState
+        // A scan goes on only while the radio answers.
+        if scanning, case .connected = newState {} else if scanning { scanning = false }
         if case .connected(let reading) = newState, let band = reading.band {
             lastOnBand[band] = (reading.hertz, reading.mode)
         }

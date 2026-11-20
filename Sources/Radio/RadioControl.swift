@@ -88,8 +88,10 @@ extension RadioMonitor {
         let voiceModes = ["USB", "LSB"]
         let widths: [Int]
         if narrowModes.contains(reading.mode.uppercased()) {
-            widths = [50, 100, 150, 200, 250, 300, 400, 500, 600, 800, 1_000, 1_500, 2_000, 2_700]
+            // The TS-590's own steps, as its knob goes (the radio refuses any other).
+            widths = [50, 80, 100, 150, 200, 250, 300, 400, 500, 600, 1_000, 1_500, 2_000, 2_500]
         } else if voiceModes.contains(reading.mode.uppercased()) {
+            if !canSetSSBWidth { return Speaker.announce("\(radioName) sets its SSB width on the radio.") }
             widths = [1_800, 2_100, 2_400, 2_700, 3_000, 3_600]
         } else {
             return Speaker.announce("No filter choices for \(reading.spokenMode).")
@@ -98,7 +100,9 @@ extension RadioMonitor {
         guard let width = wider ? widths.first(where: { $0 > current }) : widths.last(where: { $0 < current }) else {
             return Speaker.announce("Filter \(reading.filterSpoken ?? ""), the \(wider ? "widest" : "narrowest").")
         }
-        change("M \(reading.mode) \(width)") { newReading in
+        // Width only: "M" would also send the mode, and the TS-590 says the
+        // mode aloud (with a morse C) on every change, even when it is the same.
+        change("W \(width)") { newReading in
             guard let newReading else { return Speaker.announce("The radio didn't change the filter.") }
             Speaker.say(.radio, full: "Filter \(newReading.filterSpoken ?? "unknown").", cue: .radio)
         }
@@ -230,7 +234,11 @@ extension RadioMonitor {
     func toggleNoiseReduction() {
         toggle("noise reduction", \.noiseReduction) { ["U NR \($0)", "L NR \($0 == 1 ? "0.5" : "0")"] }
     }
-    func togglePeakFilter() { toggle("audio peak filter", \.peakFilter) { ["U APF \($0)"] } }
+    // The TS-590 has no audio peak filter (the Elecraft radios do).
+    func togglePeakFilter() {
+        if !hasPeakFilter { return Speaker.announce("\(radioName) has no audio peak filter.") }
+        toggle("audio peak filter", \.peakFilter) { ["U APF \($0)"] }
+    }
     // Dual watch: both VFOs heard at once (the KX3's SUB).
     func toggleDualWatch() { toggle("dual watch", \.dualWatch) { ["U DUAL_WATCH \($0)"] } }
     func toggleRIT() { toggle("RIT", \.ritOn) { ["U RIT \($0)"] } }

@@ -299,6 +299,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
              ("XIT", #selector(toggleXIT(_:)), "x"),
              ("Split", #selector(toggleSplit(_:)), "s"),
              ("Swap VFOs", #selector(swapVFOs(_:)), "v")],
+            [("Band Scan", #selector(toggleBandScan(_:)), "c")],
         ]
         for group in groups {
             radioMenu.addItem(.separator())
@@ -358,6 +359,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // and -). See RadioControl.swift.
     @objc func nextMode(_ sender: Any?) { RadioMonitor.shared.nextMode() }
     @objc func widerFilter(_ sender: Any?) { RadioMonitor.shared.changeFilter(wider: true) }
+    // Radio > Band Scan (Control-Command-C): starts or stops the scan.
+    @objc func toggleBandScan(_ sender: Any?) { RadioMonitor.shared.toggleScan() }
     @objc func narrowerFilter(_ sender: Any?) { RadioMonitor.shared.changeFilter(wider: false) }
     @objc func keyerFaster(_ sender: Any?) {
         if !changeCWSpeed(by: 1) { RadioMonitor.shared.changeKeyerSpeed(by: 1) }
