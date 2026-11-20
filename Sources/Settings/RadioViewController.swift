@@ -128,8 +128,8 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             "With this on too, those programs can key the radio through Solid Copy (on the TS-590, from "
             + "its data input: the USB audio they play). Solid Copy puts the radio back to receive if the "
             + "program goes, if sharing is turned off or the radio changed, when Solid Copy quits, and "
-            + "after 5 minutes of one transmission. A program's first transmission is said. Programs "
-            + "already connected must reconnect to see this change. Try it into a dummy load first.")
+            + "after 5 minutes of one transmission. A program's first transmission is said. Set the "
+            + "program's PTT to CAT. Try it into a dummy load first.")
         transmitNote.preferredMaxLayoutWidth = 520
         transmitNote.isSelectable = true
         transmitBox.setAccessibilityLinkedUIElements([transmitNote])
@@ -174,7 +174,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     @objc private func toggleTransmit(_ sender: NSButton) {
         Settings.shareRadioTransmit = sender.state == .on
         Speaker.announce(sender.state == .on
-            ? "Programs sharing the radio may transmit. Programs already connected must reconnect."
+            ? "Programs sharing the radio may transmit."
             : "Programs sharing the radio can't transmit.")
     }
 

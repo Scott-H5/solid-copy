@@ -85,9 +85,9 @@ final class RigctlServer {
     // itself) or only list it.
     var onTransmit: (String, Bool) -> Void = { _, _ in }
 
-    // Settings > Radio, "Let them transmit". Programs read it when they
-    // connect (\dump_state's ptt_type), so turning it on takes effect when
-    // they connect again; turning it off unkeys at once.
+    // Settings > Radio, "Let them transmit". Checked on each "T 1", so a
+    // change takes effect at once, with no reconnecting; turning it off
+    // also unkeys at once.
     var allowTransmit = false {
         didSet {
             guard !allowTransmit else { return }
@@ -369,9 +369,13 @@ final class RigctlServer {
             "0x0", "0x0",                // levels
             "0x0", "0x0",                // parameters
             "vfo_ops=0x0",
-            // 1 (RIG_PTT_RIG): the program may key the radio through Solid
-            // Copy; 0: it can't (Let them transmit is off).
-            "ptt_type=\(allowTransmit ? "0x1" : "0x0")",
+            // 1 (RIG_PTT_RIG): keying goes through Solid Copy. Always 1,
+            // even with Let them transmit off: a program reads this only
+            // when it connects, and with 0 its hamlib refuses PTT itself
+            // until it reconnects (found with iDigi, 20 November 2026). So
+            // Solid Copy refuses "T 1" itself instead, which follows the
+            // checkbox at once.
+            "ptt_type=0x1",
             "targetable_vfo=0x0",
             "has_set_vfo=1", "has_get_vfo=1", "has_set_freq=1", "has_get_freq=1",
             "has_set_conf=0", "has_get_conf=0", "has_power2mW=0", "has_mW2power=0",

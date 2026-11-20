@@ -96,7 +96,8 @@ MainActor.assumeIsolated {
     var said: String?
     server.answer("\\dump_state") { said = $0 }
     check(said?.hasPrefix("1\n2037\n0\n") == true && said?.hasSuffix("done\n") == true
-          && said?.contains("ptt_type=0x0") == true, "\\dump_state: protocol 1, the radio's model, no PTT, ends in done")
+          && said?.contains("ptt_type=0x1") == true,
+          "\\dump_state: protocol 1, the radio's model, PTT through Solid Copy, ends in done")
     server.answer("\\get_freq") { said = $0 }
     check(said == "7025300\n", "a long name (\\get_freq) is understood")
     server.answer("T 1") { said = $0 }
@@ -178,9 +179,9 @@ MainActor.assumeIsolated {
     check(result.out == "14074000\nRPRT 0\n", "the server still answers after that, and q says goodbye")
 
     // Transmitting, with "Let them transmit" on.
-    check(!server.dumpState().contains("ptt_type=0x1"), "transmit off: \\dump_state offers no PTT")
+    // Turned on with a program already connected: it may key at once, no
+    // reconnecting (\dump_state always offers PTT; Solid Copy decides).
     server.allowTransmit = true
-    check(server.dumpState().contains("ptt_type=0x1"), "transmit on: \\dump_state offers PTT (RIG_PTT_RIG)")
     let programA = ObjectIdentifier(PretendRadio.self), programB = ObjectIdentifier(RigctlServer.self)
     radio.sent = []
     server.answer("T 0", from: programA) { said = $0 }

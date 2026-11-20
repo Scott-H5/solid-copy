@@ -415,8 +415,8 @@ network server **127.0.0.1** and port **4532**. That's all.
 - **Let them transmit** (under it, off until you turn it on) lets them
   key the radio too (PTT). On the TS-590 they transmit from its data
   input, the USB audio they play; set the program's PTT method to CAT.
-  Programs already connected must reconnect to see this change. Try it
-  into a dummy load first.
+  Turning it on or off works at once, even for programs already
+  connected. Try it into a dummy load first.
 - Solid Copy keeps the radio from being left on the air. It goes back to
   receive if the program that keyed it goes (quits, crashes, loses its
   connection), if sharing or Let them transmit is turned off, if you
