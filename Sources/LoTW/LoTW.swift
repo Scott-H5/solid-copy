@@ -70,9 +70,9 @@ enum LoTW {
     }
 
     // The contacts TQSL skipped, from its output: for each one it prints
-    // why ("The Station Location 'Gridsquare' has value 'EN82' while QSO
-    // has 'EN83'"), then the contact, a field per line (CALL: KB3QQQ,
-    // QSO_DATE: 19980322, TIME_ON: 202500, ...). Found on the author's first
+    // why ("The Station Location 'Gridsquare' has value 'FM19JK' while QSO
+    // has 'FM19KJ'"), then the contact, a field per line (CALL: KB3CFK,
+    // QSO_DATE: 19980322, TIME_ON: 202500, ...). Found on Scott's first
     // real sync, 16 November 2026: a station location with its grid's
     // letters swapped skipped all 154 contacts.
     struct Skipped: Equatable {
@@ -80,13 +80,13 @@ enum LoTW {
         var keys: Set<String> = []
         // The first reason given, in TQSL's words.
         var reason = ""
-        // Each one as said: "VE6AAA on 13 December 2025", in TQSL's order.
+        // Each one as said: "VE6BBP on 13 December 2025", in TQSL's order.
         // TQSL's reason doesn't name the contact, so this is how you know
-        // which to fix (the author, 16 November 2026).
+        // which to fix (Scott, 16 November 2026).
         var named: [String] = []
         static func key(for qso: QSO) -> String { "\(Callsign.normalized(qso.call)) \(qso.adifDate) \(qso.adifTime)" }
 
-        // "VE6AAA on 13 December 2025", or the first five and "and 3 more".
+        // "VE6BBP on 13 December 2025", or the first five and "and 3 more".
         var list: String {
             named.prefix(5).joined(separator: "; ") + (named.count > 5 ? "; and \(named.count - 5) more" : "")
         }
@@ -109,7 +109,7 @@ enum LoTW {
     // contact - QSO does not specify a band or frequency on line 2081"),
     // then the contact. "Previously Signed QSO detected" isn't a problem:
     // that contact is on LoTW already (signed before, or a repeat of one
-    // earlier in the same file, as with the author's VE3XYZ entered three
+    // earlier in the same file, as with Scott's VE3OXQ entered three
     // times), so it isn't counted as skipped.
     static func skipped(in output: String) -> Skipped {
         var result = Skipped()
@@ -150,7 +150,7 @@ enum LoTW {
         }
         // No certificate for the call (none yet, or expired): TQSL signs
         // nothing, and says code 8, the same as "all already on LoTW".
-        // Found 16 November 2026, while the author's new certificate was on its
+        // Found 16 November 2026, while Scott's new certificate was on its
         // way: Solid Copy took it for "already uploaded" and marked 156.
         if lower.contains("no valid callsign certificate") || lower.contains("signing aborted") {
             return .failed("TQSL has no usable callsign certificate for this call, so it signed nothing. "

@@ -1,12 +1,12 @@
 // WinKeyer.swift
 //
-// Sends CW through a K1EL WinKeyer (the author's is a WinKeyer Mini, WK3.1, at
-// /dev/cu.usbserial-8410). The WinKeyer keys the radio itself, with its own
+// Sends CW through a K1EL WinKeyer (Scott's is a WinKeyer Mini, WK3.1, at
+// /dev/cu.usbserial-XXXX). The WinKeyer keys the radio itself, with its own
 // timing; Solid Copy hands it text.
 //
 // Connecting happens only when you ask (CW > Connect WinKeyer), never at
 // launch: Keyer Sidetone uses the same WinKeyer, and only one app can hold
-// its port. If another app has it,
+// its port (CLAUDE.md decision, 17 November 2026). If another app has it,
 // you hear so.
 //
 // The WinKeyer's language (K1EL's "WinKeyer3 IC Interface & Operation

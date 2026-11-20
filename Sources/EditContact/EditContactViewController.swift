@@ -261,7 +261,7 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
         // The bands in ADIF's terms ("20" or "14.058" becomes "20m"), or
         // the band from the frequency if it's empty, so LoTW will take the
         // contact. Receive band too: TQSL refuses one that isn't a band
-        // (VE6AAA, 16 November 2026, "Invalid RX BAND (14.058)").
+        // (VE6BBP, 16 November 2026, "Invalid RX BAND (14.058)").
         for (adif, name) in [("band", "Band"), ("band_rx", "Receive band")] {
             guard let field = lineFields[adif] else { continue }
             guard let band = Bands.normalized(field.stringValue) else {

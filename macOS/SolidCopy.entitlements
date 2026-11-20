@@ -13,8 +13,8 @@
 	<true/>
 	<!--
 	  Make outgoing network connections: callsign lookups (QRZ, HamQTH,
-	  callook.info), log uploads, and the radio through rigctld, which
-	  listens on a local network port.
+	  callook.info), log uploads, and a rigctld you run yourself (Hamlib NET
+	  rigctl, on 127.0.0.1 or another address).
 	-->
 	<key>com.apple.security.network.client</key>
 	<true/>
@@ -31,16 +31,10 @@
 	<key>com.apple.security.files.bookmarks.app-scope</key>
 	<true/>
 	<!--
-	  Use the radio's serial (USB) port. Needed by the rigctld bundled in
-	  the app, which runs inside Solid Copy's sandbox.
+	  Use the radio's serial (USB) port: the built-in driver for Kenwood and
+	  Elecraft radios talks to it directly.
 	-->
 	<key>com.apple.security.device.serial</key>
-	<true/>
-	<!--
-	  Accept local network connections: rigctld listens on 127.0.0.1
-	  port 4532 for Solid Copy (and any other program you point at it).
-	-->
-	<key>com.apple.security.network.server</key>
 	<true/>
 </dict>
 </plist>

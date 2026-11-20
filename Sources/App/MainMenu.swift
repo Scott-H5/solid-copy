@@ -46,7 +46,7 @@ enum MainMenu {
         return menu
     }
 
-    // The File menu, in groups (the author, 17 November 2026), most used first:
+    // The File menu, in groups (Scott, 17 November 2026), most used first:
     //   New Log ▸ (New Log…, New Contest Log…, New Test Log…), Open Log ▸,
     //     Delete This Log…, Show Log in Finder: your logs (Logs.swift);
     //   Import…, Export…, Back Up Now: what goes in and out;
@@ -74,7 +74,7 @@ enum MainMenu {
         menu.addItem(.separator())
         // Import… reads ADIF and ADX files and SQL log files (it works
         // out which). Shift-Command-I, to pair with Export's Shift-Command-E
-        // (the author, 17 November 2026); Command-I is Show Last Contact and
+        // (Scott, 17 November 2026); Command-I is Show Last Contact and
         // Option-Command-I Show Details.
         let importItem = menu.addItem(withTitle: "Import…",
                                       action: #selector(AppDelegate.importLog(_:)),

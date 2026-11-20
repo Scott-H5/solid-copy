@@ -2,8 +2,8 @@
 //
 // Settings > CW (the 11th section): sending CW through a WinKeyer
 // (WinKeyer.swift) and the messages F1 to F8 send (CWMessages.swift).
-//   - WinKeyer port: a menu of the Mac's serial ports. the author's WinKeyer
-//     Mini is /dev/cu.usbserial-8410 (not the radios' ports).
+//   - WinKeyer port: a menu of the Mac's serial ports. Scott's WinKeyer
+//     Mini is /dev/cu.usbserial-XXXX (not the radios' ports).
 //   - Speed (words per minute, 5 to 99). Control-Command-= and - change it
 //     too while the WinKeyer is connected.
 //   - Your name, for the {MYNAME} fill-in.

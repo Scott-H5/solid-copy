@@ -9,7 +9,7 @@
 // order, when the list opens; the rest follow. Showing or hiding an item
 // leaves it where it is, so nothing moves under VoiceOver's cursor (it
 // used to jump to the end of the items in use, and the row you were on
-// then read as a different item: the author, 16 November 2026). The order of
+// then read as a different item: Scott, 16 November 2026). The order of
 // the items in use is their order in the list; Move Up and Move Down
 // swap an item with the next item in use above or below it.
 //

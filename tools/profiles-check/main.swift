@@ -26,8 +26,8 @@ MainActor.assumeIsolated {
 
     // Settings as they were saved before profiles: a callsign, a grid, and a
     // form whose fields have no starting values.
-    defaults.set("N0CALL", forKey: "myCallsign")
-    defaults.set("EN82", forKey: "myGrid")
+    defaults.set("N3BYY", forKey: "myCallsign")
+    defaults.set("EM10", forKey: "myGrid")
     defaults.set(Data(#"[{"adif":"name","tabStop":true},{"adif":"rst_sent","tabStop":true},{"adif":"comment","tabStop":true}]"#.utf8),
                  forKey: "formFields")
     defaults.set(false, forKey: "lookupEnabled")
@@ -35,7 +35,7 @@ MainActor.assumeIsolated {
     let profiles = Settings.profiles
     check(profiles.map(\.name) == ["Home", "Portable"], "old settings become Home, and Portable is added")
     let home = profiles[0]
-    check(home.station["station_callsign"] == "N0CALL" && home.station["my_gridsquare"] == "EN82",
+    check(home.station["station_callsign"] == "N3BYY" && home.station["my_gridsquare"] == "EM10",
           "Home keeps your callsign and grid")
     check(home.formFields.map(\.adif) == ["name", "rst_sent", "comment"] && home.formFields[1].startingValue == "",
           "Home keeps your form; signal reports start blank")
@@ -107,7 +107,7 @@ MainActor.assumeIsolated {
     let logged = logbook.contacts.last
     check(logged?.call == "K1ABC" && logged?["band"] == "20m" && logged?["tx_pwr"] == "5",
           "the contact has the form's band and power")
-    check(logged?["station_callsign"] == "N0CALL" && logged?["my_pota_ref"] == "US-1234" && logged?["my_gridsquare"] == "",
+    check(logged?["station_callsign"] == "N3BYY" && logged?["my_pota_ref"] == "US-1234" && logged?["my_gridsquare"] == "",
           "the contact has Portable's station details (callsign and park, no grid)")
     check(field("Power (watts)")?.stringValue == "5" && field("Band")?.stringValue == "",
           "after logging, the form goes back to its starting values")

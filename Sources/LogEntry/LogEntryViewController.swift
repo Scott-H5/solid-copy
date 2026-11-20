@@ -401,7 +401,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
             qso["band"] = band
         }
         // No band at all: most likely the radio dropped without your
-        // noticing (the author's VE6AAA, December 2025, logged while another
+        // noticing (Scott's VE6BBP, December 2025, logged while another
         // logger had the radio). LoTW won't take a contact without one, and
         // awards need it. Warn once; Return again logs it anyway.
         if qso["band"].isEmpty, noBandWarnedFor != call {
@@ -435,7 +435,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         registerUndoLog(qso.id, form: typed)
         onLogged?(qso.id)
         // With its serial number, when it has one (a contest), so you
-        // needn't look in the details (the author, 17 November 2026).
+        // needn't look in the details (Scott, 17 November 2026).
         let number = qso["stx"].trimmingCharacters(in: .whitespaces)
         let serial = number.isEmpty ? "" : ", number \(number)"
         Speaker.say(.logging, full: "Logged \(Callsign.spoken(qso.call))\(serial). \(logbook.countText) in the log.",
@@ -535,7 +535,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     // the form changes (so typing survives a profile switch), and a hidden
     // one can hold old text: a Mode of CW from the Portable profile made
     // every contact a dupe in a Field Day log, whatever the radio said
-    // (the author, 17 November 2026). Nil when the field isn't on the form.
+    // (Scott, 17 November 2026). Nil when the field isn't on the form.
     private func onForm(_ adif: String) -> String? {
         guard formChoices.contains(where: { $0.adif == adif }) else { return nil }
         return fieldsByName[adif]?.stringValue.trimmingCharacters(in: .whitespaces)
@@ -705,7 +705,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     // in, and each log and contest has its own count. Type over it to
     // change it; logging moves on from whatever was logged. {NR} in a CW
     // message sends the same number, and is logged as Serial sent even
-    // when the field isn't on the form. (the author, 17 November 2026: contests
+    // when the field isn't on the form. (Scott, 17 November 2026: contests
     // need serials with or without the keyer.)
 
     // The contest the form is for: its Contest field, or that field's
@@ -1034,7 +1034,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
             return true
         case #selector(NSResponder.cancelOperation(_:)):
             // CW being sent: Escape stops it, and nothing else, as in
-            // contest loggers (the author's choice, 17 November 2026).
+            // contest loggers (Scott's choice, 17 November 2026).
             if WinKeyer.shared.stop() {
                 Speaker.announce("Stopped.")
                 return true
@@ -1364,7 +1364,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         }
         let inContest = formChoices.contains { $0.adif == "contest_id" }
         let park = Settings.currentProfile.station["my_pota_ref"] ?? ""
-        // Everyday logging: the same call, band and mode
+        // Everyday logging (CLAUDE.md item 5): the same call, band and mode
         // (CW, phone, data) on the same UTC day.
         guard inContest || !park.isEmpty else { return everydayDupe(call) }
         // The band and mode now: as typed on the form, or from the radio.
@@ -1412,7 +1412,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         return ("Dupe: \(call)" + rest, "Dupe: \(Callsign.spoken(call))" + rest)
     }
 
-    // MARK: DXCC entity and "needed"
+    // MARK: DXCC entity and "needed" (CLAUDE.md item 6)
     //
     // The call's country (DXCC entity) from cty.dat (Countries.swift), and
     // whether you need it: a new country, a new band for it, or a new mode
@@ -1595,7 +1595,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     }
 
     // A lookup said at its chosen level. A needed call (a new country,
-    // band or mode; plays the needed sound in
+    // band or mode; CLAUDE.md items 6 and 9) plays the needed sound in
     // place of the lookup's own, whatever the level, so it's heard even
     // with lookups set to a sound or nothing.
     private func sayLookupSpeech(full: String, brief: String, cue: Speaker.Cue, needed: Bool) {

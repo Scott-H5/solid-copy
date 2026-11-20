@@ -56,17 +56,29 @@ each file does and why, and has recipes for common changes.
     `ExportFormat` and they appear in the Export dialog's Format menu.
 - `Sources/App/ImportExport.swift`: the Import and Export dialogs and
   their summaries.
-- `Sources/Radio`: the radio, through hamlib's rigctld.
-  - `RadioMonitor.swift`: keeps connected and never gives up; starts,
-    stops and restarts Solid Copy's own rigctld; says what changed. The
-    comments at the top explain each case.
-  - `RigctldClient.swift`: the conversation with rigctld, with a time
-    limit on every wait. The comments show what rigctld's replies look
-    like.
+- `Sources/Radio`: the radio, through the built-in driver or a rigctld
+  you run (Hamlib NET rigctl).
+  - `RadioMonitor.swift`: keeps connected and never gives up; says what
+    changed. The comments at the top explain each case.
+  - `RadioLink.swift`: the interface both ways of reaching a radio
+    share, and the failures they report (not answering, port gone,
+    port in use, refused).
+  - `RigctldClient.swift`: the conversation with a rigctld you run, with
+    a time limit on every wait. The comments show what rigctld's replies
+    look like.
+  - `KenwoodClient.swift`: the built-in driver's serial conversation
+    with a Kenwood or Elecraft radio's own USB port, with the same time
+    limits. It asks a question, or sends changes followed by "ID;", and
+    waits for the answer.
+  - `KenwoodCAT.swift`: the words themselves, with no port in it: turns
+    RadioControl's commands ("F 7025300", "M CW 500") into Kenwood's
+    ("FA00007025300", "MD3", "FW0050"), and reads answers. Kept apart so
+    `tools/radio-check` can test it with canned answers.
   - `RadioReading.swift`: frequency, band, mode and power in ADIF's
     terms, and in words.
-  - `RadioSettings.swift`: one radio's settings, and hamlib's list of
-    radios. Settings.swift keeps your list and which is in use.
+  - `RadioSettings.swift`: one radio's settings, and the built-in
+    driver's radios for the Settings menus. Settings.swift keeps your
+    list and which is in use.
   - `RadioMenu.swift`: the menu items for choosing a radio, shared by
     the Radio menu and the radio pop-up.
   - `RadioControl.swift`: tuning, mode, filter, keyer, preamp,
@@ -76,8 +88,6 @@ each file does and why, and has recipes for common changes.
 - `Sources/LogEntry/RadioSlider.swift`: the Tuning, Offset, Power, RF gain and Squelch controls at
   the bottom of the window (Command-T, then Tab), sliders to VoiceOver.
 - `Sources/Settings/RadioViewController.swift`: Settings > Radio.
-- `tools/bundle-rigctld.sh`: copies rigctld into the app when it's built,
-  and why (the sandbox).
 - `Sources/Lookup`: callsign lookups.
   - `CallsignLookup.swift`: tries the cache, then QRZ, then
     callook.info. The cache is `LookupCache.json` next to the log.
@@ -662,43 +672,49 @@ lower-case letter means Command plus that letter.
 
 1. When Solid Copy opens, or you switch radios, `RadioMonitor` takes the
    radio in use (`Settings.currentRadio`).
-2. With Solid Copy's own rigctld (the usual way), it checks the radio's
-   USB port is there. If not, the radio is "off or unplugged". If it is,
-   it starts the copy of rigctld inside the app: `rigctld -m 2037 -r
-   /dev/cu.usbserial-… -s 115200 -T 127.0.0.1 -t 45320`. Its pid is kept
-   in a file, so a rigctld left running is stopped the next time Solid
-   Copy starts one; otherwise it would keep the radio's port open. In
-   practice a force-quit leaves none: rigctld closes with the app that
-   started it (checked 15 November 2026). The accessibility audit's way
-   of ending its test copy does leave one, and the sandbox seems not to
-   let the next copy stop it, so `audit.sh` stops it itself. The pid
-   file is a backstop, not yet shown to work in the sandbox; see PLAN.
-3. Every second, on a background queue, `RigctldClient` asks rigctld for
-   frequency (`+f`), mode (`+m`) and power (`+l RFPOWER`, then
-   `+\power2mW` to turn it into watts).
+2. With the built-in driver (the usual way for a Kenwood or Elecraft
+   radio), it checks the radio's USB port is there. If not, the radio is
+   "off or unplugged". If it is, `KenwoodClient` opens the port itself
+   (see "With the built-in driver" below). Solid Copy starts no helper
+   program.
+3. Every second, on a background queue, the radio's client asks for
+   frequency, mode and power: `FA;`, `MD;` and the power setting for a
+   Kenwood or Elecraft radio. A rigctld you run (Hamlib NET rigctl) is
+   asked the same things with `+f`, `+m` and `+l RFPOWER`.
 4. A good reading goes to the form (`radioChanged` in
    LogEntryViewController.swift), which updates the radio pop-up's label
    and fills the radio fields you
    haven't typed in. Pressing Return logs the latest reading for every
    radio field you didn't type, on the form or not.
 5. When something goes wrong, it tries again every 3 seconds: the port
-   gone stops rigctld; rigctld gone starts it again; the radio silent
-   restarts rigctld, after 10 seconds the first time, then 30, then once
-   a minute. Each new kind of state is spoken once, and trouble ("not
-   answering", "connection not running") only once until the radio
+   gone is "off or unplugged"; a rigctld that isn't running is "not
+   running"; a radio that stays silent is "not answering". Each new kind
+   of state is spoken once, and trouble only once until the radio
    connects or its port goes.
 6. A radio that's off while its port stays is the costly case: the KX3,
-   whose USB chip is in its cable. Each look makes rigctld try the radio
-   for some 20 seconds before giving up. So after a minute of silence,
-   Solid Copy looks every 15 seconds instead of 3, and restarts rigctld
-   only once a minute. Typing a callsign still looks at once. While
-   rigctld runs it holds the serial port, so another program (the
-   Elecraft Utility, say) can't open it: choose No Radio first.
-   `tools/check-radio.sh` checks this with a pretend serial port that
-   never answers.
+   whose USB chip is in its cable. After a minute of silence, Solid Copy
+   looks every 15 seconds instead of 3. Typing a callsign still looks at
+   once. The built-in driver holds the serial port while it's connected,
+   so another program (the Elecraft Utility, say) can't open it: choose
+   No Radio first. `tools/check-radio.sh` checks this with a pretend
+   serial port that never answers.
 
-To try it without a radio, `tools/check-radio.sh` uses hamlib's Dummy
-radio (model 1), which pretends to be on 145 MHz FM.
+To try the Hamlib NET rigctl path without a radio, `tools/check-radio.sh`
+runs hamlib's Dummy radio (model 1, in Homebrew's rigctld, a test tool
+only) on port 4600, which pretends to be on 145 MHz FM.
+
+### With the built-in driver
+
+A radio set to "Built-in driver (Kenwood and Elecraft)" has no rigctld.
+`KenwoodClient` opens the radio's USB port itself (8 data bits, no
+parity, one stop bit, the speed in Settings), and asks in Kenwood's
+text: "FA;" gets "FA00014060000;" back. The port's presence is checked
+every second, as rigctld's is: if it's gone the radio is "off or
+unplugged"; if another app holds it, "port in use". A silent radio is
+"not answering", after a second per question. Changes are sent with
+"ID;" after them: the radio answers "ID" once it has taken them, and a
+"?" means it refused one, so the next choice is tried. Which commands
+are radio-tested and which are not is listed in docs/PLAN.md, Phase 3.
 
 ## How tuning works
 
@@ -760,6 +776,7 @@ The audio peak filter is asked about only in CW: in other modes the KX3
 doesn't answer, and hamlib retried for 6 seconds before giving up,
 holding up every command behind it (the long waits after a mode change).
 
-All of this was found with Radio > Record Radio Log, which has rigctld
-write every command and every byte from the radio, with times; Radio >
-Save Radio Log… copies the log out of Solid Copy's private folder.
+All of this was found with Radio > Record Radio Log, which had rigctld
+write every command and every byte from the radio, with times. The menu
+items went with the bundled rigctld in v1.3; `rigctl -vvvvv` (Homebrew's
+hamlib) does the same job for a rigctld you run.

@@ -6,7 +6,8 @@
 // Sidetone, where it was tested with the same WinKeyer Mini; kept as its
 // own copy because Solid Copy uses no shared packages.
 //
-// The radio doesn't use this: hamlib's rigctld opens the radio's port.
+// The radio doesn't use this: the built-in driver (KenwoodClient) opens the
+// radio's port with its own settings, and a rigctld you run opens it itself.
 
 import Foundation
 
@@ -28,7 +29,11 @@ final class SerialPort {
     var fileDescriptor: Int32 { fd }
 
     // 8 data bits, no parity; two stop bits for the WinKeyer's 1200 baud.
-    init(_ path: String, baud: speed_t = speed_t(B1200), twoStopBits: Bool = true) throws {
+    // Hardware handshake (RTS/CTS) is off for the WinKeyer. Kenwood radios
+    // over USB need it on: without it the TS-590SG never answers (found
+    // 20 November 2026; Hamlib's rigctld turns it on too).
+    init(_ path: String, baud: speed_t = speed_t(B1200), twoStopBits: Bool = true,
+         hardwareHandshake: Bool = false) throws {
         // O_NONBLOCK: don't wait for a modem "carrier" signal while opening.
         fd = open(path, O_RDWR | O_NOCTTY | O_NONBLOCK)
         guard fd >= 0 else {
@@ -47,7 +52,8 @@ final class SerialPort {
         cfmakeraw(&t)                       // bytes in and out exactly as sent
         cfsetspeed(&t, baud)
         t.c_cflag |= tcflag_t(CS8 | CLOCAL | CREAD | (twoStopBits ? CSTOPB : 0))
-        t.c_cflag &= ~tcflag_t(PARENB | CRTSCTS)
+        t.c_cflag &= ~tcflag_t(PARENB)
+        if hardwareHandshake { t.c_cflag |= tcflag_t(CRTSCTS) } else { t.c_cflag &= ~tcflag_t(CRTSCTS) }
         tcsetattr(fd, TCSANOW, &t)
     }
 

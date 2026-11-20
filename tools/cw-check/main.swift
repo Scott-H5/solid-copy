@@ -13,25 +13,25 @@ import AppKit
 
 func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !ok { exit(1) } }
 
-let values = ["MYCALL": "N0CALL", "MYNAME": "the author", "MYSTATE": "MD", "NR": "42",
-              "CALL": "K5ZZZ", "NAME": "Tom", "STATE": "TX", "SKCC": "26050T", "RST": "599"]
-check(CWMessages.expand(CWMessages.defaults[0], values: values) == "CQ CQ N0CALL N0CALL K", "F1: CQ with your call")
-check(CWMessages.expand(CWMessages.defaults[1], values: values) == "K5ZZZ 599 the author MD",
+let values = ["MYCALL": "N3BYY", "MYNAME": "Scott", "MYSTATE": "MD", "NR": "42",
+              "CALL": "K5AX", "NAME": "Tom", "STATE": "TX", "SKCC": "26050T", "RST": "599"]
+check(CWMessages.expand(CWMessages.defaults[0], values: values) == "CQ CQ N3BYY N3BYY K", "F1: CQ with your call")
+check(CWMessages.expand(CWMessages.defaults[1], values: values) == "K5AX 599 Scott MD",
       "F2: their call, RST, your name and state")
-check(CWMessages.expand("{CALL} 5NN {nr}", values: values) == "K5ZZZ 5NN 42", "{NR}: your serial number")
-check(CWMessages.expand("TU {name} {Call}", values: values) == "TU Tom K5ZZZ", "fill-ins in any case")
+check(CWMessages.expand("{CALL} 5NN {nr}", values: values) == "K5AX 5NN 42", "{NR}: your serial number")
+check(CWMessages.expand("TU {name} {Call}", values: values) == "TU Tom K5AX", "fill-ins in any case")
 check(CWMessages.expand("{CALL} {NAME} {MYNAME}", values: ["CALL": "W1AW"]) == "W1AW",
       "empty fill-ins are left out, with no extra spaces")
 check(CWMessages.expand("{NOPE} AGN?", values: values) == "AGN?", "an unknown fill-in is left out")
 check(CWMessages.expand("{CALL", values: values) == "{CALL", "an unclosed brace is kept as typed")
 check(CWMessages.defaults.count == CWMessages.count, "eight starting messages")
 check(CWMessages.fieldDay.count == CWMessages.count, "eight Field Day messages")
-let fdValues = ["MYCALL": "N0CALL", "CALL": "W1AW", "SENT": "1D MDC"]
-check(CWMessages.expand(CWMessages.fieldDay[0], values: fdValues) == "CQ FD N0CALL N0CALL FD", "Field Day CQ")
+let fdValues = ["MYCALL": "N3BYY", "CALL": "W1AW", "SENT": "1D MDC"]
+check(CWMessages.expand(CWMessages.fieldDay[0], values: fdValues) == "CQ FD N3BYY N3BYY FD", "Field Day CQ")
 check(CWMessages.expand(CWMessages.fieldDay[1], values: fdValues) == "W1AW 1D MDC",
       "Field Day exchange: their call, then your class and section from {SENT}")
 
-check(WinKeyer.sendable("cq de n0call/qrp, k") == "CQ DE N0CALL/QRP, K", "upper case, / and , kept")
+check(WinKeyer.sendable("cq de n3byy/qrp, k") == "CQ DE N3BYY/QRP, K", "upper case, / and , kept")
 check(WinKeyer.sendable("Tom's  rig: 100w!") == "TOMS RIG 100W", "characters CW can't carry are left out")
 check(WinKeyer.sendable("  ") == "", "only spaces: nothing to send")
 check(WinKeyer.clamp(2) == 5 && WinKeyer.clamp(150) == 99 && WinKeyer.clamp(25) == 25, "speeds kept to 5 to 99")
@@ -86,11 +86,11 @@ if case .success(let back) = Contest.parse(naqp.fileText, knownFields: known) {
 func qso(_ call: String, _ band: String, _ mode: String) -> QSO {
     var q = QSO(call: call, timeOn: Date()); q["band"] = band; q["mode"] = mode; return q
 }
-let worked = [qso("W1AW", "20m", "CW"), qso("K5ZZZ", "40m", "SSB"), qso("N0FT", "20m", "FT8")]
+let worked = [qso("W1AW", "20m", "CW"), qso("K5AX", "40m", "SSB"), qso("N0FT", "20m", "FT8")]
 check(fd.dupe(of: "W1AW", band: "20m", mode: "CW", in: worked) != nil, "band and mode: same band, same mode, a dupe")
 check(fd.dupe(of: "W1AW", band: "20m", mode: "SSB", in: worked) == nil, "band and mode: CW then phone is new")
 check(fd.dupe(of: "W1AW", band: "40m", mode: "CW", in: worked) == nil, "band and mode: another band is new")
-check(fd.dupe(of: "K5ZZZ", band: "40m", mode: "USB", in: worked) != nil, "SSB and USB are both phone")
+check(fd.dupe(of: "K5AX", band: "40m", mode: "USB", in: worked) != nil, "SSB and USB are both phone")
 check(fd.dupe(of: "N0FT", band: "20m", mode: "RTTY", in: worked) != nil, "FT8 and RTTY are both digital")
 check(fd.dupe(of: "W1AW", band: "20m", mode: "", in: worked) == nil,
       "band and mode: an unknown mode is never a dupe (a TS-590SG data mode warned of CW)")
@@ -104,8 +104,8 @@ check(perBand.dupe(of: "W1AW", band: "20m", mode: "SSB", in: worked) != nil
 
 // MARK: Dupe sheet
 let sheet = Contest.dupeSheet(worked + [qso("W1AW", "20m", "CW"), qso("AA1A", "80m", "CW")],
-                              contestName: "ARRL Field Day", myCall: "N0CALL")
-check(sheet.hasPrefix("ARRL Field Day dupe sheet, N0CALL\n5 contacts\n"), "headed with the contest and your call")
+                              contestName: "ARRL Field Day", myCall: "N3BYY")
+check(sheet.hasPrefix("ARRL Field Day dupe sheet, N3BYY\n5 contacts\n"), "headed with the contest and your call")
 let blocks = sheet.components(separatedBy: "\n\n").dropFirst().map { $0.components(separatedBy: "\n").first ?? "" }
 check(blocks == ["80m CW (1)", "40m Phone (1)", "20m CW (1)", "20m Digital (1)"],
       "by band, longest first, then CW, phone, digital; repeats counted once: \(blocks)")

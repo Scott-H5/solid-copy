@@ -1,20 +1,20 @@
 // ElectronicCard.swift
 //
-// Your electronic QSL card: a PDF the size of a
+// Your electronic QSL card (CLAUDE.md, v1 item 10): a PDF the size of a
 // paper card (5.5 by 3.5 inches) that confirms one contact, with real
 // text VoiceOver reads, and a picture of your choosing behind it. QSL >
 // Send QSL Card (LogTableViewController) makes one and hands it to Mail.
 //
 // What's on it, top to bottom, which is also the order it's read in:
-//   N0CALL                                  your call, large
-//   the author / Anytown, PA / SKCC 12345       your lines (Settings > QSL Card)
-//   Grid square: EN82.                     your fields you chose (my_...)
+//   N3BYY                                  your call, large
+//   Scott / Anytown, PA / SKCC 12345       your lines (Settings > QSL Card)
+//   Grid square: FN20.                     your fields you chose (my_...)
 //   To Bob, W1AW                           their name, if chosen, and call
 //   Date: 17 November 2026.  Time: 14:32 UTC.  Band: 40m.  ...
 //                                          the contact's fields you chose,
 //                                          in your order, one paragraph
 //   Thanks for the contact.                its QSL message, or your usual one
-//   73, N0CALL
+//   73, N3BYY
 //   Picture: a brass straight key.         what the picture shows, if set
 //
 // Why one column, and the contact as one paragraph: VoiceOver reads a

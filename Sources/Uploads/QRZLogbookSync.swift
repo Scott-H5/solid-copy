@@ -1,6 +1,7 @@
 // QRZLogbookSync.swift
 //
-// Gets confirmations from QRZ Logbook and marks them in the log, as LoTW's Sync does. QSL > Sync with QRZ Logbook uploads
+// Gets confirmations from QRZ Logbook and marks them in the log (CLAUDE.md
+// v1 item 4), as LoTW's Sync does. QSL > Sync with QRZ Logbook uploads
 // new contacts first (QRZLogbookUpload.swift), then comes here.
 //
 // How QRZ's FETCH works (its Logbook API Developer Guide, last updated 7

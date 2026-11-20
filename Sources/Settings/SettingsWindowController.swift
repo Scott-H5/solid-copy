@@ -31,8 +31,7 @@
 // Section 4, Log Columns: which columns the log shows, and in what order. Call
 // is always first.
 //
-// Section 5, Radio: your radios and the one in use, read through rigctld (see
-// RadioViewController.swift).
+// Section 5, Radio: your radios and the one in use (see RadioViewController.swift).
 //
 // Section 6, Speech: how much is said for lookups, logging and radio
 // changes (see Speaker.swift), each a pop-up menu, saved as you choose.

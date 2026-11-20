@@ -8,7 +8,7 @@
 // Database.init(readOnlyURL:)), so the original is never changed.
 //
 // How the format stores things, and what each becomes (worked out from
-// the author's own log, 2026-11-14):
+// Scott's own log, 2026-11-14):
 //   - qso_start and qso_done are Unix time (seconds since 1 January 1970,
 //     UTC). They become the contact's time, and End date and End time.
 //     A few have fractions of a second; those are dropped.
@@ -28,14 +28,14 @@
 //       "QRZLogbook:date"        QRZ Logbook confirmed, and its date
 //       "CardC:date" received    a paper card received, and its date
 //       "Uploaded to (or Updated in) QRZ Logbook date"  uploaded there
-//     "CardC" is a card the logger was told came in. In the author's log it's
+//     "CardC" is a card the logger was told came in. In Scott's log it's
 //     the old paper cards he and his wife entered by hand on 17 December
 //     2025 (an earlier reading took it for a bulk mark: it isn't, as the
 //     contacts without cards from the same years show). The format puts
 //     the same "CardC" in qsl_sent too, which says nothing about a card
 //     going out, so it isn't taken as one. A bare date at the start of
 //     qsl_received repeats the first confirmation's, so it's skipped.
-//   - ext_val_1 and ext_val_2 hold your own county ("MD,COUNTY") and
+//   - ext_val_1 and ext_val_2 hold your own county ("MD,FREDERICK") and
 //     state ("MD"). ext_val_3 repeated the other station's state and
 //     ext_val_4 was empty, so neither is kept.
 //

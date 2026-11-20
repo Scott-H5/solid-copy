@@ -1,6 +1,6 @@
 // RadioViewController.swift
 //
-// Settings > Radio: your radios, read through hamlib's rigctld. One is in
+// Settings > Radio: your radios. One is in
 // use at a time, whatever the profile; switch here, from the radio pop-up
 // under the clocks, or with Control-Command-1, 2, ... (Radio menu).
 //
@@ -8,15 +8,17 @@
 //   - Radio in use: a pop-up menu of your radios, and No Radio.
 //   - New Radio (added and put in use, ready to set up) and Delete Radio.
 //   - The radio in use:
-//     - Connect through: Solid Copy's own rigctld (the usual way: Solid
-//       Copy starts it, and starts it again whenever it needs to), or a
-//       rigctld you run yourself, at an address.
-//     - Manufacturer and Model: two pop-up menus rather than one long
-//       one, since hamlib knows hundreds of radios.
+//     - Connect through: the built-in driver (Kenwood and Elecraft radios,
+//       talked to over the USB port, with nothing else to install), or
+//       "Hamlib NET rigctl": a rigctld you run yourself, at an IP address
+//       and port, for any other radio. The built-in driver offers only the
+//       Kenwood and Elecraft radios it knows.
+//     - Manufacturer and Model: the built-in driver's radios, in two menus.
 //     - Port: the radio's USB serial port. The list is fresh each time it
 //       opens, so a radio plugged in a moment ago is there.
 //     - Speed: the port's speed, which must match the radio's own setting.
-//     - Address: only for a rigctld you run yourself ("127.0.0.1:4532").
+//     - IP address and Network port: only for Hamlib NET rigctl, with the
+//       defaults 127.0.0.1 and 4532 (rigctld's usual port).
 //     - Status: what the radio is doing now, kept up to date.
 //
 // Every change is saved at once, and Solid Copy reconnects with it.
@@ -36,13 +38,12 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let modelMenu = NSPopUpButton()
     private let portMenu = NSPopUpButton()
     private let speedMenu = NSPopUpButton()
-    private let addressField = NSTextField(string: "")
+    private let ipField = NSTextField(string: "")
+    private let netPortField = NSTextField(string: "")
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
     private var details: NSStackView!
     private var grid: NSGridView!
 
-    // hamlib's radios, once loaded (see RadioModels).
-    private var models: [RadioModels.Model] = []
     // The radio shown, to tell when another is chosen elsewhere.
     private var shownID: UUID?
 
@@ -61,17 +62,21 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         top.rowAlignment = .firstBaseline
 
         heading.font = .boldSystemFont(ofSize: NSFont.systemFontSize + 1)
-        connectionMenu.addItems(withTitles: ["Solid Copy's own rigctld", "A rigctld you run yourself"])
+        connectionMenu.addItems(withTitles: ["Built-in driver (Kenwood and Elecraft)", "Hamlib NET rigctl"])
         speedMenu.addItems(withTitles: RadioSettings.speeds.map { "\($0) baud" })
         // The port list is made fresh each time it opens (menuNeedsUpdate).
         portMenu.menu?.delegate = self
-        addressField.placeholderString = "127.0.0.1:4532"
-        addressField.delegate = self
-        addressField.widthAnchor.constraint(equalToConstant: 260).isActive = true
+        // Defaults shown until typed over: this Mac, rigctld's usual port.
+        ipField.placeholderString = "127.0.0.1"
+        netPortField.placeholderString = "4532"
+        for field in [ipField, netPortField] {
+            field.delegate = self
+            field.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        }
 
         let controls: [(String, NSView)] = [("Connect through", connectionMenu), ("Manufacturer", makerMenu),
                                             ("Model", modelMenu), ("Port", portMenu), ("Speed", speedMenu),
-                                            ("Address", addressField)]
+                                            ("IP address", ipField), ("Network port", netPortField)]
         for (label, control) in controls {
             control.setAccessibilityLabel(label)
             if let menu = control as? NSPopUpButton {
@@ -126,11 +131,6 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
                 }
             }
         }
-        Task { [weak self] in
-            let models = await RadioModels.load()
-            self?.models = models
-            self?.refresh()
-        }
         refresh()
     }
 
@@ -148,22 +148,34 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         guard let radio else { return showStatus() }
 
         heading.stringValue = radio.name
-        connectionMenu.selectItem(at: radio.usesOwnRigctld ? 0 : 1)
+        connectionMenu.selectItem(at: radio.builtIn ? 0 : 1)
         // Manufacturers, then the chosen one's models.
         makerMenu.removeAllItems()
         makerMenu.addItem(withTitle: "Choose a manufacturer")
-        makerMenu.addItems(withTitles: Self.unique(models.map(\.maker)))
-        let model = models.first { $0.number == radio.model }
+        makerMenu.addItems(withTitles: Self.unique(offeredModels.map(\.maker)))
+        let model = offeredModels.first { $0.number == radio.model }
         if let model { makerMenu.selectItem(withTitle: model.maker) } else { makerMenu.selectItem(at: 0) }
         fillModels(selecting: model?.number)
         fillPorts()
         speedMenu.selectItem(at: RadioSettings.speeds.firstIndex(of: radio.baud) ?? 3)
-        addressField.stringValue = radio.address
+        // The saved address split into its two fields; the defaults show
+        // when there isn't one yet.
+        if radio.address.isEmpty {
+            ipField.stringValue = ""
+            netPortField.stringValue = ""
+        } else {
+            ipField.stringValue = radio.hostAndPort.host
+            netPortField.stringValue = String(radio.hostAndPort.port)
+        }
         showRows()
         showStatus()
     }
 
     // MARK: - Filling the menus
+
+    // The radios offered: the built-in driver's (KenwoodRadio). Hamlib NET
+    // rigctl doesn't pick a model here; its rigctld is set up separately.
+    private var offeredModels: [RadioModels.Model] { RadioModels.builtIn }
 
     // The chosen manufacturer's models, after "Choose a model" (so choosing
     // a manufacturer doesn't pick one of its radios for you).
@@ -171,7 +183,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         modelMenu.removeAllItems()
         modelMenu.addItem(withTitle: "Choose a model")
         let maker = makerMenu.titleOfSelectedItem ?? ""
-        for model in models where model.maker == maker {
+        for model in offeredModels where model.maker == maker {
             modelMenu.addItem(withTitle: model.name)
             modelMenu.lastItem?.tag = model.number
         }
@@ -183,7 +195,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         modelMenu.isEnabled = makerMenu.indexOfSelectedItem > 0
     }
 
-    // The serial ports there now ("usbserial-0567003F3CA0"), plus the saved
+    // The serial ports there now ("usbserial-XXXX"), plus the saved
     // one if it isn't (the radio is off), marked as such.
     private func fillPorts() {
         let saved = Settings.currentRadio?.port ?? ""
@@ -208,12 +220,13 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         MainActor.assumeIsolated { fillPorts() }
     }
 
-    // Shows only the rows that apply: the address for your own rigctld;
-    // manufacturer, model, port and speed for Solid Copy's.
+    // Shows only the rows that apply: the IP address and network port for
+    // Hamlib NET rigctl; manufacturer, model, port and speed for the others.
     private func showRows() {
-        let own = connectionMenu.indexOfSelectedItem == 0
-        for row in 1...4 { grid.row(at: row).isHidden = !own }
-        grid.row(at: 5).isHidden = own
+        let yours = connectionMenu.indexOfSelectedItem == 1
+        for row in 1...4 { grid.row(at: row).isHidden = yours }
+        grid.row(at: 5).isHidden = !yours
+        grid.row(at: 6).isHidden = !yours
     }
 
     private func showStatus() {
@@ -263,8 +276,10 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     @objc private func changed(_ sender: NSPopUpButton) {
         if sender === makerMenu { fillModels(selecting: nil) }
-        if sender === connectionMenu { showRows() }
         save()
+        // The built-in driver offers fewer radios, so the lists are made
+        // again (refresh also shows the rows that apply).
+        if sender === connectionMenu { refresh() }
     }
 
     func controlTextDidEndEditing(_ notification: Notification) {
@@ -275,23 +290,40 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     // reconnects when Settings say it changed.
     private func save() {
         guard var radio = Settings.currentRadio else { return }
-        if connectionMenu.indexOfSelectedItem == 0 {
+        let choice = connectionMenu.indexOfSelectedItem
+        radio.builtIn = choice == 0
+        if choice == 1 {
+            // Hamlib NET rigctl: its IP address and port are all that's
+            // needed (the rest is kept, for if you switch back). Empty
+            // fields mean the defaults. A bad port is refused in plain
+            // words and the saved one shown again.
+            let host = ipField.stringValue.trimmingCharacters(in: .whitespaces)
+            let portText = netPortField.stringValue.trimmingCharacters(in: .whitespaces)
+            let savedHost = radio.hostAndPort
+            guard !host.contains(":") else {
+                Speaker.announce("An IP address like 127.0.0.1, without a port. The port goes in Network port.")
+                ipField.stringValue = savedHost.host
+                return
+            }
+            guard let port = portText.isEmpty ? 4532 : UInt16(portText), port > 0 else {
+                Speaker.announce("Network port must be a number from 1 to 65535.")
+                netPortField.stringValue = String(savedHost.port)
+                return
+            }
+            radio.address = "\(host.isEmpty ? "127.0.0.1" : host):\(port)"
+            ipField.stringValue = host.isEmpty ? "127.0.0.1" : host
+            netPortField.stringValue = String(port)
+        } else {
             radio.address = ""
             // A manufacturer but no model yet: keep the old model until
             // one is chosen.
-            if let model = models.first(where: { $0.number == modelMenu.selectedItem?.tag }),
+            if let model = offeredModels.first(where: { $0.number == modelMenu.selectedItem?.tag }),
                modelMenu.indexOfSelectedItem > 0 {
                 radio.model = model.number
                 radio.modelName = "\(model.maker) \(model.name)"
             }
             radio.port = portMenu.selectedItem?.representedObject as? String ?? ""
             radio.baud = RadioSettings.speeds[max(0, speedMenu.indexOfSelectedItem)]
-        } else {
-            // A rigctld of your own: its address is all that's needed (the
-            // rest is kept, for if you switch back).
-            let address = addressField.stringValue.trimmingCharacters(in: .whitespaces)
-            radio.address = address.isEmpty ? "127.0.0.1:4532" : address
-            addressField.stringValue = radio.address
         }
         guard radio != Settings.currentRadio else { return }
         let renamed = radio.name != Settings.currentRadio?.name

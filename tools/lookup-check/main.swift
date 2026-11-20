@@ -49,12 +49,12 @@ check(QRZClient.formEncode(["password": "a&b=c d+é", "username": "N0CALL"]) == 
 
 let callookJSON = """
 {"status":"VALID","type":"PERSON","current":{"callsign":"N0CALL","operClass":"EXTRA"},
- "name":"PUBLIC, JOHN Q","address":{"line1":"1 MAIN ST","line2":"ANYTOWN, PA 00000"},
- "location":{"latitude":"42.5","longitude":"-83.0","gridsquare":"EN82"}}
+ "name":"PUBLIC, JOHN Q","address":{"line1":"1 MAIN ST","line2":"FREDERICK, MD 21701"},
+ "location":{"latitude":"39.41","longitude":"-77.41","gridsquare":"FM19jk"}}
 """
 let callook = CallookClient.result(from: Data(callookJSON.utf8), call: "N0CALL")
 check(callook?.fields["name"] == "John Q Public" && callook?.firstName == "John", "callook: FCC name tidied")
-check(callook?.fields["qth"] == "Anytown" && callook?.fields["state"] == "PA" && callook?.place == "Anytown, Pennsylvania",
+check(callook?.fields["qth"] == "Frederick" && callook?.fields["state"] == "MD" && callook?.place == "Frederick, Maryland",
       "callook: city and state from the address")
 check(CallookClient.result(from: Data(#"{"status":"INVALID"}"#.utf8), call: "X") == nil, "callook: unknown call gives nothing")
 

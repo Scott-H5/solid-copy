@@ -19,7 +19,7 @@
 // The waiting list is saved as it changes (user defaults, key
 // "autoUpload.waiting"), so quitting during the wait loses nothing: the
 // next launch sends them half a minute after opening. Before 16 November
-// 2026 quitting forgot them, which mattered once the author chose "five
+// 2026 quitting forgot them, which mattered once Scott chose "five
 // minutes after the last contact": log the last one, quit, and it stayed
 // behind.
 

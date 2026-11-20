@@ -77,7 +77,7 @@ final class LogDatabase {
         // (Solid Copy's own fields, as ADIF has none) (2026-11-14).
         addColumns(["fists", "fists_cc", "app_solidcopy_licw", "app_solidcopy_cwops"]),
         // 5: The SQL log format's own fields taken out again (2026-11-15). Checked
-        // against the author's log: its QSL text was a bulk mark ("CardC" with
+        // against Scott's log: its QSL text was a bulk mark ("CardC" with
         // one date on every contact) plus what's already in the LoTW and
         // QRZ Logbook fields; extra value 3 only repeated the state, and 4
         // was empty. Nothing in them is lost.
@@ -90,7 +90,7 @@ final class LogDatabase {
         // 6: QSL tracking: card dates and how they went, their card's
         // message, LoTW and eQSL sent and received, and QRZ Logbook
         // confirmations (ADIF 3.1.6 names) (2026-11-16). Step 5 was wrong
-        // about "CardC": those are real paper cards (the author, 16 November),
+        // about "CardC": those are real paper cards (Scott, 16 November),
         // now imported as cards received (SQLLogImport.swift). Its
         // dropped column was never needed: the import reads the original.
         addColumns([

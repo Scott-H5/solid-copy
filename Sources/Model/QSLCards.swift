@@ -109,7 +109,7 @@ struct QSLCards {
 
     // Matches card files to contacts by call. One contact with that call:
     // that one. Several: the one already marked card received, if only
-    // one is (in the author's log, cards entered by hand were marked);
+    // one is (in Scott's log, cards entered by hand were marked);
     // otherwise it's left for you to attach from the log, as the file
     // can't say which. A contact that has a card already is skipped.
     static func match(_ files: [URL], to contacts: [QSO]) -> Match {

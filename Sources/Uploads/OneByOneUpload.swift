@@ -143,7 +143,7 @@ enum OneByOneUpload {
 
     // Refusals grouped by reason, so 24 contacts refused for one reason
     // are one sentence, not 24: " 24 weren't taken, because its date is
-    // ...: KB3QQQ, AF4QQQ, ... and 19 more." Reasons in the order first met.
+    // ...: KB3CFK, AF4CM, ... and 19 more." Reasons in the order first met.
     nonisolated static func refusals(_ refused: [(call: String, why: String)]) -> String {
         var reasons: [String] = []
         var calls: [String: [String]] = [:]

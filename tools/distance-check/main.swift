@@ -4,7 +4,7 @@
 //   - grid squares to positions (centres), and bad grids refused;
 //   - New York to London, a well-known path (about 5,570 km, setting off
 //     at about 51 degrees);
-//   - the author's grid (EN82, Anytown) to W1AW (FN31pr, Newington);
+//   - an example grid (EM10, central Texas) to W1AW (FN31pr, Newington);
 //   - the words said and shown, in miles and kilometres;
 //   - a contact's distance from its own fields, preferring lat/lon.
 //
@@ -38,11 +38,11 @@ let ny = GreatCircle.path(from: newYork, to: london)
 check(near(ny.km, 5570, 15) && near(ny.bearing, 51.2, 1), "New York to London: \(Int(ny.km)) km at \(Int(ny.bearing))°")
 let back = GreatCircle.path(from: london, to: newYork)
 check(near(back.km, ny.km, 0.001) && near(back.bearing, 288, 1.5), "and back: the same distance, a different bearing")
-let home = GreatCircle.path(myGrid: "EN82", fields: ["gridsquare": "FN31pr"])!
-check(near(home.km, 853, 5) && near(home.bearing, 92, 3), "Anytown to W1AW: \(Int(home.km)) km at \(Int(home.bearing))°")
+let home = GreatCircle.path(myGrid: "EM10", fields: ["gridsquare": "FN31pr"])!
+check(near(home.km, 454, 5) && near(home.bearing, 53, 3), "EM10 to W1AW: \(Int(home.km)) km at \(Int(home.bearing))°")
 check(GreatCircle.path(myGrid: "", fields: ["gridsquare": "FN31pr"]) == nil
-      && GreatCircle.path(myGrid: "EN82", fields: [:]) == nil, "an unknown end: no path")
-let precise = GreatCircle.path(myGrid: "EN82", fields: ["lat": "41.714", "lon": "-72.727", "gridsquare": "JO01"])!
+      && GreatCircle.path(myGrid: "EM10", fields: [:]) == nil, "an unknown end: no path")
+let precise = GreatCircle.path(myGrid: "EM10", fields: ["lat": "41.714", "lon": "-72.727", "gridsquare": "JO01"])!
 check(near(precise.km, home.km, 5), "latitude and longitude are used before the grid")
 
 // Words
@@ -61,7 +61,7 @@ check(GreatCircle.spoken(km: 0.4, bearing: 10) == "nearby" && GreatCircle.spoken
 
 // A contact
 var qso = QSO(call: "W1AW", timeOn: Date())
-qso["my_gridsquare"] = "EN82"
+qso["my_gridsquare"] = "EM10"
 qso["gridsquare"] = "FN31pr"
 check(GreatCircle.path(for: qso).map { near($0.km, home.km, 0.001) } == true, "a contact's own fields give its path")
 print("All distance checks passed.")

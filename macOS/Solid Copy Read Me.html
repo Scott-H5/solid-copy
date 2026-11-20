@@ -25,8 +25,9 @@ VoiceOver and the keyboard.</p>
 <ul>
 <li>logs a contact from the keyboard alone, starting in the Callsign field</li>
 <li>fills in name, QTH and grid from QRZ (or callook.info)</li>
-<li>reads frequency, band, mode and power from the radio through hamlib
-(tested with the Kenwood TS-590SG and Elecraft KX3)</li>
+<li>reads frequency, band, mode and power from the radio, through its own
+built-in driver for Kenwood and Elecraft radios, or hamlib's rigctld for
+others (tested with the Kenwood TS-590SG and Elecraft KX3)</li>
 <li>uploads to LoTW, QRZ Logbook, Club Log and eQSL, automatically if you
 like, and brings LoTW and QRZ confirmations back</li>
 <li>warns about dupes, and says each contact's country and whether it's a
@@ -39,6 +40,7 @@ you can send by email</li>
 format (.sql), exports ADIF, ADX and CSV, and backs up to a folder
 you choose</li>
 </ul>
+<p>See <a href="https://github.com/Scott-H5/solid-copy/blob/main/docs/PLAN.md">docs/PLAN.md</a> for where it's headed.</p>
 <h2 id="installing">Installing</h2>
 <p>Download the zip from the latest release at
 <a href="https://github.com/Scott-H5/solid-copy/releases">https://github.com/Scott-H5/solid-copy/releases</a> and open it. You get a
@@ -163,10 +165,6 @@ as you go.</p>
 <td>Save (in QSO notes, Return starts a new line)</td>
 </tr>
 <tr>
-<td>Tab, Shift-Tab (on the form, with QSO notes added in Settings)</td>
-<td>QSO notes isn't a Tab stop: click in it or reach it with VoiceOver. Return logs the contact, as in every form field</td>
-</tr>
-<tr>
 <td>Escape (in Edit Contact)</td>
 <td>Cancel</td>
 </tr>
@@ -225,6 +223,10 @@ as you go.</p>
 <tr>
 <td>Escape (in the log)</td>
 <td>Go back to Callsign</td>
+</tr>
+<tr>
+<td>Tab, Shift-Tab (on the form, with QSO notes added in Settings)</td>
+<td>QSO notes isn't a Tab stop: click in it or reach it with VoiceOver. Return logs the contact, as in every form field</td>
 </tr>
 <tr>
 <td>Tab (in the log) or Option-Command-I</td>
@@ -444,11 +446,15 @@ without your noticing) gives the warning sound and "No band": type the
 band or frequency, or press Return again to log it anyway. A frequency
 typed without a band fills the band in by itself.</p>
 <h2 id="the-radio">The radio</h2>
-<p>Solid Copy reads frequency, band, mode and power from the radio, through
-hamlib's <code>rigctld</code>, which is built into the app. Add your radios in
-<strong>Settings &gt; Radio</strong> (Command-comma, Command-5): <strong>New Radio</strong>, then its
-manufacturer, model, USB port and speed (the TS-590SG uses 115200, the
-KX3 38400). One radio is in use at a time, whatever the profile.</p>
+<p>Solid Copy reads frequency, band, mode and power from the radio. For
+Kenwood and Elecraft radios (TS-590S, TS-590SG, K3, KX3, KX2) it uses its
+own built-in driver, which talks to the radio's USB port directly, so
+nothing else needs installing. Any other radio works through hamlib's
+<code>rigctld</code>, which you run yourself (see "Hamlib NET rigctl" below).</p>
+<p>Add your radios in <strong>Settings &gt; Radio</strong> (Command-comma, Command-5):
+<strong>New Radio</strong>, then its connection, manufacturer, model, USB port and
+speed (the TS-590SG uses 115200, the KX3 38400). One radio is in use at a
+time, whatever the profile.</p>
 <ul>
 <li>
 <p><strong>Switch radios</strong> in the middle of a session: <strong>Control-Command-1, 2…</strong>
@@ -610,12 +616,25 @@ Radio &gt; Reconnect Radio starts afresh if you ever want to.</li>
 "lost" only after 4 seconds without one. Restarting VoiceOver with a
 USB braille display plugged in can make the radio miss a second's
 read, which before version 1.1.2 was announced as lost, then back.</li>
-<li>While Solid Copy is open, other programs (WSJT-X, say, set to "Hamlib
-NET rigctl") can share the radio at 127.0.0.1 port 45320. (Not
-rigctld's usual 4532, so it can't collide with a rigctld of your own.)</li>
+<li>A program such as WSJT-X can use the radio through a rigctld you run,
+set to "Hamlib NET rigctl" at 127.0.0.1 port 4532. For a Kenwood or
+Elecraft radio, the built-in driver holds the radio's USB port itself,
+so a rigctld can't use that radio at the same time.</li>
 </ul>
-<p>Building needs hamlib from Homebrew (<code>brew install hamlib</code>); the build
-copies its rigctld into the app. After <code>brew upgrade hamlib</code>, rebuild.</p>
+<h3 id="hamlib-net-rigctl-a-rigctld-you-run-yourself">Hamlib NET rigctl: a rigctld you run yourself</h3>
+<p><strong>Settings &gt; Radio &gt; Connect through</strong> has <strong>Hamlib NET rigctl</strong> for a
+rigctld you run yourself, from hamlib, on this Mac or another one. Set its <strong>IP address</strong>
+(127.0.0.1 is this Mac) and <strong>Network port</strong> (4532 is rigctld's usual
+port). Solid Copy then uses that rigctld and nothing else.</p>
+<p>To get hamlib, install it with Homebrew (see <a href="https://brew.sh" rel="nofollow">https://brew.sh</a> for
+installing Homebrew):</p>
+<div class="highlight highlight-source-shell"><pre>brew install hamlib</pre></div>
+<p>Then start rigctld for your radio. These are the TS-590SG (model 2037,
+115200 baud) and the KX3 (model 2045, 38400 baud); use your radio's
+model number and the port from Settings &gt; Radio:</p>
+<div class="highlight highlight-source-shell"><pre>rigctld -m 2037 -r /dev/cu.usbserial-XXXX -s 115200 -t 4532</pre></div>
+<p>Leave that running while you log. Hamlib's own instructions, and its
+full list of radios, are at <a href="https://hamlib.github.io/" rel="nofollow">https://hamlib.github.io/</a>.</p>
 <h2 id="choosing-the-form-and-the-columns">Choosing the form and the columns</h2>
 <p><strong>Settings &gt; Logging Form</strong> (Command-comma, then Command-3) lists every
 field you can put on the profile in use's form after Callsign; the
@@ -1087,7 +1106,7 @@ Undo takes the import back out.</p>
 <p><strong>File &gt; Export…</strong> (Shift-Command-E) saves the whole log as ADIF, as ADX
 or as a CSV spreadsheet. ADIF and ADX carry exactly the same fields; use
 whichever the other program or service asks for. Notes are private, so they're left out unless you tick
-Include Notes.</p>
+Include QSO notes.</p>
 <p>To check importing and exporting without changing your Solid Copy log,
 run <code>tools/check-import-export.sh</code> (see Checks).</p>
 <h2 id="checks">Checks</h2>
@@ -1144,6 +1163,8 @@ about 9 minutes, so start it when you can leave the Mac alone.</li>
 <h2 id="documents">Documents</h2>
 <ul>
 <li>
+<a href="https://github.com/Scott-H5/solid-copy/blob/main/docs/PLAN.md">docs/PLAN.md</a>: goals, decisions and phases</li>
+<li>
 <a href="https://github.com/Scott-H5/solid-copy/blob/main/docs/ACCESSIBILITY-CONTRACT.md">docs/ACCESSIBILITY-CONTRACT.md</a>: the
 rules for focus and speech the app must keep</li>
 <li>
@@ -1171,12 +1192,14 @@ eQSL). Those are the logins for the services you've set up.</li>
 <p>Your backups aren't in that folder if you chose another one under Settings &gt;
 Backups, such as a folder in iCloud Drive. Solid Copy doesn't delete them,
 so remove that folder yourself if you don't want the copies.</p>
-<p>Nothing else is left behind: the radio helper (rigctld) closes with the app.</p>
+<p>Nothing else is left behind: Solid Copy starts no helper programs, and it
+lets go of the radio's port when it quits.</p>
 <h2 id="licence">Licence</h2>
 <p>Solid Copy is licensed under the GNU General Public License, version 3
 (GPL-3.0). The full text is in the LICENSE file.</p>
-<p>Solid Copy talks to radios through Hamlib's rigctld, which is bundled
-inside the app. Thank you to the Hamlib project and its contributors:
+<p>Solid Copy works with radios through Hamlib's rigctld, which you run
+yourself for radios the built-in driver doesn't cover. Thank you to the
+Hamlib project and its contributors:
 <a href="https://hamlib.github.io/" rel="nofollow">https://hamlib.github.io/</a> (source code at
 <a href="https://github.com/Hamlib/Hamlib">https://github.com/Hamlib/Hamlib</a>). docs/CREDITS.md lists everything
 Solid Copy includes and its licence.</p>

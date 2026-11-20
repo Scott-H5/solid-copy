@@ -1,6 +1,6 @@
 // Logs.swift
 //
-// Your logs:
+// Your logs (CLAUDE.md #12; the list is LogList.swift):
 //   File > New Contest Log…  a log for one contest (Contest.swift), with
 //                          that contest's profile (made from its
 //                          template if you have none), which comes back
@@ -182,7 +182,7 @@ extension AppDelegate {
             self?.fillLogMenu()
             // The sheet is still attached while this runs, and switching
             // refuses while a sheet is open; so switch a moment later,
-            // once it's gone. (Found by the author, 17 November 2026: new logs
+            // once it's gone. (Found by Scott, 17 November 2026: new logs
             // were made but never opened.)
             DispatchQueue.main.async { MainActor.assumeIsolated { self?.switchTo(log) } }
         }

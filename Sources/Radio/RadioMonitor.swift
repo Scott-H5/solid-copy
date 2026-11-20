@@ -8,22 +8,13 @@
 // at once when you start typing a callsign, so the contact gets the
 // radio's frequency even if the radio was switched on a moment ago.
 //
-// With Solid Copy's own rigctld (the usual way), it also looks after
-// rigctld:
-//   - The radio's USB port missing (the TS-590SG's disappears when the
-//     radio is off): rigctld is stopped, and the state is "off or
-//     unplugged". When the port comes back, rigctld is started again.
-//   - rigctld stopped (it can stop if the radio vanishes under it): it's
-//     started again.
-//   - The radio not answering: rigctld is restarted, in case it's
-//     holding on to a port that went away and came back. After 10
-//     seconds the first time, then 30, then once a minute, so a radio
-//     that's simply off (the KX3, whose port is in its cable and stays
-//     when the radio is off) doesn't keep rigctld starting over.
+// With the built-in driver (KenwoodClient) the USB port is checked: gone is
+// "off or unplugged", and a port another app holds is said too.
+// With Hamlib NET rigctl (RigctldClient) it's a rigctld you run yourself:
+// if nothing answers at its address, that's said, and it keeps trying.
 //
 // After a minute without an answer, it looks every 15 seconds instead
-// of 3: each look at a silent radio ties rigctld up for some 20 seconds
-// of trying. Typing a callsign still tries at once.
+// of 3. Typing a callsign still tries at once.
 //
 // Each change of state is spoken once (rule 12 of the accessibility
 // contract), and trouble only once until the radio connects or its
@@ -48,6 +39,8 @@ final class RadioMonitor {
         case needsSetup
         // The radio's USB port isn't there: the radio is off or unplugged.
         case portMissing
+        // Another app has the radio's USB port open, so Solid Copy can't.
+        case portInUse
         // rigctld has just been started, and is opening the radio.
         case starting
         // Nothing is listening at the rigctld address.
@@ -169,10 +162,6 @@ final class RadioMonitor {
         return offsetTarget ?? status?.offsetHertz
     }
 
-    // How long the radio may be silent before rigctld is restarted: the
-    // first time, the second, and every time after that. (The check in
-    // tools/radio-check shortens these.)
-    static var restartDelays: [TimeInterval] = [10, 30, 60]
     // How long a connected radio may go without answering before it's
     // called lost. A radio sometimes misses one read and answers the
     // next: restarting VoiceOver with a USB braille display plugged in
@@ -190,19 +179,14 @@ final class RadioMonitor {
     static var tone: @MainActor (Tone) -> Void = { $0.play() }
 
     private var settings: RadioSettings?
-    private var client: RigctldClient?
+    // RigctldClient, or KenwoodClient for the built-in driver.
+    private var client: RadioLink?
     // The network calls wait, so they're made here, one at a time.
     private let queue = DispatchQueue(label: "Solid Copy radio")
     private var polling = false
     private var timer: Timer?
     private var tick = 0
-    private var rigctld: Process?
-    private var rigctldStarted = Date.distantPast
     private var notAnsweringSince: Date?
-    // rigctld starts since the last good reading.
-    private(set) var startsWithoutReading = 0
-    // Restarts because the radio was silent, since the last good reading.
-    private var silentRestarts = 0
     // The last good reading, or when this radio was chosen.
     private var lastReading = Date()
     // The kind of state last announced (see set(_:)).
@@ -214,18 +198,20 @@ final class RadioMonitor {
     // Nothing happens if it's the same as before.
     func use(_ newSettings: RadioSettings?) {
         guard newSettings != settings else { return }
-        stopRigctld()
         settings = newSettings
-        client = newSettings.map {
-            RigctldClient(host: $0.hostAndPort.host, port: $0.hostAndPort.port,
-                          dialect: .init(model: $0.model, modelName: $0.modelName))
+        client = newSettings.flatMap { settings -> RadioLink? in
+            if settings.builtIn {
+                // No model the built-in driver knows: no client, and
+                // check() says the radio needs setting up.
+                guard let radio = KenwoodRadio.forModel(settings.model) else { return nil }
+                return KenwoodClient(path: settings.port, baud: settings.baud, radio: radio)
+            }
+            return RigctldClient(host: settings.hostAndPort.host, port: settings.hostAndPort.port,
+                                 dialect: .init(model: settings.model, modelName: settings.modelName))
         }
         notAnsweringSince = nil
-        startsWithoutReading = 0
-        silentRestarts = 0
         lastReading = Date()
         spokenKind = nil
-        rigctldStarted = .distantPast
         status = nil
         tuneTarget = nil
         offsetTarget = nil
@@ -247,66 +233,6 @@ final class RadioMonitor {
         set(.starting)
     }
 
-    // Radio > Record Radio Log: rigctld writes everything it sends the
-    // radio and everything the radio sends back, with times, to
-    // ~/Library/Containers/io.github.scott-h5.solidcopy/Data/Library/Logs/
-    // rigctld.log, for finding out what's going wrong. Off whenever Solid
-    // Copy starts (the log grows fast); turning it on starts a fresh log
-    // and restarts rigctld, with the log or without.
-    var recordsLog = false {
-        didSet {
-            guard recordsLog != oldValue else { return }
-            if recordsLog { try? FileManager.default.removeItem(at: Self.logURL) }
-            reconnect()
-        }
-    }
-
-    // The pid (process number) of the rigctld Solid Copy started, while
-    // it runs. A force-quit (or a crash, or the accessibility audit
-    // ending Solid Copy) leaves rigctld running with the radio's port
-    // open, and macOS has no way to stop a child when its parent goes.
-    // So the next start stops it first.
-    static var pidURL: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Solid Copy rigctld.pid")
-    }
-
-    private static func stopLeftoverRigctld() {
-        guard let text = try? String(contentsOf: pidURL, encoding: .utf8),
-              let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 0 else { return }
-        try? FileManager.default.removeItem(at: pidURL)
-        // Only if it's still a Solid Copy rigctld: the number may have
-        // been given to another program since.
-        var path = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
-        guard proc_pidpath(pid, &path, UInt32(path.count)) > 0 else { return }
-        // (macOS gives the real place, so a shortcut such as Homebrew's
-        // /opt/homebrew/bin/rigctld is followed before comparing.)
-        let running = String(cString: path)
-        guard running == RadioModels.rigctld.resolvingSymlinksInPath().path
-                || running.hasSuffix(".app/Contents/Helpers/rigctld") else { return }
-        kill(pid, SIGTERM)
-        // Give it a moment to let go of the port.
-        for _ in 0..<20 where kill(pid, 0) == 0 { usleep(50_000) }
-    }
-
-    static var logURL: URL {
-        FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Logs/rigctld.log")
-    }
-
-    // Where rigctld's messages go: the log, added to, or nowhere.
-    private func rigctldOutput() -> FileHandle {
-        guard recordsLog else { return FileHandle.nullDevice }
-        let url = Self.logURL
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if !FileManager.default.fileExists(atPath: url.path) {
-            FileManager.default.createFile(atPath: url.path, contents: nil)
-        }
-        guard let file = try? FileHandle(forWritingTo: url) else { return FileHandle.nullDevice }
-        file.seekToEndOfFile()
-        return file
-    }
-
     // Tries straight away (when you start typing a callsign, say), unless
     // a try is already under way.
     func checkNow() {
@@ -320,10 +246,9 @@ final class RadioMonitor {
         use(current)
     }
 
-    // Stops Solid Copy's rigctld, when Solid Copy quits.
+    // Stops the radio check, when Solid Copy quits.
     func stop() {
         timer?.invalidate()
-        stopRigctld()
     }
 
     // MARK: - Words
@@ -337,12 +262,11 @@ final class RadioMonitor {
         case .none: return ""
         case .needsSetup: return "Choose its model and port in Settings, Radio."
         case .portMissing: return "Off or unplugged. Waiting for it."
+        case .portInUse: return "Another app has the radio's port. Quit that app; Solid Copy keeps trying."
         case .starting: return "Connecting…"
         case .notRunning:
-            if let settings, !settings.usesOwnRigctld {
-                return "Nothing answering at \(settings.address). Is rigctld running? Trying again."
-            }
-            return "rigctld stopped. Starting it again."
+            let (host, port) = settings?.hostAndPort ?? ("", 0)
+            return "Nothing answering at \(host):\(port). Is rigctld running? Trying again."
         case .notAnswering: return "Not answering. Trying again."
         case .connected(let reading): return reading.shown
         }
@@ -354,6 +278,7 @@ final class RadioMonitor {
         case .none, .starting: return nil
         case .needsSetup: return "\(radioName) not set up."
         case .portMissing: return "\(radioName) off or unplugged."
+        case .portInUse: return "\(radioName) port in use by another app."
         case .notRunning: return "\(radioName) connection not running."
         case .notAnswering: return "\(radioName) not answering."
         case .connected(let reading): return "\(radioName) connected, \(reading.spoken)."
@@ -374,24 +299,14 @@ final class RadioMonitor {
     }
 
     private func check() {
-        guard let settings, let client, !polling else { return }
-        if settings.usesOwnRigctld {
-            guard settings.isComplete else { return set(.needsSetup) }
-            guard FileManager.default.fileExists(atPath: settings.port) else {
-                stopRigctld()
-                return set(.portMissing)
-            }
-            if rigctld?.isRunning != true {
-                // Not more than once every 3 seconds, if it keeps stopping.
-                guard Date().timeIntervalSince(rigctldStarted) >= 3 else { return }
-                startRigctld(settings)
-                // Started twice without a reading: say so (it keeps
-                // trying). The model or speed may be wrong.
-                return set(rigctld == nil || startsWithoutReading > 2 ? .notRunning : .starting)
-            }
-            // Give rigctld a moment to open the radio.
-            if Date().timeIntervalSince(rigctldStarted) < 1 { return }
+        guard let settings, !polling else { return }
+        guard settings.isComplete else { return set(.needsSetup) }
+        // The built-in driver's USB port: gone means the radio is off or
+        // unplugged.
+        if settings.builtIn, !FileManager.default.fileExists(atPath: settings.port) {
+            return set(.portMissing)
         }
+        guard let client else { return }
         polling = true
         // The status line's settings every 5 seconds (and at once, after
         // connecting). They change less, and each is a question to the
@@ -573,35 +488,24 @@ final class RadioMonitor {
         return "S \(max(0, 9 + Int((Double(decibels) / 6).rounded())))"
     }
 
-    private func finished(_ result: Result<RadioReading, Error>, from client: RigctldClient) {
+    private func finished(_ result: Result<RadioReading, Error>, from client: RadioLink) {
         polling = false
         // From a radio that's since been changed in Settings: ignore it.
         guard client === self.client, let settings else { return }
         switch result {
         case .success(let reading):
             notAnsweringSince = nil
-            startsWithoutReading = 0
-            silentRestarts = 0
             lastReading = Date()
             set(.connected(reading))
         case .failure(let error):
-            let failure = error as? RigctldClient.Failure ?? .notAnswering
-            // Just started: rigctld can take a few seconds to open the
-            // radio. Not worth announcing yet.
-            if settings.usesOwnRigctld, Date().timeIntervalSince(rigctldStarted) < 5 {
-                return set(.starting)
-            }
+            let failure = error as? RadioFailure ?? .notAnswering
+            // The built-in driver's port: gone (off or unplugged), or held by
+            // another app. Neither is "not answering", so each is said as itself.
+            if failure == .portGone { notAnsweringSince = nil; return set(.portMissing) }
+            if failure == .portBusy { notAnsweringSince = nil; return set(.portInUse) }
             if failure == .notAnswering || failure == .rejected {
                 let since = notAnsweringSince ?? Date()
                 notAnsweringSince = since
-                let delays = Self.restartDelays
-                if settings.usesOwnRigctld,
-                   Date().timeIntervalSince(since) >= delays[min(silentRestarts, delays.count - 1)] {
-                    // Next try starts a fresh rigctld.
-                    stopRigctld()
-                    notAnsweringSince = nil
-                    silentRestarts += 1
-                }
                 // Still connected, as far as anyone hears, for a missed
                 // read or two (missedAnswerGrace).
                 if case .connected = state, Date().timeIntervalSince(since) < Self.missedAnswerGrace { return }
@@ -661,38 +565,5 @@ final class RadioMonitor {
         case .notRunning, .notAnswering: return "trouble"
         default: return "\(state)"
         }
-    }
-
-    // MARK: - Solid Copy's own rigctld
-
-    private func startRigctld(_ settings: RadioSettings) {
-        Self.stopLeftoverRigctld()
-        let process = Process()
-        process.executableURL = RadioModels.rigctld
-        // -T 127.0.0.1: listen on this Mac only, not the network.
-        process.arguments = ["-m", "\(settings.model)", "-r", settings.port, "-s", "\(settings.baud)",
-                             "-T", "127.0.0.1", "-t", "\(RadioSettings.ownPort)"]
-            // Recording: everything (-vvvvv), each line timed (-Z).
-            + (recordsLog ? ["-vvvvv", "-Z"] : [])
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = rigctldOutput()
-        rigctldStarted = Date()
-        startsWithoutReading += 1
-        do {
-            try process.run()
-            rigctld = process
-            try? "\(process.processIdentifier)".write(to: Self.pidURL, atomically: true, encoding: .utf8)
-        } catch {
-            rigctld = nil
-        }
-    }
-
-    private func stopRigctld() {
-        if let rigctld, rigctld.isRunning { rigctld.terminate() }
-        if rigctld != nil { try? FileManager.default.removeItem(at: Self.pidURL) }
-        rigctld = nil
-        // The connection was to that rigctld: drop it (on the queue, so it
-        // can't happen in the middle of a reading).
-        if let client { queue.async { client.disconnect() } }
     }
 }

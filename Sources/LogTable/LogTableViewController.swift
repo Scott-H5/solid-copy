@@ -185,7 +185,7 @@ final class LogTableViewController: NSViewController,
     // keys. Option-Command-Left and Right move the chosen column and say
     // where it went ("Date (UTC), now column 2 of 8"). Call always stays
     // first. The new order is saved, as when a heading is dragged.
-    // (the author's idea, 14 November 2026.)
+    // (Scott's idea, 14 November 2026.)
     private var chosenColumn = 0
 
     private func stepColumn(_ step: Int) {
@@ -259,7 +259,7 @@ final class LogTableViewController: NSViewController,
         tableView.allowsColumnResizing = true
         // The contacts first, then the columns (which redraws the table).
         // The other way round, the table drew itself with no contacts and
-        // stayed empty until the log changed (found 2026-11-14: the author's 160
+        // stayed empty until the log changed (found 2026-11-14: Scott's 160
         // contacts didn't show at launch).
         rebuildRows()
         rebuildColumns()
@@ -358,7 +358,7 @@ final class LogTableViewController: NSViewController,
     // Shows another log (File > Open Log). The table itself stays, so
     // nothing on screen is torn down: rebuilding the window's views while
     // a field had focus crashed inside macOS's text-input indicator with
-    // VoiceOver on (the author, 17 November 2026).
+    // VoiceOver on (Scott, 17 November 2026).
     func use(_ newLogbook: Logbook) {
         logbook = newLogbook
         searchText = [:]
@@ -879,7 +879,7 @@ final class LogTableViewController: NSViewController,
     // Edit > Copy (Command-C) in the log copies the selected contacts as
     // ADIF text, every field, Notes too (it's your own clipboard). Edit >
     // Paste (Command-V) in a log adds the ADIF on the clipboard to it, so
-    // contacts can be brought into a test log or a new log (the author, 17
+    // contacts can be brought into a test log or a new log (Scott, 17
     // November 2026), and ADIF copied from anywhere else works too.
     // Pasting skips contacts already in the log (same call and time),
     // backs the log up first, and Command-Z takes the paste back out.

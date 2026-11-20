@@ -38,8 +38,8 @@ MainActor.assumeIsolated {
   // Deleting several at once, then Undo and Redo. Two of them are exact
   // repeats (same call and time), like some imported entries.
   let repeatTime = Date(timeIntervalSince1970: 1794667000)
-  try! book.add(QSO(call: "VE3XYZ", timeOn: repeatTime))
-  try! book.add(QSO(call: "VE3XYZ", timeOn: repeatTime))
+  try! book.add(QSO(call: "VE3OXQ", timeOn: repeatTime))
+  try! book.add(QSO(call: "VE3OXQ", timeOn: repeatTime))
   check(tv.numberOfRows == 5, "five contacts before deleting")
   w.makeFirstResponder(tv)
   tv.selectRowIndexes(IndexSet([0, 1, 2]), byExtendingSelection: false)
@@ -47,7 +47,7 @@ MainActor.assumeIsolated {
   table.deleteContact(nil)
   check(tv.numberOfRows == 2 && book.contacts.count == 2, "Delete removes all three")
   w.undoManager?.undo()
-  check(tv.numberOfRows == 5 && book.contacts.filter { $0.call == "VE3XYZ" }.count == 2 && table.selectionCount == 3,
+  check(tv.numberOfRows == 5 && book.contacts.filter { $0.call == "VE3OXQ" }.count == 2 && table.selectionCount == 3,
         "Undo puts all three back, repeats included, and selects them")
   w.undoManager?.redo()
   check(book.contacts.count == 2, "Redo deletes them again")
@@ -67,7 +67,7 @@ MainActor.assumeIsolated {
   check(table.search("") == book.contacts.count && table.filter == nil, "an empty search shows everything")
 
   // QSL: the summary line, in words.
-  var q = QSO(call: "VE3XYZ", timeOn: Date(timeIntervalSince1970: 1794669000))
+  var q = QSO(call: "VE3OXQ", timeOn: Date(timeIntervalSince1970: 1794669000))
   check(QSL.summary(q) == "Not confirmed." && !QSL.isConfirmed(q), "nothing yet: not confirmed")
   q["qsl_rcvd"] = "Y"; q["qslrdate"] = "20251217"; q["lotw_qsl_rcvd"] = "Y"; q["lotw_qslrdate"] = "20220423"
   q["qsl_sent"] = "Y"; q["qslsdate"] = "20261112"; q["qsl_sent_via"] = "B"

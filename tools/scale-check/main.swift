@@ -44,7 +44,7 @@ MainActor.assumeIsolated {
                 q["band"] = bands[i % bands.count]; q["mode"] = "CW"; q["freq"] = "14.0\(i % 99)"
                 q["state"] = states[i % states.count]; q["country"] = "United States"; q["dxcc"] = "291"
                 q["gridsquare"] = "FM19\(i % 10)\(i % 7)"; q["qth"] = "Town \(i % 3000)"; q["cqz"] = "5"; q["ituz"] = "8"
-                q["tx_pwr"] = "100"; q["station_callsign"] = "N0CALL"; q["my_gridsquare"] = "EN82"
+                q["tx_pwr"] = "100"; q["station_callsign"] = "N3BYY"; q["my_gridsquare"] = "EM10"
                 q["email"] = "op\(i)@example.org"; q.comment = i % 10 == 0 ? "nice signal" : ""
                 q["skcc"] = i % 4 == 0 ? "\(i % 30000)S" : ""
                 batch.append(q)

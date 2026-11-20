@@ -83,7 +83,7 @@ enum QRZLogbook {
                 + "settings on qrz.com, then upload again)"
         }
         // "freq_to_band: cannot determine band from , ... qso_hash:
-        // required field missing band1, ..." (VE6AAA, 16 November 2026).
+        // required field missing band1, ..." (VE6BBP, 16 November 2026).
         if lower.contains("cannot determine band") || lower.contains("missing band") {
             return "it has no band or frequency (add one in Edit Contact, then upload again)"
         }

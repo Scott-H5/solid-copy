@@ -210,7 +210,7 @@ MainActor.assumeIsolated {
     usa.hertz = 14_200_000
     usa.mode = "SSB"
     check(needs.needed(usa, country: table.country(of: "K5ABC"), log: logbook.contacts) == "new mode", "phone: new mode")
-    // The same for the call in the logging form.
+    // The same for the call in the logging form (CLAUDE.md item 6).
     let k5 = table.country(of: "K5ABC")
     check(needs.needed(country: table.country(of: "VP8XYZ"), band: "20m", modeGroup: "CW", log: logbook.contacts)
           == "new country", "form: a country never worked")
@@ -223,7 +223,7 @@ MainActor.assumeIsolated {
 
     // In the window: the line says the country and that it's needed, and
     // DX: needed only leaves out the rest.
-    // The needed sound as spots come in: a new country
+    // The needed sound as spots come in (CLAUDE.md item 9): a new country
     // chimes, once; a worked one doesn't; a second new one within 30
     // seconds doesn't either.
     UserDefaults.standard.removeObject(forKey: "sound.neededSpots")
@@ -278,10 +278,10 @@ MainActor.assumeIsolated {
     }.first { $0.hasPrefix("VP8XYZ") } ?? ""
     check(vp8.contains("heard by 2"), "a station heard by two: \(vp8)")
 
-    // Heard near me (N0CALL, North America): a spot heard only in South
+    // Heard near me (N3BYY, North America): a spot heard only in South
     // America is left out; one heard in Canada too stays.
     var profile = Settings.currentProfile
-    profile.station["station_callsign"] = "N0CALL"
+    profile.station["station_callsign"] = "N3BYY"
     Settings.currentProfile = profile
     var far = DXCluster.spot(fromLine: "DX de VP8AA-#:   7010.0  K7XYZ        CW 9 dB 20 WPM CQ               1433Z", now: now)!
     far.time = now

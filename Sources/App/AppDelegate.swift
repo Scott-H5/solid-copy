@@ -189,7 +189,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // "Solid Copy, Main log, Portable": VoiceOver reads the title when you
     // come to the window, so the profile in use is always findable.
     // With the log in use too ("Solid Copy, Contest practice (test log),
-    // Home"), so which log you're in is always findable.
+    // Home"), so which log you're in is always findable (CLAUDE.md #12).
     func updateTitle() {
         window?.title = "Solid Copy, \(logbook?.info.title ?? "Main log"), \(Settings.currentProfile.name)"
     }
@@ -321,13 +321,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         strength.target = self
         let reconnect = radioMenu.addItem(withTitle: "Reconnect Radio", action: #selector(reconnectRadio(_:)),
                                           keyEquivalent: "")
-        let record = radioMenu.addItem(withTitle: "Record Radio Log", action: #selector(recordRadioLog(_:)),
-                                       keyEquivalent: "")
-        record.state = RadioMonitor.shared.recordsLog ? .on : .off
-        record.target = self
-        let saveLog = radioMenu.addItem(withTitle: "Save Radio Log…", action: #selector(saveRadioLog(_:)),
-                                        keyEquivalent: "")
-        saveLog.target = self
         radioMenu.addItem(.separator())
         let settings = radioMenu.addItem(withTitle: "Radio Settings…", action: #selector(editRadio(_:)),
                                          keyEquivalent: "")
@@ -404,42 +397,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Speaker.announce(status.replacingOccurrences(of: "WPM", with: "words per minute") + ".")
     }
 
-    // Radio > Record Radio Log: on and off (see RadioMonitor.recordsLog).
-    // Ticked while on.
-    @objc func recordRadioLog(_ sender: NSMenuItem) {
-        let monitor = RadioMonitor.shared
-        monitor.recordsLog.toggle()
-        sender.state = monitor.recordsLog ? .on : .off
-        Speaker.announce(monitor.recordsLog ? "Recording the radio log." : "Radio log stopped.")
-    }
-
-    // Radio > Save Radio Log…: copies the log out of Solid Copy's private
-    // folder, which macOS keeps other programs (Terminal included) out
-    // of, to where you choose: the Desktop, to begin with.
-    @objc func saveRadioLog(_ sender: Any?) {
-        let log = RadioMonitor.logURL
-        guard FileManager.default.fileExists(atPath: log.path) else {
-            return showMessage("There's no radio log yet.", details: "Choose Radio > Record Radio Log first.")
-        }
-        guard let window, window.attachedSheet == nil else { return }
-        let panel = NSSavePanel()
-        panel.title = "Save Radio Log"
-        panel.prompt = "Save"
-        panel.nameFieldStringValue = "rigctld.log"
-        panel.directoryURL = realDocumentsFolder?.deletingLastPathComponent().appendingPathComponent("Desktop")
-        panel.beginSheetModal(for: window) { [weak self] response in
-            guard response == .OK, let url = panel.url else { return }
-            do {
-                // The panel has already asked whether to replace one there.
-                if FileManager.default.fileExists(atPath: url.path) { try FileManager.default.removeItem(at: url) }
-                try FileManager.default.copyItem(at: log, to: url)
-                Speaker.announce("Radio log saved.")
-            } catch {
-                self?.showMessage("The radio log wasn't saved.", details: error.localizedDescription)
-            }
-        }
-    }
-
     // Radio > Reconnect Radio: starts the connection again from scratch.
     @objc func reconnectRadio(_ sender: Any?) {
         RadioMonitor.shared.reconnect()
@@ -477,7 +434,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Speaker.announce(Speaker.quiet ? "Quiet mode on. Sounds only." : "Quiet mode off.")
     }
 
-    // Stops Solid Copy's rigctld, so it doesn't keep the radio's port.
+    // Stops the radio check, so the radio's port is let go.
     func applicationWillTerminate(_ notification: Notification) {
         RadioMonitor.shared.stop()
         // Host close: the WinKeyer goes back to its own settings, free for

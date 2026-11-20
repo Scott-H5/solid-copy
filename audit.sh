@@ -19,12 +19,9 @@ TEAM="$(tr -d '[:space:]' < team.txt 2>/dev/null || true)"
 [ -n "$TEAM" ] || { echo "Put your Apple Developer team ID in team.txt first." >&2; exit 1; }
 
 # Solid Copy open already (the copy in /Applications) would run beside
-# the audit's own copy, and both would start rigctld for the same radio
-# on the same port. So it's quit first; reopen it afterwards.
+# the audit's own copy, and both would open the same radio's port. So it's
+# quit first; reopen it afterwards.
 osascript -e 'tell application id "io.github.scott-h5.solidcopy" to quit' 2>/dev/null || true
-# The audit ends its copy of Solid Copy abruptly, which leaves that
-# copy's rigctld running (holding the radio's port); stop it at the end.
-trap 'pkill -f "build/tests/.*/Contents/Helpers/rigctld" 2>/dev/null || true' EXIT
 
 xcodegen generate --quiet
 mkdir -p build

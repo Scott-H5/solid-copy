@@ -4,7 +4,7 @@
 // keyer speed, preamp, attenuator, AGC, noise blanker and reduction,
 // audio peak filter, dual watch, RIT and XIT and their offset, split and
 // VFOs. (Power, RF gain, squelch and the S-meter are in RadioMonitor.)
-// Each command changes the radio through rigctld, reads it back, and
+// Each command changes the radio through its client (RadioLink), reads it back, and
 // says what the radio actually did ("CW, 500 hertz"), since a radio may
 // round a value or refuse it.
 //

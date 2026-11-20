@@ -78,7 +78,7 @@ MainActor.assumeIsolated {
     QRZLogbookUpload.key = { "TEST-KEY" }
     let semaphore = DispatchSemaphore(value: 0)
     ClubLogUpload.token = { "cl_TEST" }
-    EQSLUpload.login = { ("N0CALL", "secret", "") }
+    EQSLUpload.login = { ("N3BYY", "secret", "") }
     var qrz = UploadReport(text: "", ok: true), lotw = UploadReport(text: "", ok: true), sync = ""
     var clubLog = qrz, eqsl = qrz, qrzSync = ""
     Task { @MainActor in
@@ -110,9 +110,9 @@ MainActor.assumeIsolated {
 // MARK: Copy and paste between logs (what Command-C and Command-V use)
 MainActor.assumeIsolated {
     let from = try! Logbook(database: LogDatabase(fileURL: work.appendingPathComponent("from.sqlite")))
-    var a = QSO(call: "K5ZZZ", timeOn: QSO.date(adifDate: "20261116", adifTime: "201200")!)
+    var a = QSO(call: "K5AX", timeOn: QSO.date(adifDate: "20261116", adifTime: "201200")!)
     a["band"] = "20m"; a["mode"] = "CW"; a["skcc"] = "26050T"; a["notes"] = "Tom, two lines\nof notes"
-    a["lotw_qsl_sent"] = "Y"; a["app_solidcopy_qsl_card"] = "K5ZZZ.jpg"
+    a["lotw_qsl_sent"] = "Y"; a["app_solidcopy_qsl_card"] = "K5AX.jpg"
     try! from.add(a)
     let copied = LogExport.adif(from.contacts, includeNotes: true)
     let read = ADIFImport.read(copied).contacts

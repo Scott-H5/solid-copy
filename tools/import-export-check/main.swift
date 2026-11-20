@@ -36,7 +36,7 @@ MainActor.assumeIsolated {
         let after = try FileManager.default.attributesOfItem(atPath: source.path)[.modificationDate] as? Date
         check(before == after, "the SQL log file wasn't changed")
         // QSLs: cards, LoTW and QRZ Logbook, from the file's QSL text.
-        // (Counts are for the author's log; another log just reports them.)
+        // (Counts are for Scott's log; another log just reports them.)
         let imported = logbook.contacts
         func count(_ field: String) -> Int { imported.filter { $0[field] == "Y" }.count }
         let qsls = "cards \(count("qsl_rcvd")), LoTW \(count("lotw_qsl_rcvd")), QRZ confirmed "
@@ -77,7 +77,7 @@ MainActor.assumeIsolated {
             check(differences.isEmpty, "every field of every contact survives SQL log → \(name) → Solid Copy")
         }
         try roundTrip(.adif, "ADIF")
-        // the author's log has no Solid Copy APP fields or multi-line text worth
+        // Scott's log has no Solid Copy APP fields or multi-line text worth
         // trusting to luck, so give the first contact some before ADX:
         // line breaks, XML's own characters, and an APP field.
         if var first = logbook.contacts.first {
