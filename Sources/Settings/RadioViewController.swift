@@ -20,8 +20,8 @@
 //     - IP address and Network port: only for Hamlib NET rigctl, with the
 //       defaults 127.0.0.1 and 4532 (rigctld's usual port).
 //     - Status: what the radio is doing now, kept up to date.
-//   - Share the radio with other programs: digital-mode programs and
-//     others that speak Hamlib NET rigctl use the radio through Solid Copy, as "Hamlib NET rigctl" at 127.0.0.1
+//   - Share the radio with other programs: iDigi, WSJT-X and others that
+//     speak Hamlib NET rigctl use the radio through Solid Copy, as "Hamlib NET rigctl" at 127.0.0.1
 //     port 4532 (RigctlServer.swift), while the built-in driver is in use.
 //     Its note says how to set those programs up.
 //
@@ -110,9 +110,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         // Instructions are a note you can read again and copy (contract
         // rule 40), linked to the checkbox (VO-Command-J).
         let shareNote = NSTextField(wrappingLabelWithString:
-            "With this on, other programs that can use Hamlib NET rigctl, such as digital-mode programs, can "
-            + "use the radio through Solid Copy while you log, with no rigctld to run. In the other program, "
-            + "choose the radio Hamlib NET rigctl, network "
+            "With this on, programs that can use Hamlib NET rigctl, such as iDigi and WSJT-X, can use the "
+            + "radio through Solid Copy while you log, with no rigctld to run. In the other program, choose "
+            + "the radio Hamlib NET rigctl, network "
             + "server 127.0.0.1, port 4532. They can tune the radio and change its mode, but can't transmit "
             + "through Solid Copy yet. It works with the built-in driver; with Hamlib NET rigctl, your own "
             + "rigctld shares the radio instead.")

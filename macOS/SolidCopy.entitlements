@@ -20,7 +20,7 @@
 	<true/>
 	<!--
 	  Accept connections from programs on this Mac only (127.0.0.1): with
-	  "Share the radio with other programs" on, other programs reach the
+	  "Share the radio with other programs" on, iDigi or WSJT-X reach the
 	  radio through Solid Copy (RigctlServer.swift).
 	-->
 	<key>com.apple.security.network.server</key>

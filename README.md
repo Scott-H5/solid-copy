@@ -361,7 +361,7 @@ is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
   "lost" only after 4 seconds without one. Restarting VoiceOver with a
   USB braille display plugged in can make the radio miss a second's
   read, which before version 1.1.2 was announced as lost, then back.
-- Other programs, such as digital-mode programs, can use the radio through Solid
+- Programs such as iDigi and WSJT-X can use the radio through Solid
   Copy while you log: see "Sharing the radio with other programs" below.
   The built-in driver holds the radio's USB port itself, so a rigctld
   you run can't open that radio at the same time.
@@ -398,9 +398,9 @@ rigctld (Control-C) first, then choose the built-in driver.
 
 ### Sharing the radio with other programs
 
-**Settings > Radio > Share the radio with other programs** lets other
-programs that can use Hamlib NET rigctl, such as digital-mode programs,
-use the radio through Solid Copy while you keep
+**Settings > Radio > Share the radio with other programs** lets
+programs that can use Hamlib NET rigctl, such as iDigi and WSJT-X, use
+the radio through Solid Copy while you keep
 logging, with no rigctld to run and no switching. Solid Copy answers
 them the way hamlib's rigctld would.
 

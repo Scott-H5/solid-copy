@@ -1,6 +1,6 @@
 // RigctlServer.swift
 //
-// Lets other programs (digital-mode programs, anything with "Hamlib NET rigctl")
+// Lets other programs (iDigi, WSJT-X, anything with "Hamlib NET rigctl")
 // use the radio through Solid Copy, while you keep logging: Solid Copy
 // answers the network commands hamlib's rigctld would, at 127.0.0.1 port
 // 4532, and passes them to the radio through the built-in driver. So

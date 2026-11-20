@@ -17,7 +17,7 @@
 //
 // Lengths are counted in bytes of UTF-8 text. ADIF's own rules say
 // characters, and say plain ADI files are ASCII only, but most programs
-// write UTF-8 and count bytes. For ordinary English
+// write UTF-8 and count bytes (WSJT-X, for example). For ordinary English
 // letters the two are the same. Solid Copy writes and reads bytes, so its
 // own files always round-trip, accents included.
 

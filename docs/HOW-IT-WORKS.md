@@ -75,8 +75,8 @@ each file does and why, and has recipes for common changes.
     ("FA00007025300", "MD3", "FW0050"), and reads answers. Kept apart so
     `tools/radio-check` can test it with canned answers.
   - `RigctlServer.swift`: the other way round: Solid Copy answering
-    rigctld's network commands at 127.0.0.1 port 4532, so digital-mode
-    programs can use the radio through the built-in driver (Settings >
+    rigctld's network commands at 127.0.0.1 port 4532, so iDigi or
+    WSJT-X can use the radio through the built-in driver (Settings >
     Radio, "Share the radio with other programs"). Questions are answered
     from the reading Solid Copy already has; changes go through
     RadioMonitor's queue. The comments show the protocol, recorded
