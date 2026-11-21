@@ -61,6 +61,12 @@ struct RadioReading: Equatable {
         return text.hasSuffix(".0") ? String(text.dropLast(2)) : text
     }
 
+    // The digital mode a program on this Mac says it's using (WSJT-X's
+    // FT8, say), with when it said so, set by WSJTXListener. A data mode
+    // on the radio can't name its digital mode, so this fills Mode then.
+    // Only trusted for a minute: an old one may be a program since quit.
+    nonisolated(unsafe) static var digitalMode: (mode: String, submode: String, said: Date)?
+
     // The fields this reading fills in, by ADIF name.
     var fields: [String: String] {
         var fields = ["freq": megahertzText]
@@ -68,6 +74,10 @@ struct RadioReading: Equatable {
         if let adifMode {
             fields["mode"] = adifMode.mode
             fields["submode"] = adifMode.submode
+        } else if mode.uppercased().hasPrefix("PKT"), let digital = Self.digitalMode,
+                  Date().timeIntervalSince(digital.said) < 60 {
+            fields["mode"] = digital.mode
+            fields["submode"] = digital.submode
         }
         if let wattsText { fields["tx_pwr"] = wattsText }
         return fields

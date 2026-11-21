@@ -48,7 +48,11 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         let vfoB = (try? ask("FR")) == "1"   // FR refused: the VFO A
         guard let hertz = KenwoodCAT.hertz(try ask(vfoB ? "FB" : "FA")) else { throw RadioFailure.notAnswering }
         let modeBody = try ask("MD")
-        guard let mode = KenwoodCAT.mode(modeBody, radio) else { throw RadioFailure.notAnswering }
+        guard let read = KenwoodCAT.mode(modeBody, radio) else { throw RadioFailure.notAnswering }
+        // The TS-590's DATA switch, in the modes that have it: USB-D is
+        // data (PKTUSB), not voice. Not asked of Elecraft radios, or in CW.
+        let hasData = !radio.isElecraft && ["LSB", "USB", "FM", "AM"].contains(read)
+        let mode = KenwoodCAT.dataMode(read, dataBody: hasData ? try? ask("DA") : nil, radio)
         // The filter width and power are optional: a radio that doesn't say
         // them is not a failure, so an error here is simply no answer.
         let passband = (try? ask(radio.filterCode)).flatMap { KenwoodCAT.passband($0, unit: radio.filterUnit) }

@@ -108,10 +108,19 @@ final class WSJTXListener {
         switch message {
         case .heartbeat(let id, let version):
             remember(connection, for: id)
+            // Still running: its mode stays good (Status only comes on a change).
+            if let mode = RadioReading.digitalMode, status != nil {
+                RadioReading.digitalMode = (mode.mode, mode.submode, now)
+            }
             self.version = version.isEmpty ? self.version : version
         case .status(let status):
             remember(connection, for: status.id)
             self.status = status
+            // So a contact logged with the radio in a data mode gets
+            // WSJT-X's mode (RadioReading.digitalMode).
+            if let adif = WSJTXStatus.adifMode(status.mode) {
+                RadioReading.digitalMode = (adif.mode, adif.submode, now)
+            }
             // WSJT-X took a Reply: its DX call is now that station.
             if let watch = answerWatch, Callsign.normalized(status.dxCall) == watch.call { finishAnswer(.sent) }
         case .decode(let decode):

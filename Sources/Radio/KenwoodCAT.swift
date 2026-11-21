@@ -80,8 +80,9 @@ enum KenwoodCAT {
 
     // The mode numbers. Kenwood's MD: 1 LSB, 2 USB, 3 CW, 4 FM, 5 AM, 6 FSK
     // (RTTY), 7 CW reverse, 9 FSK reverse. Elecraft's: 6 is DATA and 9 DATA
-    // reverse, so data (PKTUSB) is 6 there. The TS-590's data mode isn't
-    // checked: PKTUSB is USB (2) there until it is.
+    // reverse, so data (PKTUSB) is 6 there. The TS-590 has no data mode
+    // number: data is LSB, USB or FM with its DATA switch on (DA1; see
+    // dataCommands and dataMode), so PKTUSB is MD2 there, with DA1.
     static func modeCode(_ mode: String, _ radio: KenwoodRadio) -> Int? {
         switch mode {
         case "LSB": 1
@@ -94,7 +95,35 @@ enum KenwoodCAT {
         case "RTTYR": 9
         case "PKTUSB": radio.isElecraft ? 6 : 2
         case "PKTLSB": radio.isElecraft ? 9 : 1
+        case "PKTFM" where !radio.isElecraft: 4
         default: nil
+        }
+    }
+
+    // The TS-590's DATA switch for a mode: DA1 for the data modes, DA0 for
+    // LSB, USB, FM and AM (so choosing USB really is voice), nothing for
+    // CW and FSK, where DA is an error. Kenwood's PC command reference:
+    // "DA Sets and reads the DATA mode", 0 off, 1 on, "in LSB, USB, FM,
+    // and AM mode". Elecraft radios have their own DATA mode number.
+    static func dataCommands(_ mode: String, _ radio: KenwoodRadio) -> [String] {
+        guard !radio.isElecraft else { return [] }
+        switch mode {
+        case "PKTUSB", "PKTLSB", "PKTFM": return ["DA1"]
+        case "LSB", "USB", "FM", "AM": return ["DA0"]
+        default: return []
+        }
+    }
+
+    // A TS-590 mode read with its DATA switch ("DA" answers "1" when on):
+    // USB with DATA on is PKTUSB, and so on. AM with DATA stays AM (hamlib
+    // has no name for it). Elecraft and every other mode: as read.
+    static func dataMode(_ mode: String, dataBody: String?, _ radio: KenwoodRadio) -> String {
+        guard !radio.isElecraft, dataBody == "1" else { return mode }
+        switch mode {
+        case "USB": return "PKTUSB"
+        case "LSB": return "PKTLSB"
+        case "FM": return "PKTFM"
+        default: return mode
         }
     }
 
@@ -129,9 +158,11 @@ enum KenwoodCAT {
             return [(receiveVFOB ? "FB" : "FA") + pad(hertz, 11)]
         case ("M", 3):
             guard let code = modeCode(words[1], radio), let width = Int(words[2]) else { throw RadioFailure.rejected }
-            // The mode first: a filter width is for the mode in use. Width 0
-            // is the radio's usual one for the mode, so it isn't sent.
-            return ["MD\(code)"] + (width > 0 ? [radio.filterCode + pad(width / radio.filterUnit, 4)] : [])
+            // The mode first, then (TS-590) its DATA switch: a filter width
+            // is for the mode in use. Width 0 is the radio's usual one for
+            // the mode, so it isn't sent.
+            return ["MD\(code)"] + dataCommands(words[1], radio)
+                + (width > 0 ? [radio.filterCode + pad(width / radio.filterUnit, 4)] : [])
         case ("SCAN", 2):
             // The radio's own band scan: 1 scans up, 0 stops (see RadioMonitor).
             guard words[1] == "1" || words[1] == "0" else { throw RadioFailure.rejected }

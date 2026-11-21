@@ -84,6 +84,11 @@ MainActor.assumeIsolated {
               "a Status: 14.074 MHz, FT8, transmitting, my call")
     } else { check(false, "a Status") }
 
+    // WSJT-X's mode for the log (ADIF).
+    check(WSJTXStatus.adifMode("FT8")! == ("FT8", "") && WSJTXStatus.adifMode("FT4")! == ("MFSK", "FT4")
+          && WSJTXStatus.adifMode("Q65")! == ("MFSK", "Q65") && WSJTXStatus.adifMode("Echo") == nil,
+          "WSJT-X's modes in ADIF: FT8 is FT8, FT4 and Q65 are MFSK submodes")
+
     // The words of a message.
     let cq = FT8Text("CQ W1AW FN31")
     check(cq?.isCQ == true && cq?.from == "W1AW" && cq?.grid == "FN31" && cq?.cqTo == "", "CQ W1AW FN31")

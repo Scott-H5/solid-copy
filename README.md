@@ -466,6 +466,11 @@ decoding, which its own window shows by an empty Band Activity:
 - If WSJT-X still decodes nothing, quit it fully (Option-Command-Escape
   to force it if needed) and open it again.
 
+While WSJT-X is running (and this window is open), a contact you log
+with the radio in a data mode (the TS-590's USB-D, say) gets WSJT-X's
+mode: FT8, or FT4 (ADIF mode MFSK, submode FT4) and so on. The radio
+alone can only say "data", not which digital mode.
+
 **Return** on a decode answers that station: WSJT-X calls it, exactly
 as if you'd double-clicked the decode in WSJT-X's own window, and runs
 its usual sequence of messages. Solid Copy then says "WSJT-X is calling

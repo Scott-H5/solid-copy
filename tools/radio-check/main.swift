@@ -90,6 +90,18 @@ MainActor.assumeIsolated {
     check(kenwood590.maxWatts == 100 && elecraftKX3.maxWatts == 15, "TS-590SG 100 watts, KX3 15")
     check(sent("F 7025300", kenwood590) == ["FA00007025300"] && sent("F 7025300", kenwood590, vfoB: true) == ["FB00007025300"],
           "tuning sends eleven digits to the receiving VFO")
+    check(sent("M PKTUSB 0", kenwood590) == ["MD2", "DA1"] && sent("M USB 0", kenwood590) == ["MD2", "DA0"]
+          && sent("M PKTLSB 0", kenwood590) == ["MD1", "DA1"] && sent("M PKTFM 0", kenwood590) == ["MD4", "DA1"]
+          && sent("M CW 0", kenwood590) == ["MD3"] && sent("M PKTUSB 0", elecraftKX3) == ["MD6"]
+          && sent("M USB 0", elecraftKX3) == ["MD2"],
+          "TS-590 data is USB, LSB or FM with DATA on (DA1), voice has it off (DA0), CW has no DA; the KX3 has none")
+    check(KenwoodCAT.dataMode("USB", dataBody: "1", kenwood590) == "PKTUSB"
+          && KenwoodCAT.dataMode("USB", dataBody: "0", kenwood590) == "USB"
+          && KenwoodCAT.dataMode("LSB", dataBody: "1", kenwood590) == "PKTLSB"
+          && KenwoodCAT.dataMode("AM", dataBody: "1", kenwood590) == "AM"
+          && KenwoodCAT.dataMode("USB", dataBody: nil, kenwood590) == "USB"
+          && KenwoodCAT.dataMode("USB", dataBody: "1", elecraftKX3) == "USB",
+          "USB-D reads as PKTUSB on the TS-590 (DA answers 1)")
     check(sent("T 1", kenwood590) == ["TX1"] && sent("T 3", kenwood590) == ["TX1"] && sent("T 2", kenwood590) == ["TX0"]
           && sent("T 0", kenwood590) == ["RX"] && sent("T 1", elecraftKX3) == ["TX"] && sent("T 0", elecraftKX3) == ["RX"]
           && sent("T 4", kenwood590) == nil,
@@ -173,6 +185,16 @@ MainActor.assumeIsolated {
     let data = RadioReading(hertz: 14_074_000, mode: "PKTUSB", watts: 100)
     check(data.fields["mode"] == nil && data.spokenMode == "data" && data.wattsText == "100",
           "a data mode leaves Mode alone, and is spoken as data")
+    // With WSJT-X saying FT8 a moment ago, a data mode logs as FT8; FT4 as
+    // MFSK, submode FT4; a minute-old one is left alone.
+    RadioReading.digitalMode = ("FT8", "", Date())
+    check(data.fields["mode"] == "FT8" && data.fields["submode"] == "", "a data mode with WSJT-X on FT8: Mode FT8")
+    RadioReading.digitalMode = ("MFSK", "FT4", Date())
+    check(data.fields["mode"] == "MFSK" && data.fields["submode"] == "FT4", "FT4: Mode MFSK, submode FT4")
+    RadioReading.digitalMode = ("FT8", "", Date().addingTimeInterval(-120))
+    check(data.fields["mode"] == nil, "WSJT-X not heard for two minutes: Mode left alone")
+    check(usb.fields["mode"] == "SSB", "voice (USB) stays SSB, whatever WSJT-X says")
+    RadioReading.digitalMode = nil
     check(cw.spoken == "7.025 megahertz, CW", "spoken to the kilohertz: \(cw.spoken)")
 
     // Talking to rigctld directly.

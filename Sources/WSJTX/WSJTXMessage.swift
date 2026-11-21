@@ -164,6 +164,17 @@ enum WSJTXMessage: Equatable {
 
 // What WSJT-X is doing (Status, sent when anything changes).
 struct WSJTXStatus: Equatable {
+    // WSJT-X's mode as ADIF names it, for the log: FT8, JT65, JT9, MSK144
+    // and WSPR are ADIF modes; FT4, Q65, FST4 and JS8 are submodes of
+    // MFSK (ADIF 3.1's mode list). nil for one Solid Copy doesn't know.
+    static func adifMode(_ mode: String) -> (mode: String, submode: String)? {
+        switch mode.uppercased() {
+        case "FT8", "JT65", "JT9", "MSK144", "WSPR", "JT4": return (mode.uppercased(), "")
+        case "FT4", "Q65", "FST4", "FST4W", "JS8": return ("MFSK", mode.uppercased())
+        default: return nil
+        }
+    }
+
     var id: String
     var dialHertz: UInt64
     var mode: String
