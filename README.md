@@ -22,9 +22,14 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   messages through a WinKeyer
 - tracks QSLs and parks, shows spots, and makes an electronic QSL card
   you can send by email
+- works FT8 and other digital modes with WSJT-X: its decodes in a list
+  VoiceOver reads, Return to answer a station, and contacts WSJT-X logs
+  arriving in your log
+- shares the radio with programs such as WSJT-X (Hamlib NET rigctl),
+  with safeguards when they transmit
 - keeps separate logs, imports ADIF, ADX and log files in the SQL
-  format (.sql), exports ADIF, ADX and CSV, and backs up to a folder
-  you choose
+  format (.sql), exports ADIF, ADX, CSV and Cabrillo, and backs up to a
+  folder you choose
 
 See [docs/PLAN.md](docs/PLAN.md) for where it's headed.
 
@@ -361,7 +366,7 @@ is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
   "lost" only after 4 seconds without one. Restarting VoiceOver with a
   USB braille display plugged in can make the radio miss a second's
   read, which before version 1.1.2 was announced as lost, then back.
-- Programs such as iDigi and WSJT-X can use the radio through Solid
+- Programs such as WSJT-X can use the radio through Solid
   Copy while you log: see "Sharing the radio with other programs" below.
   The built-in driver holds the radio's USB port itself, so a rigctld
   you run can't open that radio at the same time.
@@ -399,7 +404,7 @@ rigctld (Control-C) first, then choose the built-in driver.
 ### Sharing the radio with other programs
 
 **Settings > Radio > Share the radio with other programs** lets
-programs that can use Hamlib NET rigctl, such as iDigi and WSJT-X, use
+programs that can use Hamlib NET rigctl, such as WSJT-X, use
 the radio through Solid Copy while you keep
 logging, with no rigctld to run and no switching. Solid Copy answers
 them the way hamlib's rigctld would.

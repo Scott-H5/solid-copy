@@ -1,7 +1,7 @@
 // tools/rigctl-check/main.swift
 //
 // Checks the rigctl server (Sources/Radio/RigctlServer.swift) the way
-// iDigi and WSJT-X will use it: hamlib's own rigctl, as "Hamlib NET
+// WSJT-X will use it: hamlib's own rigctl, as "Hamlib NET
 // rigctl" (-m 2), connects to it and asks and sets things. Behind the
 // server is a pretend radio, so no radio is needed and nothing is sent to
 // one. It listens on port 45332, not 4532, so a Solid Copy that's open
@@ -159,7 +159,7 @@ MainActor.assumeIsolated {
           && radio.status?.vfo == "VFOB" && radio.status?.split == true,
           "rigctl chooses VFO B and split: \(result.out.debugDescription), code \(result.code), sent \(radio.sent)")
 
-    // Two programs at once (iDigi and WSJT-X, say): both are answered.
+    // Two programs at once (WSJT-X and another, say): both are answered.
     let other = Process()
     other.executableURL = URL(fileURLWithPath: rigctl)
     other.arguments = ["-m", "2", "-r", address]

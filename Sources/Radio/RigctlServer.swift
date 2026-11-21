@@ -1,6 +1,6 @@
 // RigctlServer.swift
 //
-// Lets other programs (iDigi, WSJT-X, anything with "Hamlib NET rigctl")
+// Lets other programs (WSJT-X, anything with "Hamlib NET rigctl")
 // use the radio through Solid Copy, while you keep logging: Solid Copy
 // answers the network commands hamlib's rigctld would, at 127.0.0.1 port
 // 4532, and passes them to the radio through the built-in driver. So
@@ -77,7 +77,7 @@ final class RigctlServer {
     // when it starts and stops; the app speaks and lists these.
     var onEvent: (String, Bool) -> Void = { _, _ in }
     // Told when a program connects (true) or goes (false), with how many
-    // are connected now, so you can tell iDigi has really reached the
+    // are connected now, so you can tell a program has really reached the
     // radio.
     var onConnection: (Bool, Int) -> Void = { _, _ in }
     // Told about transmitting: what to say, and whether to speak it (the
@@ -411,7 +411,7 @@ final class RigctlServer {
             // 1 (RIG_PTT_RIG): keying goes through Solid Copy. Always 1,
             // even with Let them transmit off: a program reads this only
             // when it connects, and with 0 its hamlib refuses PTT itself
-            // until it reconnects (found with iDigi, 20 November 2026). So
+            // until it reconnects (found 20 November 2026). So
             // Solid Copy refuses "T 1" itself instead, which follows the
             // checkbox at once.
             "ptt_type=0x1",
