@@ -679,6 +679,28 @@ Copy says so and doesn't share the radio.</li>
 radio through Solid Copy") and when it goes. Window &gt; Activity lists
 those, and when sharing starts and stops.</li>
 </ul>
+<h3 id="wsjt-x-decodes">WSJT-X decodes</h3>
+<p><strong>Window &gt; WSJT-X Decodes</strong> (Command-4) shows what WSJT-X is decoding,
+newest first, one line each, so VoiceOver reads a whole decode at once:</p>
+<ul>
+<li>"W1AW calling CQ, United States, grid FN31, -12 dB, 14:30:15, new
+country"</li>
+<li>"To you, from K1ABC: -08, -15 dB, 14:30:30" (a station calling you is
+also said aloud, wherever you are)</li>
+<li>"K1ABC to W1AW: RR73, -3 dB, 14:30:45"</li>
+</ul>
+<p>WSJT-X runs as usual and does the decoding; you rarely need its window.
+Each line says the station's country, and whether it's a new country,
+band or mode for you, or worked before. Tab reaches the filters: <strong>CQs
+only</strong>, <strong>Needed only</strong> and <strong>Hide stations worked before</strong>. The status
+line above the list says WSJT-X's frequency and mode, and whether it's
+transmitting.</p>
+<p>Solid Copy listens for WSJT-X while the window is open, at 127.0.0.1
+port 2237, which is what WSJT-X sends to unless you've changed it
+(WSJT-X's Settings &gt; Reporting, UDP Server). Only one program can listen
+there; if another has the port, the window says so.</p>
+<p>Coming next: answering a chosen station from this window, and contacts
+WSJT-X logs arriving in your log.</p>
 <h2 id="choosing-the-form-and-the-columns">Choosing the form and the columns</h2>
 <p><strong>Settings &gt; Logging Form</strong> (Command-comma, then Command-3) lists every
 field you can put on the profile in use's form after Callsign; the
@@ -1174,6 +1196,8 @@ callook.info)</li>
 <code>tools/check-profiles.sh</code>: operating profiles</li>
 <li>
 <code>tools/check-radio.sh</code>: the radio</li>
+<li>
+<code>tools/check-wsjtx.sh</code>: reading WSJT-X's decodes (no WSJT-X needed)</li>
 <li>
 <code>tools/check-rigctl.sh</code>: sharing the radio with other programs, with
 hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</li>

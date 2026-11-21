@@ -386,6 +386,18 @@ owns the field passes on its typing (`textChanged`), Down and Up (`key`),
 leaving (`left`) and, before logging, `resolve`, which turns a single
 match into its reference or refuses with a reason.
 
+## WSJT-X decodes
+
+`Sources/WSJTX` reads what WSJT-X sends over UDP to 127.0.0.1 port 2237.
+`WSJTXMessage.swift` reads its messages (the format is in its comments,
+from WSJT-X's NetworkMessage.hpp) and refuses anything broken, and
+`FT8Text` turns a message's words into who's calling whom.
+`WSJTXListener.swift` listens while the decodes window is open and keeps
+the last 15 minutes. `DecodesWindowController.swift` is Window > WSJT-X
+Decodes; `DecodeLine.swift` has its words, apart from the window, so
+`tools/check-wsjtx.sh` can test them. "Needed" is the Spots window's
+WorkedCountries, with the band from WSJT-X's dial frequency.
+
 ## Spots
 
 `Spots.swift` has `Spot` (one spot, its spoken line, its radio mode, and

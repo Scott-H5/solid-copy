@@ -313,6 +313,11 @@ enum MainMenu {
         // Command-3: the open log, to look things up (LogBrowserWindowController.swift).
         let browse = menu.addItem(withTitle: "Log", action: #selector(AppDelegate.showLogBrowser(_:)), keyEquivalent: "3")
         browse.target = appDelegate
+        // Command-4: what WSJT-X is decoding, in a list VoiceOver reads
+        // (DecodesWindowController.swift).
+        let decodes = menu.addItem(withTitle: "WSJT-X Decodes", action: #selector(AppDelegate.showDecodes(_:)),
+                                   keyEquivalent: "4")
+        decodes.target = appDelegate
         let next = menu.addItem(withTitle: "Next Window",
                                 action: #selector(AppDelegate.nextWindow(_:)), keyEquivalent: "`")
         let previous = menu.addItem(withTitle: "Previous Window",

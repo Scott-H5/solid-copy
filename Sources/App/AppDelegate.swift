@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var logEntry: LogEntryViewController?
     var settingsWindow: SettingsWindowController?
     var spotsWindow: SpotsWindowController?
+    var decodesWindow: DecodesWindowController?
     // Window > Activity (Command-2), made the first time (ActivityWindowController.swift).
     var activityWindow: ActivityWindowController?
     // Window > Log (Command-3), made the first time (LogBrowserWindowController.swift).
@@ -148,6 +149,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             fillLogMenu()
             spotsWindow?.close()
             spotsWindow = nil
+            decodesWindow?.close()
+            decodesWindow = nil
             updateTitle()
             return
         }
@@ -615,6 +618,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             spotsWindow = spots
         }
         spotsWindow?.show()
+    }
+
+    // Window > WSJT-X Decodes (Command-4): made the first time, and again
+    // for another log (it says "worked before" against the log open).
+    @objc func showDecodes(_ sender: Any?) {
+        guard let logbook else { return }
+        if decodesWindow == nil {
+            let decodes = DecodesWindowController(logbook: logbook)
+            decodes.onEscape = { [weak self] in self?.showLoggingWindow(nil) }
+            decodesWindow = decodes
+        }
+        decodesWindow?.show()
     }
 
     // Window > Logging Window (Command-0): the main window, in front,

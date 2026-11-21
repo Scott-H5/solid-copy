@@ -432,6 +432,32 @@ network server **127.0.0.1** and port **4532**. That's all.
   radio through Solid Copy") and when it goes. Window > Activity lists
   those, and when sharing starts and stops.
 
+### WSJT-X decodes
+
+**Window > WSJT-X Decodes** (Command-4) shows what WSJT-X is decoding,
+newest first, one line each, so VoiceOver reads a whole decode at once:
+
+- "W1AW calling CQ, United States, grid FN31, -12 dB, 14:30:15, new
+  country"
+- "To you, from K1ABC: -08, -15 dB, 14:30:30" (a station calling you is
+  also said aloud, wherever you are)
+- "K1ABC to W1AW: RR73, -3 dB, 14:30:45"
+
+WSJT-X runs as usual and does the decoding; you rarely need its window.
+Each line says the station's country, and whether it's a new country,
+band or mode for you, or worked before. Tab reaches the filters: **CQs
+only**, **Needed only** and **Hide stations worked before**. The status
+line above the list says WSJT-X's frequency and mode, and whether it's
+transmitting.
+
+Solid Copy listens for WSJT-X while the window is open, at 127.0.0.1
+port 2237, which is what WSJT-X sends to unless you've changed it
+(WSJT-X's Settings > Reporting, UDP Server). Only one program can listen
+there; if another has the port, the window says so.
+
+Coming next: answering a chosen station from this window, and contacts
+WSJT-X logs arriving in your log.
+
 ## Choosing the form and the columns
 
 **Settings > Logging Form** (Command-comma, then Command-3) lists every
@@ -942,6 +968,7 @@ of them touch your Solid Copy log.
 - `tools/check-log-table.sh`: the log table
 - `tools/check-profiles.sh`: operating profiles
 - `tools/check-radio.sh`: the radio
+- `tools/check-wsjtx.sh`: reading WSJT-X's decodes (no WSJT-X needed)
 - `tools/check-rigctl.sh`: sharing the radio with other programs, with
   hamlib's rigctl as the other program (needs `brew install hamlib`)
 - `tools/check-parks.sh`: parks
