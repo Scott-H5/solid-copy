@@ -203,6 +203,12 @@ MainActor.assumeIsolated {
     check(transmitSaid == ["A program is transmitting through Solid Copy."], "its first transmission is said")
     server.answer("t") { said = $0 }
     check(said == "1\n", "t says transmitting")
+    // WSJT-X re-sends the frequency and mode while transmitting: nothing is
+    // sent to the radio (which would refuse), and the program is told done.
+    server.answer("F \(radio.reading!.hertz).000000", from: programA) { said = $0 }
+    check(said == "RPRT 0\n" && radio.sent == ["T 1"], "the same frequency again: done, nothing sent")
+    server.answer("M PKTUSB -1", from: programA) { said = $0 }
+    check(said == "RPRT 0\n" && radio.sent == ["T 1"], "a mode while transmitting: done, nothing sent")
     said = nil
     server.answer("T 1", from: programB) { said = $0 }
     check(wait(2) { said != nil } && said == "RPRT -9\n" && radio.sent == ["T 1"],

@@ -250,11 +250,25 @@ final class RigctlServer {
             guard words.count == 2, let hertz = Double(words[1]), hertz > 0, hertz < 1e10 else {
                 return done(Self.invalid)
             }
-            return change("F \(Int(hertz.rounded()))", done)
+            // Already there: nothing to send. Programs re-send the frequency
+            // constantly (WSJT-X, even while transmitting, when the TS-590
+            // refuses any frequency command), so this saves the radio's port
+            // and a needless refusal.
+            let target = Int(hertz.rounded())
+            if radio.reading?.hertz == target { return done(Self.ok) }
+            return change("F \(target)", done)
         case "M":
             // "M PKTUSB 3000": a width of 0 or -1 means the radio's usual one.
             guard words.count == 3, let width = Int(words[2]) else { return done(Self.invalid) }
-            return change("M \(words[1].uppercased()) \(max(width, 0))", done)
+            let mode = words[1].uppercased()
+            // Already in that mode, with no new width: nothing to send.
+            if radio.reading?.mode == mode, width <= 0 { return done(Self.ok) }
+            // While a program transmits, a mode request isn't sent: the radio
+            // won't change mode on the air, and programs re-send the mode
+            // they already set (WSJT-X's "M PKTUSB -1" before and during each
+            // transmission). It's taken again once the radio is receiving.
+            if isTransmitting { return done(Self.ok) }
+            return change("M \(mode) \(max(width, 0))", done)
         case "V":
             guard words.count == 2 else { return done(Self.invalid) }
             if words[1] == "currVFO" { return done(Self.ok) }
