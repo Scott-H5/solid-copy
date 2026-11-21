@@ -301,9 +301,11 @@ Add your radios in **Settings > Radio** (Command-comma, Command-5):
 speed (the TS-590SG uses 115200, the KX3 38400). One radio is in use at a
 time, whatever the profile.
 
-- **Band scan** (Radio > Band Scan, Control-Command-C) steps up the band a
-  kilohertz at a time, pausing at each, and turns back at the top. Press it
-  again to stop. It says when it starts and stops, not at each step.
+- **Band scan** (Radio > Band Scan, Control-Command-C) starts the radio's
+  own band scan; press it again to stop. It says when it starts and stops
+  (with the frequency it stopped on), not at each step. The TS-590 only,
+  through the built-in driver. The scan's speed is set on the radio, with
+  the knob that also sets RIT and XIT; Solid Copy has no command for it.
 - **Switch radios** in the middle of a session: **Control-Command-1, 2…**
   (the Radio menu lists them), or the radio pop-up under the clocks.
 - The radio pop-up's label is the radio and what it's doing:
