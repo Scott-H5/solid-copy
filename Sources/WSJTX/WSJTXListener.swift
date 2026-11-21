@@ -46,6 +46,12 @@ final class WSJTXListener {
     private var listener: NWListener?
     private var listeningPort: UInt16?
     private var senders: [String: NWConnection] = [:]
+    // Where each WSJT-X last sent from (its address and port). Kept when
+    // listening stops, so a WSJT-X sending from somewhere new is known to
+    // be a new run of it (quit and opened again), whose Band Activity
+    // starts empty: Solid Copy's older decodes are cleared then, since
+    // WSJT-X can't answer a station it no longer has.
+    private var lastEndpoint: [String: String] = [:]
 
     var isListening: Bool { listener != nil }
 
@@ -99,15 +105,19 @@ final class WSJTXListener {
         connection.receiveMessage { [weak self] data, _, _, error in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                if let data, let message = WSJTXMessage.parse(data) { self.handle(message, from: connection) }
+                if let data, let message = WSJTXMessage.parse(data) {
+                    self.handle(message, from: connection, endpoint: "\(connection.endpoint)")
+                }
                 if error == nil, self.listener != nil { self.receive(on: connection) } else { connection.cancel() }
             }
         }
     }
 
     // What each message changes. Public so the check can feed it messages.
-    func handle(_ message: WSJTXMessage, from connection: NWConnection? = nil, now: Date = Date()) {
+    func handle(_ message: WSJTXMessage, from connection: NWConnection? = nil, endpoint: String? = nil,
+                now: Date = Date()) {
         lastHeard = now
+        if let endpoint { noteEndpoint(endpoint, for: messageID(message)) }
         switch message {
         case .heartbeat(let id, let version):
             remember(connection, for: id)
@@ -138,9 +148,12 @@ final class WSJTXListener {
             // WSJT-X's Erase: its band activity is cleared, so the list is too.
             decodes = []
         case .close(let id):
+            // WSJT-X quit: its decodes go with it (a new run won't know them).
             senders[id]?.cancel()
             senders[id] = nil
+            lastEndpoint[id] = nil
             if status?.id == id { status = nil }
+            decodes.removeAll { $0.decode.id == id }
         case .loggedADIF(let id, let adif):
             remember(connection, for: id)
             onLoggedADIF?(adif)
@@ -174,7 +187,11 @@ final class WSJTXListener {
     func answer(_ decode: WSJTXDecode, call: String, wait: TimeInterval = 4,
                 done: @escaping (Answer) -> Void) {
         finishAnswer(nil)
+        // Already calling that station: WSJT-X's DX call won't change, so no
+        // Status would come to confirm it; it's calling it now.
+        let alreadyCalling = status.map { Callsign.normalized($0.dxCall) == Callsign.normalized(call) } ?? false
         guard send(WSJTXMessage.reply(to: decode), to: decode.id) else { return done(.unheard) }
+        if alreadyCalling { return done(.sent) }
         let timer = Timer(timeInterval: wait, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated { self?.finishAnswer(.ignored) }
         }
@@ -195,6 +212,23 @@ final class WSJTXListener {
         send(WSJTXMessage.haltTx(id: status?.id ?? "WSJT-X"), to: status?.id)
     }
 
+    private func messageID(_ message: WSJTXMessage) -> String {
+        switch message {
+        case .heartbeat(let id, _), .clear(let id), .loggedADIF(let id, _), .close(let id), .other(let id, _): id
+        case .status(let status): status.id
+        case .decode(let decode): decode.id
+        }
+    }
+
+    // A WSJT-X sending from a new address is a new run of it: clear the
+    // decodes the old one had (see lastEndpoint).
+    private func noteEndpoint(_ endpoint: String, for id: String) {
+        if let last = lastEndpoint[id], last != endpoint {
+            decodes.removeAll { $0.decode.id == id }
+        }
+        lastEndpoint[id] = endpoint
+    }
+
     private func remember(_ connection: NWConnection?, for id: String) {
         guard let connection, senders[id] !== connection else { return }
         senders[id] = connection
@@ -210,5 +244,6 @@ final class WSJTXListener {
         status = nil
         lastHeard = nil
         version = nil
+        lastEndpoint = [:]
     }
 }

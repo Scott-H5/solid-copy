@@ -159,8 +159,8 @@ MainActor.assumeIsolated {
     listener.handle(took)
     check(answered == .sent && sentData.count == 1, "WSJT-X takes the Reply (its DX call is W1AW): said as calling")
     answered = nil
+    listener.handle(WSJTXMessage.parse(statusMessage())!)   // WSJT-X calling nobody
     listener.answer(decode, call: "W1AW", wait: 0.3) { answered = $0 }
-    listener.handle(WSJTXMessage.parse(statusMessage())!)
     let waitEnd = Date().addingTimeInterval(3)
     while answered == nil, Date() < waitEnd { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
     check(answered == .ignored, "WSJT-X ignores it (Accept UDP requests off): said, with what to turn on")
@@ -169,6 +169,26 @@ MainActor.assumeIsolated {
     listener.answer(decode, call: "W1AW") { answered = $0 }
     check(answered == .unheard, "no WSJT-X heard: nothing sent, said")
     check(!listener.haltTransmitting(), "Stop Transmitting with no WSJT-X heard: said, not sent")
+
+    // WSJT-X quit and opened again: the old run's decodes are cleared
+    // (it can't answer them), by its Close, or by a new sending address.
+    listener.reset()
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ OLD2 FN31"))!, endpoint: "127.0.0.1:50001")
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ OLD3 FN31", seconds: 52_230))!, endpoint: "127.0.0.1:50001")
+    check(listener.decodes.count == 2, "decodes from one run of WSJT-X are kept together")
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ NEW2 FN31", seconds: 52_245))!, endpoint: "127.0.0.1:50002")
+    check(listener.decodes.map(\.decode.text) == ["CQ NEW2 FN31"], "a new run of WSJT-X (new address): old decodes cleared")
+    listener.handle(.close(id: "WSJT-X"))
+    check(listener.decodes.isEmpty, "WSJT-X closing: its decodes cleared")
+    // Answering the station WSJT-X is already calling: confirmed at once.
+    var already = WSJTXMessage.parse(statusMessage())!
+    if case .status(var st) = already { st.dxCall = "W1AW"; already = .status(st) }
+    listener.handle(already)
+    listener.sendHook = { _ in }
+    var again: WSJTXListener.Answer?
+    listener.answer(decode, call: "W1AW", wait: 0.2) { again = $0 }
+    check(again == .sent, "answering the station WSJT-X is already calling: said as calling, not refused")
+    listener.sendHook = nil
 
     // Logging: WSJT-X's Logged ADIF, as it sends it (a header, then one
     // record), into contacts, with the profile filling what WSJT-X left out.

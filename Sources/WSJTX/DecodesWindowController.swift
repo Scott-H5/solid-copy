@@ -157,8 +157,8 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
                 Speaker.announce("WSJT-X is calling \(call).")
             case .ignored:
                 NSSound.beep()
-                Speaker.announce("WSJT-X didn't take it. In WSJT-X's Settings > Reporting, turn on Accept UDP "
-                                 + "requests, and check its Enable Tx.")
+                Speaker.announce("WSJT-X didn't take it. That decode may be too old for WSJT-X; try a newer one. "
+                                 + "If none work, check WSJT-X's Settings > Reporting, Accept UDP requests.")
             case .unheard:
                 NSSound.beep()
                 Speaker.announce("WSJT-X hasn't been heard yet, so there's nothing to answer through.")
