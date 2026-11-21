@@ -455,6 +455,17 @@ port 2237, which is what WSJT-X sends to unless you've changed it
 (WSJT-X's Settings > Reporting, UDP Server). Only one program can listen
 there; if another has the port, the window says so.
 
+If the status line names WSJT-X but no decodes come, WSJT-X isn't
+decoding, which its own window shows by an empty Band Activity:
+
+- WSJT-X's **Monitor** (VoiceOver calls it a checkbox) must be on. Its
+  Settings > General > **Monitor off at startup** leaves it off each
+  time WSJT-X opens.
+- The radio's audio to the Mac must not be too loud: on the TS-590SG,
+  menu 72 (USB audio output level) at 5 clipped; 2 worked.
+- If WSJT-X still decodes nothing, quit it fully (Option-Command-Escape
+  to force it if needed) and open it again.
+
 Coming next: answering a chosen station from this window, and contacts
 WSJT-X logs arriving in your log.
 
