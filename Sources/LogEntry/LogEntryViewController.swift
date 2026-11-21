@@ -1466,6 +1466,18 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         lookupLabel.isHidden = text.isEmpty
     }
 
+    // A contact logged elsewhere (from WSJT-X) gets the lookup's details
+    // too, quietly: the form and what it shows aren't touched.
+    func lookUpQuietly(_ call: String, forContact id: UUID) {
+        guard Settings.lookupEnabled, Callsign.looksValid(call) else { return }
+        let key = CallsignLookup.lookupCall(for: call)
+        Task { @MainActor [weak self] in
+            if case .found(let result) = await CallsignLookup.shared.lookUp(key) {
+                self?.addLookup(result, toContact: id)
+            }
+        }
+    }
+
     // Returns true if a lookup started (its answer will be spoken).
     @discardableResult
     private func startLookup(for call: String) -> Bool {

@@ -396,7 +396,11 @@ from WSJT-X's NetworkMessage.hpp) and refuses anything broken, and
 the last 15 minutes. It also answers back the way WSJT-X's messages
 came: Reply (call a station, then watch WSJT-X's Status to see whether
 it took it) and Halt Tx. `DecodesWindowController.swift` is Window > WSJT-X
-Decodes; `DecodeLine.swift` has its words, apart from the window, so
+Decodes; `WSJTXLogging.swift` turns WSJT-X's Logged ADIF message into contacts
+(through ADIFImport, with the profile filling what WSJT-X left out);
+AppDelegate.loggedFromWSJTX adds them like an import, skipping repeats,
+then uploads and looks them up. `DecodeLine.swift` has its words, apart
+from the window, so
 `tools/check-wsjtx.sh` can test them. "Needed" is the Spots window's
 WorkedCountries, with the band from WSJT-X's dial frequency.
 

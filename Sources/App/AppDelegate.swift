@@ -80,6 +80,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // in profiles by an earlier version into the list.)
         RadioMonitor.shared.use(Settings.currentRadio)
         startSharingRadio()
+        // Contacts WSJT-X logs go into the log (WSJTXLogging.swift).
+        WSJTXListener.shared.onLoggedADIF = { [weak self] adif in self?.loggedFromWSJTX(adif) }
         fillRadioMenu()
         // POTA's park list, if you have one and it's a month old.
         ParkList.shared.updateIfStale()
@@ -618,6 +620,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             spotsWindow = spots
         }
         spotsWindow?.show()
+    }
+
+    // A contact WSJT-X logged: into the log open now, unless it's there
+    // already (the same call at the same second), with the profile's
+    // station fields, then the usual automatic uploads (never from a test
+    // log) and a spoken "Logged". Said even when WSJT-X is in front, since
+    // that's where you'll be.
+    func loggedFromWSJTX(_ adif: String) {
+        guard let logbook else { return }
+        let incoming = WSJTXLogging.contacts(from: adif, station: Settings.currentProfile.station)
+        guard !incoming.isEmpty else {
+            return Activity.shared.record("WSJT-X", "Logging", ok: false,
+                                          latest: "WSJT-X sent a logged contact Solid Copy couldn't read.")
+        }
+        do {
+            let (added, skipped) = try logbook.importContacts(incoming)
+            for qso in added {
+                AutoUploader.shared.logged(qso.id)
+                // Name and QTH from QRZ (or callook), as for the form's.
+                logEntry?.lookUpQuietly(qso.call, forContact: qso.id)
+            }
+            let text = WSJTXLogging.spoken(added: added, skipped: skipped)
+            Activity.shared.record("WSJT-X", "Logging", ok: true, latest: text)
+            Speaker.Cue.logged.play()
+            Speaker.announce(text + (added.isEmpty ? "" : " \(logbook.countText) in the log."))
+        } catch {
+            NSSound.beep()
+            let text = "A contact from WSJT-X wasn't saved: \(error.localizedDescription)"
+            Activity.shared.record("WSJT-X", "Logging", ok: false, latest: text)
+            Speaker.announce(text)
+        }
     }
 
     // Window > WSJT-X Decodes (Command-4): made the first time, and again

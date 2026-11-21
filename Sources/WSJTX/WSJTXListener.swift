@@ -37,6 +37,9 @@ final class WSJTXListener {
     private(set) var lastHeard: Date?
     // The WSJT-X version from its Heartbeat ("3.0.1").
     private(set) var version: String?
+    // Told the ADIF of each contact WSJT-X logs (WSJTXLogging.swift), so
+    // the app can add it to the log.
+    var onLoggedADIF: ((String) -> Void)?
     // Why it isn't listening, if it isn't (the port is taken, say).
     private(set) var problem: String?
 
@@ -138,7 +141,10 @@ final class WSJTXListener {
             senders[id]?.cancel()
             senders[id] = nil
             if status?.id == id { status = nil }
-        case .loggedADIF, .other:
+        case .loggedADIF(let id, let adif):
+            remember(connection, for: id)
+            onLoggedADIF?(adif)
+        case .other:
             break
         }
         changed()

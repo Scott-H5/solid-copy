@@ -170,6 +170,46 @@ MainActor.assumeIsolated {
     check(answered == .unheard, "no WSJT-X heard: nothing sent, said")
     check(!listener.haltTransmitting(), "Stop Transmitting with no WSJT-X heard: said, not sent")
 
+    // Logging: WSJT-X's Logged ADIF, as it sends it (a header, then one
+    // record), into contacts, with the profile filling what WSJT-X left out.
+    let adif = """
+    <adif_ver:5>3.1.0
+    <programid:6>WSJT-X
+    <EOH>
+    <call:6>KJ5IUY <gridsquare:4>EM12 <mode:3>FT8 <rst_sent:3>-14 <rst_rcvd:3>-10 <qso_date:8>20261121 \
+    <time_on:6>175615 <qso_date_off:8>20261121 <time_off:6>175815 <band:3>20m <freq:9>14.075057 \
+    <station_callsign:6>N0CALL <my_gridsquare:6>FN20aa <tx_pwr:2>50 <EOR>
+    """
+    let logged = WSJTXLogging.contacts(from: adif, station: ["my_rig": "TS-590SG", "tx_pwr": "100", "my_gridsquare": "FN31"])
+    check(logged.count == 1 && logged[0].call == "KJ5IUY" && logged[0]["mode"] == "FT8" && logged[0]["band"] == "20m"
+          && logged[0]["freq"].hasPrefix("14.075") && logged[0]["rst_sent"] == "-14" && logged[0]["gridsquare"] == "EM12",
+          "a contact WSJT-X logged: call, mode FT8, band, frequency, reports, grid")
+    check(logged[0]["my_rig"] == "TS-590SG" && logged[0]["tx_pwr"] == "50" && logged[0]["my_gridsquare"] == "FN20aa",
+          "the profile fills what WSJT-X left out (rig), but never replaces what it sent (power, grid)")
+    check(WSJTXLogging.contacts(from: "not ADIF at all", station: [:]).isEmpty, "a message with no contact: nothing")
+    check(WSJTXLogging.spoken(added: logged, skipped: 0) == "Logged KJ5IUY from WSJT-X."
+          && WSJTXLogging.spoken(added: [], skipped: 1).contains("already in the log"),
+          "said: logged, or already in the log")
+    // Into a throwaway log: added once; the same contact again is skipped.
+    let logURL = FileManager.default.temporaryDirectory.appendingPathComponent("wsjtx-check-\(UUID()).sqlite")
+    defer { try? FileManager.default.removeItem(at: logURL) }
+    if let book = try? Logbook(database: LogDatabase(fileURL: logURL)) {
+        let first = try? book.importContacts(logged)
+        let again = try? book.importContacts(WSJTXLogging.contacts(from: adif, station: [:]))
+        check(first?.added.count == 1 && again?.added.isEmpty == true && again?.skipped == 1 && book.contacts.count == 1,
+              "logged once; WSJT-X sending the same contact again doesn't add it twice")
+    } else {
+        check(false, "a throwaway log opens")
+    }
+    // The listener hands it to the app.
+    var handed: String?
+    listener.onLoggedADIF = { handed = $0 }
+    var loggedMessage = Writer(type: 12, id: "WSJT-X")
+    loggedMessage.utf8(adif)
+    listener.handle(WSJTXMessage.parse(loggedMessage.data)!)
+    check(handed == adif, "a Logged ADIF message is handed to the app to log")
+    listener.onLoggedADIF = nil
+
     // A real UDP datagram to a listening port (45337, not 2237, so a
     // running copy of Solid Copy isn't disturbed).
     listener.reset()

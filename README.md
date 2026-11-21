@@ -483,7 +483,16 @@ Transmitting goes through your radio setup as usual: with Solid Copy
 sharing the radio, **Let them transmit** must be on (Settings > Radio),
 and WSJT-X's own Enable Tx decides whether it actually transmits.
 
-Coming next: contacts WSJT-X logs arriving in your log.
+**Contacts you log in WSJT-X** (its Log QSO window, or automatically, if
+you've set it to) go straight into the Solid Copy log that's open: call,
+grid, reports, band, frequency, mode and times, as WSJT-X sent them, with
+your profile's rig, county and so on filling in what WSJT-X doesn't know,
+and the name and QTH from your callsign lookup. Solid Copy says "Logged
+KJ5IUY from WSJT-X", even with WSJT-X in front, and the contact uploads
+like any other (never from a test log). One already in the log isn't
+added again. This works while the WSJT-X Decodes window is open; WSJT-X
+keeps its own log too (wsjtx_log.adi), which File > Import… reads if a
+contact was missed.
 
 ## Choosing the form and the columns
 
