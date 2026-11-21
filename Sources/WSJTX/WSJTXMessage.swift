@@ -110,8 +110,35 @@ enum WSJTXMessage: Equatable {
         }
     }
 
+    // Reply (4): what WSJT-X does when you double-click a decode: it
+    // calls that station, starting its usual sequence of messages. The
+    // decode is sent back as WSJT-X sent it, since WSJT-X matches it to a
+    // line in its Band Activity. Modifiers 0: no Shift or Control held.
+    // WSJT-X takes it only with Settings > Reporting > Accept UDP requests
+    // on.
+    static func reply(to decode: WSJTXDecode) -> Data {
+        var w = Writer(type: 4, id: decode.id)
+        w.uint32(decode.milliseconds)
+        w.int32(Int32(clamping: decode.snr))
+        w.double(decode.dt)
+        w.uint32(UInt32(clamping: max(decode.df, 0)))
+        w.utf8(decode.mode)
+        w.utf8(decode.text)
+        w.bool(decode.lowConfidence)
+        w.uint8(0)
+        return w.data
+    }
+
+    // Halt Tx (8): stop transmitting now (Auto Tx Only false: not just the
+    // automatic sequence, the transmission on the air too).
+    static func haltTx(id: String) -> Data {
+        var w = Writer(type: 8, id: id)
+        w.bool(false)
+        return w.data
+    }
+
     // Writes QDataStream values, for the messages Solid Copy sends WSJT-X
-    // (stage 2: Reply and Halt Tx), and for the check's made-up messages.
+    // (Reply and Halt Tx), and for the check's made-up messages.
     struct Writer {
         private(set) var data = Data()
 

@@ -8,16 +8,21 @@
 //   "K1ABC to W1AW: RR73, -3 dB, 14:30:45"
 //
 //   Up, Down   move between decodes
+//   Return     answer that station: WSJT-X calls it, as if you'd
+//              double-clicked the decode in WSJT-X (its Accept UDP
+//              requests must be on). Said: "WSJT-X is calling W1AW."
+//   Command-period  Stop Transmitting: WSJT-X stops at once (Halt Tx)
 //   Escape     back to the logging window (this window stays open)
-//   Tab        to the filters: CQs Only, Needed Only, Hide Worked, then back
+//   Tab        to the filters: CQs Only, Needed Only, Hide Worked, then
+//              Stop Transmitting, then back
 //
 // WSJT-X runs as usual and does the decoding; Solid Copy listens to it
 // (WSJTXListener.swift) while this window is open. A new decode never
 // moves focus; the one you're on stays selected. Only a station calling
 // you is said, since that's the one you mustn't miss.
 //
-// Stage 1 of v1.3 item 6. Next: Return answers the chosen station
-// through WSJT-X, and contacts WSJT-X logs arrive in the log.
+// v1.3 item 6, stages 1 and 2. Next: contacts WSJT-X logs arrive in the
+// log.
 
 import AppKit
 
@@ -31,6 +36,7 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
     private let cqBox = NSButton(checkboxWithTitle: "CQs only", target: nil, action: nil)
     private let neededBox = NSButton(checkboxWithTitle: "Needed only", target: nil, action: nil)
     private let hideWorkedBox = NSButton(checkboxWithTitle: "Hide stations worked before", target: nil, action: nil)
+    private let stopButton = NSButton(title: "Stop Transmitting", target: nil, action: nil)
     private let worked = WorkedCountries()
 
     // The decodes shown, after the filters, with their words worked out.
@@ -93,7 +99,13 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
             box.target = self
             box.action = #selector(filterChanged(_:))
         }
-        let boxes = NSStackView(views: [cqBox, neededBox, hideWorkedBox])
+        // Command-period, the Mac's "stop", while this window is in front.
+        stopButton.target = self
+        stopButton.action = #selector(stopTransmitting(_:))
+        stopButton.keyEquivalent = "."
+        stopButton.keyEquivalentModifierMask = .command
+        stopButton.toolTip = "Stops WSJT-X transmitting at once (Command-period)"
+        let boxes = NSStackView(views: [cqBox, neededBox, hideWorkedBox, stopButton])
         boxes.spacing = 16
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("decode"))
@@ -105,17 +117,16 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         table.setAccessibilityLabel("Decodes")
         table.dataSource = self
         table.delegate = self
-        table.onEnter = {
-            NSSound.beep()
-            Speaker.announce("Answering a station from here comes next. For now, answer it in WSJT-X.")
-        }
+        table.onEnter = { [weak self] in self?.answerSelected() }
+        table.doubleAction = #selector(answerSelectedAction(_:))
+        table.target = self
         table.onEscape = { [weak self] in self?.onEscape?() }
         let scroll = NSScrollView()
         scroll.documentView = table
         scroll.hasVerticalScroller = true
         scroll.borderType = .bezelBorder
 
-        let order: [NSView] = [table, cqBox, neededBox, hideWorkedBox]
+        let order: [NSView] = [table, cqBox, neededBox, hideWorkedBox, stopButton]
         for (index, view) in order.enumerated() { view.nextKeyView = order[(index + 1) % order.count] }
 
         let stack = NSStackView(views: [heading, status, boxes, scroll])
@@ -126,6 +137,42 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         scroll.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
         scroll.setContentHuggingPriority(.defaultLow, for: .vertical)
         return stack
+    }
+
+    @objc private func answerSelectedAction(_ sender: Any?) { answerSelected() }
+
+    // Return: WSJT-X calls the station that sent the chosen decode.
+    private func answerSelected() {
+        guard shown.indices.contains(table.selectedRow) else { return NSSound.beep() }
+        let decode = shown[table.selectedRow].decode
+        guard let words = FT8Text(decode.text), FT8Text.looksLikeCall(words.from), !words.from.hasPrefix("<") else {
+            NSSound.beep()
+            return Speaker.announce("That decode doesn't name a station to answer.")
+        }
+        let call = words.plainFrom
+        Speaker.announce("Answering \(call).")
+        WSJTXListener.shared.answer(decode, call: call) { result in
+            switch result {
+            case .sent:
+                Speaker.announce("WSJT-X is calling \(call).")
+            case .ignored:
+                NSSound.beep()
+                Speaker.announce("WSJT-X didn't take it. In WSJT-X's Settings > Reporting, turn on Accept UDP "
+                                 + "requests, and check its Enable Tx.")
+            case .unheard:
+                NSSound.beep()
+                Speaker.announce("WSJT-X hasn't been heard yet, so there's nothing to answer through.")
+            }
+        }
+    }
+
+    // Command-period: WSJT-X stops transmitting at once.
+    @objc private func stopTransmitting(_ sender: Any?) {
+        guard WSJTXListener.shared.haltTransmitting() else {
+            NSSound.beep()
+            return Speaker.announce("WSJT-X hasn't been heard yet.")
+        }
+        Speaker.announce("Told WSJT-X to stop transmitting.")
     }
 
     @objc private func filterChanged(_ sender: Any?) {

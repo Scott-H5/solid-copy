@@ -466,8 +466,19 @@ decoding, which its own window shows by an empty Band Activity:
 - If WSJT-X still decodes nothing, quit it fully (Option-Command-Escape
   to force it if needed) and open it again.
 
-Coming next: answering a chosen station from this window, and contacts
-WSJT-X logs arriving in your log.
+**Return** on a decode answers that station: WSJT-X calls it, exactly
+as if you'd double-clicked the decode in WSJT-X's own window, and runs
+its usual sequence of messages. Solid Copy then says "WSJT-X is calling
+W1AW", or, if WSJT-X didn't take it, what to check. **Stop
+Transmitting** (Command-period, while this window is in front) stops
+WSJT-X at once. For both, WSJT-X's **Settings > Reporting > Accept UDP
+requests** must be on.
+
+Transmitting goes through your radio setup as usual: with Solid Copy
+sharing the radio, **Let them transmit** must be on (Settings > Radio),
+and WSJT-X's own Enable Tx decides whether it actually transmits.
+
+Coming next: contacts WSJT-X logs arriving in your log.
 
 ## Choosing the form and the columns
 

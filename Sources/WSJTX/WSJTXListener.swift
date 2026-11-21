@@ -13,8 +13,9 @@
 // program that shows WSJT-X's decodes on a map, say), Solid Copy says so,
 // and WSJT-X can be set to send to both through its multicast setting.
 //
-// Each WSJT-X sending to it is kept (by its address) so stage 2 can answer
-// a station through it (Reply).
+// Each WSJT-X sending to it is kept (by its address), so Solid Copy can
+// answer through it: Reply (call a station) and Halt Tx (stop
+// transmitting) go back the way its messages came.
 
 import Foundation
 import Network
@@ -111,6 +112,8 @@ final class WSJTXListener {
         case .status(let status):
             remember(connection, for: status.id)
             self.status = status
+            // WSJT-X took a Reply: its DX call is now that station.
+            if let watch = answerWatch, Callsign.normalized(status.dxCall) == watch.call { finishAnswer(.sent) }
         case .decode(let decode):
             remember(connection, for: decode.id)
             // A replay of old decodes (WSJT-X sends them again when a
@@ -130,6 +133,51 @@ final class WSJTXListener {
             break
         }
         changed()
+    }
+
+    // Sends a message to the WSJT-X with this id (or the only one, if
+    // there's one). false if no WSJT-X has been heard to send it to.
+    // `sent` is told once it's gone; the check swaps in its own.
+    var sendHook: ((Data) -> Void)?
+    @discardableResult
+    func send(_ data: Data, to id: String? = nil) -> Bool {
+        if let sendHook { sendHook(data); return true }
+        let connection = id.flatMap { senders[$0] } ?? (senders.count == 1 ? senders.values.first : nil)
+        guard let connection else { return false }
+        connection.send(content: data, completion: .contentProcessed { _ in })
+        return true
+    }
+
+    // Asks WSJT-X to call the station that sent `decode` (Reply), then
+    // watches its Status for that call as its DX call, so Solid Copy can
+    // say whether WSJT-X took it. `done` gets: "sent" (WSJT-X is calling
+    // it), "ignored" (no sign within `wait` seconds: most likely Accept
+    // UDP requests is off), or "unheard" (no WSJT-X to send to).
+    enum Answer { case sent, ignored, unheard }
+    private var answerWatch: (call: String, done: (Answer) -> Void, timer: Timer)?
+
+    func answer(_ decode: WSJTXDecode, call: String, wait: TimeInterval = 4,
+                done: @escaping (Answer) -> Void) {
+        finishAnswer(nil)
+        guard send(WSJTXMessage.reply(to: decode), to: decode.id) else { return done(.unheard) }
+        let timer = Timer(timeInterval: wait, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated { self?.finishAnswer(.ignored) }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        answerWatch = (Callsign.normalized(call), done, timer)
+    }
+
+    private func finishAnswer(_ result: Answer?) {
+        guard let watch = answerWatch else { return }
+        answerWatch = nil
+        watch.timer.invalidate()
+        if let result { watch.done(result) }
+    }
+
+    // Stop transmitting now (Halt Tx). false if no WSJT-X has been heard.
+    @discardableResult
+    func haltTransmitting() -> Bool {
+        send(WSJTXMessage.haltTx(id: status?.id ?? "WSJT-X"), to: status?.id)
     }
 
     private func remember(_ connection: NWConnection?, for id: String) {

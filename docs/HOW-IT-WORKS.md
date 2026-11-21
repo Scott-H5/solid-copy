@@ -393,7 +393,9 @@ match into its reference or refuses with a reason.
 from WSJT-X's NetworkMessage.hpp) and refuses anything broken, and
 `FT8Text` turns a message's words into who's calling whom.
 `WSJTXListener.swift` listens while the decodes window is open and keeps
-the last 15 minutes. `DecodesWindowController.swift` is Window > WSJT-X
+the last 15 minutes. It also answers back the way WSJT-X's messages
+came: Reply (call a station, then watch WSJT-X's Status to see whether
+it took it) and Halt Tx. `DecodesWindowController.swift` is Window > WSJT-X
 Decodes; `DecodeLine.swift` has its words, apart from the window, so
 `tools/check-wsjtx.sh` can test them. "Needed" is the Spots window's
 WorkedCountries, with the band from WSJT-X's dial frequency.

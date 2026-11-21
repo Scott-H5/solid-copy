@@ -129,6 +129,42 @@ MainActor.assumeIsolated {
     check(DecodeLine.status(listener: listener, shown: 3, total: 9) == "WSJT-X 3.0.1: 14.074 megahertz, FT8. 3 of 9 decodes.",
           "the status line: \(DecodeLine.status(listener: listener, shown: 3, total: 9))")
 
+    // Reply: WSJT-X's field order (Id, Time, snr, Delta time, Delta
+    // frequency, Mode, Message, Low confidence, Modifiers), checked with a
+    // reader, not the writer.
+    let replyData = WSJTXMessage.reply(to: decode)
+    var r = WSJTXMessage.Reader(replyData)
+    let header = (r.uint32(), r.uint32(), r.uint32(), r.utf8())
+    check(header.0 == WSJTXMessage.magic && header.2 == 4 && header.3 == "WSJT-X", "Reply: header, type 4, WSJT-X's id")
+    check(r.uint32() == 52_215_000 && r.int32() == -12 && r.double() == 0.2 && r.uint32() == 1500 && r.utf8() == "~"
+          && r.utf8() == "CQ W1AW FN31" && r.bool() == false && r.uint32() == nil,
+          "Reply: the decode's time, signal, offset, mode and text, as WSJT-X sent them")
+    var h = WSJTXMessage.Reader(WSJTXMessage.haltTx(id: "WSJT-X"))
+    check(h.uint32() == WSJTXMessage.magic && h.uint32() == 2 && h.uint32() == 8 && h.utf8() == "WSJT-X"
+          && h.bool() == false, "Halt Tx: type 8, stop now (not just the automatic sequence)")
+
+    // Answering: told whether WSJT-X took it, from its next Status.
+    listener.reset()
+    var sentData: [Data] = []
+    listener.sendHook = { sentData.append($0) }
+    var answered: WSJTXListener.Answer?
+    listener.answer(decode, call: "W1AW", wait: 2) { answered = $0 }
+    var took = WSJTXMessage.parse(statusMessage())!
+    if case .status(var st) = took { st.dxCall = "W1AW"; took = .status(st) }
+    listener.handle(took)
+    check(answered == .sent && sentData.count == 1, "WSJT-X takes the Reply (its DX call is W1AW): said as calling")
+    answered = nil
+    listener.answer(decode, call: "W1AW", wait: 0.3) { answered = $0 }
+    listener.handle(WSJTXMessage.parse(statusMessage())!)
+    let waitEnd = Date().addingTimeInterval(3)
+    while answered == nil, Date() < waitEnd { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+    check(answered == .ignored, "WSJT-X ignores it (Accept UDP requests off): said, with what to turn on")
+    listener.sendHook = nil
+    answered = nil
+    listener.answer(decode, call: "W1AW") { answered = $0 }
+    check(answered == .unheard, "no WSJT-X heard: nothing sent, said")
+    check(!listener.haltTransmitting(), "Stop Transmitting with no WSJT-X heard: said, not sent")
+
     // A real UDP datagram to a listening port (45337, not 2237, so a
     // running copy of Solid Copy isn't disturbed).
     listener.reset()
@@ -139,6 +175,25 @@ MainActor.assumeIsolated {
     let end = Date().addingTimeInterval(5)
     while listener.decodes.isEmpty, Date() < end { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
     check(listener.decodes.first?.decode.text == "CQ UDP1 FN31", "a decode sent over UDP is heard")
+    // And the Reply goes back to the sender, the way WSJT-X's messages came.
+    var back: Data?
+    sender.receiveMessage { data, _, _, _ in DispatchQueue.main.async { back = data } }
+    let heard = listener.decodes.first!.decode
+    listener.answer(heard, call: "UDP1", wait: 1) { _ in }
+    let backEnd = Date().addingTimeInterval(5)
+    while back == nil, Date() < backEnd { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+    var backReader = WSJTXMessage.Reader(back ?? Data())
+    _ = (backReader.uint32(), backReader.uint32())
+    check(backReader.uint32() == 4, "the Reply reaches WSJT-X over UDP, at the address its messages came from")
+    sender.receiveMessage { data, _, _, _ in DispatchQueue.main.async { back = data } }
+    back = nil
+    listener.handle(WSJTXMessage.parse(statusMessage())!)   // so Halt has an id
+    check(listener.haltTransmitting(), "Stop Transmitting is sent")
+    let haltEnd = Date().addingTimeInterval(5)
+    while back == nil, Date() < haltEnd { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
+    var haltReader = WSJTXMessage.Reader(back ?? Data())
+    _ = (haltReader.uint32(), haltReader.uint32())
+    check(haltReader.uint32() == 8, "Halt Tx reaches WSJT-X over UDP")
     sender.cancel()
     listener.stop()
     print("All WSJT-X checks passed.")
