@@ -33,6 +33,9 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   with safeguards when they transmit
 - turns the antenna through hamlib's rotctld: to the station you're
   logging, the long path, or a heading you type
+- shows the band plan for your license class (the United States plan
+  from the FCC's rules to start), warns when the radio is outside your
+  privileges, and gives the band conditions from HAMQSL.com
 - keeps separate logs, imports ADIF, ADX and log files in the SQL
   format (.sql), exports ADIF, ADX, CSV and Cabrillo, and backs up to a
   folder you choose

@@ -55,7 +55,7 @@ final class AccessibilityAuditTests: XCTestCase {
         try audit(app, screen: "Search")
         app.typeKey(.escape, modifierFlags: [])
 
-        // Command-comma: Settings, and Command-1 to 6 for its sections.
+        // Command-comma: Settings, and Command-1 to 7 for its sections.
         app.typeKey(",", modifierFlags: .command)
         sleep(1)
         for (number, name) in [("1", "Settings: Lookup"), ("2", "Settings: Profiles"),
@@ -65,7 +65,28 @@ final class AccessibilityAuditTests: XCTestCase {
             sleep(1)
             try audit(app, screen: name)
         }
+        // Settings > Band Plan (v1.6): past Command-9, so chosen in the
+        // sidebar list.
+        let bandPlanRow = app.tables["Settings sections"].staticTexts["Band Plan"]
+        if bandPlanRow.waitForExistence(timeout: 3) {
+            bandPlanRow.click()
+            sleep(1)
+            try audit(app, screen: "Settings: Band Plan")
+        } else {
+            issues.append("Settings: Band Plan: its row in the sidebar wasn't found")
+        }
         app.typeKey("w", modifierFlags: .command)
+        sleep(1)
+
+        // Windows: WSJT-X Decodes (Command-4), Awards (Command-5) and Band
+        // Plan (Command-6). Each is closed again with Command-W.
+        for (key, name) in [("4", "WSJT-X Decodes"), ("5", "Awards"), ("6", "Band Plan")] {
+            app.typeKey(key, modifierFlags: .command)
+            sleep(2)
+            try audit(app, screen: name)
+            app.typeKey("w", modifierFlags: .command)
+            sleep(1)
+        }
 
         print("AUDIT SUMMARY: \(issues.count) issue(s)")
         if !issues.isEmpty {
