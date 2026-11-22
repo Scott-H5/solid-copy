@@ -444,6 +444,10 @@ back what you turned down, whenever you want it:</p>
 <td>Say the contest log's score (see Contests)</td>
 </tr>
 <tr>
+<td>Option-Command-B</td>
+<td>Say the band conditions (below)</td>
+</tr>
+<tr>
 <td>Command-R (Radio menu)</td>
 <td>Say what the radio is doing</td>
 </tr>
@@ -475,6 +479,22 @@ play whatever the speech levels say, Quiet Mode too.</p>
 without your noticing) gives the warning sound and "No band": type the
 band or frequency, or press Return again to log it anyway. A frequency
 typed without a band fills the band in by itself.</p>
+<h3 id="band-conditions">Band conditions</h3>
+<p><strong>Speech &gt; Say Band Conditions</strong> (Option-Command-B) says how the bands
+are, from N0NBH's solar data at HAMQSL.com: "Band conditions, daytime
+here: 80 to 40 meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor.
+Tonight, 17 to 15 poor. Solar flux 99, A index 6, K index 0, geomagnetic
+field inactive, noise S0 to S1. From HAMQSL.com, N0NBH, updated 1814 UTC."</p>
+<ul>
+<li>Day or night is by the sun at the grid in your profile (or 6 am to 6
+pm by the Mac's clock without one), and the other half of the day is
+said only where it differs.</li>
+<li>VHF openings (E skip, aurora) are said only when N0NBH reports one.</li>
+<li>N0NBH updates the figures about once an hour and asks that they're
+fetched no more often, so Solid Copy fetches them at most hourly, and
+only when you ask. Without the internet you hear the last ones, with
+how old they are; a failure is in Window &gt; Activity.</li>
+</ul>
 <h2 id="the-radio">The radio</h2>
 <p>Solid Copy reads frequency, band, mode and power from the radio. For
 Kenwood and Elecraft radios (TS-590S, TS-590SG, K3, KX3, KX2) it uses its
@@ -1483,6 +1503,9 @@ hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</l
 <code>tools/check-rotor.sh</code>: rotor control, against a pretend rotctld (<code>--live</code> adds hamlib's dummy rotor)</li>
 <li>
 <code>tools/check-spots.sh</code>: spots</li>
+<li>
+<code>tools/check-conditions.sh</code>: band conditions (add <code>--live</code> to read
+N0NBH's real figures once)</li>
 <li>
 <code>tools/check-cards.sh</code>: scanned and electronic QSL cards</li>
 <li>

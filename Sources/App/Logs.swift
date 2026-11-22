@@ -136,6 +136,11 @@ extension AppDelegate {
         Speaker.announce("\(contest.name): " + lines.joined(separator: ". ") + ".")
     }
 
+    // Speech > Say Band Conditions (Option-Command-B).
+    @objc func sayBandConditions(_ sender: Any?) {
+        BandConditionsSource.shared.sayConditions()
+    }
+
     // The open log's contest and its score in lines, or nil (and why, said).
     private func contestScore() -> (Contest, [String])? {
         guard let logbook else { return nil }

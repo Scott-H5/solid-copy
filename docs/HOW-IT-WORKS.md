@@ -71,6 +71,13 @@ each file does and why, and has recipes for common changes.
     apart, in words).
   - `RotorControl.swift`: the Radio menu's rotor commands: a turn is
     watched until it arrives, stalls or takes too long, and said.
+- `Sources/Conditions`: Speech > Say Band Conditions.
+  - `BandConditions.swift`: reads N0NBH's solar XML from HAMQSL.com
+    (`XMLParser`, keeping only the fields it says, each cleaned by
+    `plain`), says it for day or night where you are (`isDay`: the sun's
+    height at your profile's grid), and `BandConditionsSource` fetches
+    it at most hourly, as N0NBH asks, keeping the last answer for when
+    a fetch fails.
 - `Sources/Radio`: the radio, through the built-in driver or a rigctld
   you run (Hamlib NET rigctl).
   - `RadioMonitor.swift`: keeps connected and never gives up; says what
