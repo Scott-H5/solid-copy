@@ -197,6 +197,65 @@ struct BandConditions: Equatable {
     }
 }
 
+// NOAA's Space Weather Prediction Center, the fallback when HAMQSL.com
+// can't be reached (the author, 22 November 2026): its solar flux and
+// planetary K index, US government data free for any use. NOAA makes no
+// band-by-band estimate, so the window says there isn't one. Two small
+// JSON files, read as untrusted: only the newest figure of each is kept.
+struct NOAAFigures: Equatable {
+    var flux: Int?               // 10.7 cm solar flux
+    var fluxTime = ""            // "2026-11-21T20:00:00"
+    var kIndex: Double?          // planetary Kp, 0 to 9
+    var aRunning: Int?           // its running A
+    var kTime = ""
+
+    static let fluxURL = URL(string: "https://services.swpc.noaa.gov/products/summary/10cm-flux.json")!
+    static let kURL = URL(string: "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json")!
+
+    // Nil if neither file gave a figure.
+    static func parse(flux: Data?, k: Data?) -> NOAAFigures? {
+        var figures = NOAAFigures()
+        struct Flux: Decodable { var flux: Double?; var time_tag: String? }
+        struct K: Decodable { var Kp: Double?; var a_running: Double?; var time_tag: String? }
+        if let flux, flux.count < 100_000, let rows = try? JSONDecoder().decode([Flux].self, from: flux),
+           let newest = rows.last(where: { $0.flux != nil }), let value = newest.flux, (0...1_000).contains(value) {
+            figures.flux = Int(value.rounded())
+            figures.fluxTime = BandConditions.plain(newest.time_tag ?? "")
+        }
+        if let k, k.count < 1_000_000, let rows = try? JSONDecoder().decode([K].self, from: k),
+           let newest = rows.last(where: { $0.Kp != nil }), let value = newest.Kp, (0...9).contains(value) {
+            figures.kIndex = value
+            figures.aRunning = newest.a_running.flatMap { (0...400).contains($0) ? Int($0.rounded()) : nil }
+            figures.kTime = BandConditions.plain(newest.time_tag ?? "")
+        }
+        return figures.flux == nil && figures.kIndex == nil ? nil : figures
+    }
+
+    // "2026-11-21T20:00:00" -> "2000 UTC 21 November".
+    static func spokenTime(_ tag: String) -> String {
+        let parts = tag.split(separator: "T")
+        guard parts.count == 2 else { return tag }
+        let date = parts[0].split(separator: "-"), time = parts[1].split(separator: ":")
+        let months = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+                      "October", "November", "December"]
+        guard date.count == 3, time.count >= 2, let month = Int(date[1]), (1...12).contains(month),
+              let day = Int(date[2]) else { return tag }
+        return "\(time[0])\(time[1]) UTC \(day) \(months[month - 1])"
+    }
+
+    var lines: [String] {
+        var lines: [String] = []
+        if let flux { lines.append("Solar flux \(flux), at \(Self.spokenTime(fluxTime)).") }
+        if let kIndex {
+            let a = aRunning.map { ", A index \($0)" } ?? ""
+            lines.append("K index \(String(format: "%.1f", kIndex))\(a), at \(Self.spokenTime(kTime)).")
+        }
+        lines.append("No band-by-band estimate: that's N0NBH's, from HAMQSL.com.")
+        lines.append("From NOAA's Space Weather Prediction Center.")
+        return lines
+    }
+}
+
 // Fetching, at most once an hour (N0NBH's request), and showing.
 @MainActor
 final class BandConditionsSource {
@@ -217,6 +276,19 @@ final class BandConditionsSource {
     }
     // Shows the window: a title, and the lines (AppDelegate's Band
     // Conditions window; the checks listen in). `say` is for "getting".
+    // NOAA's two files, for when HAMQSL.com fails: either may be nil.
+    var fetchNOAA: () async -> (flux: Data?, k: Data?) = {
+        @Sendable func get(_ url: URL) async -> Data? {
+            var request = URLRequest(url: url, timeoutInterval: 20)
+            request.setValue("Solid Copy", forHTTPHeaderField: "User-Agent")
+            guard let (data, response) = try? await URLSession.shared.data(for: request),
+                  (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+            return data
+        }
+        async let flux = get(NOAAFigures.fluxURL)
+        async let k = get(NOAAFigures.kURL)
+        return await (flux, k)
+    }
     var show: (_ title: String, _ lines: [String]) -> Void = { _, _ in }
     var say: (String) -> Void = { Speaker.announce($0) }
 
@@ -240,12 +312,17 @@ final class BandConditionsSource {
             } catch {
                 let problem = error.localizedDescription
                 Activity.shared.record("Band conditions", "N0NBH", ok: false, latest: "Couldn't get them. \(problem)")
-                var lines = [problem]
+                // NOAA's figures now, then N0NBH's last ones (with their age).
+                var lines = ["HAMQSL.com couldn't be reached: \(problem)"]
+                let noaa = await fetchNOAA()
+                let figures = NOAAFigures.parse(flux: noaa.flux, k: noaa.k)
+                if let figures { lines += figures.lines }
                 if let latest {
-                    lines += ["The last ones:"] + latest.conditions.lines(
+                    lines += ["N0NBH's last ones:"] + latest.conditions.lines(
                         isDay: Self.isDayHere(), age: Date().timeIntervalSince(latest.fetched))
                 }
-                show("Couldn't Get Band Conditions", lines)
+                if figures == nil && latest == nil { lines.append("NOAA couldn't be reached either.") }
+                show(figures == nil ? "Couldn't Get Band Conditions" : "Band Conditions from NOAA", lines)
             }
         }
     }

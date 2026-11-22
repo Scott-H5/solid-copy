@@ -64,6 +64,29 @@ let sample = """
     source.show = { shown.append(($0, $1)) }
     source.say = { said.append($0) }
     func settle() async { for _ in 0..<50 where shown.isEmpty { try? await Task.sleep(nanoseconds: 20_000_000) } }
+    // HAMQSL.com down: NOAA's figures, said as NOAA's, with no band estimate.
+    let noaaFlux = Data(#"[{"flux":99,"time_tag":"2026-11-21T20:00:00"}]"#.utf8)
+    let noaaK = Data(#"[{"time_tag":"2026-11-22T12:00:00","Kp":0.67,"a_running":3,"station_count":8},{"time_tag":"2026-11-22T15:00:00","Kp":1.33,"a_running":5,"station_count":8}]"#.utf8)
+    check(NOAAFigures.parse(flux: noaaFlux, k: noaaK)?.lines == [
+        "Solar flux 99, at 2000 UTC 21 November.", "K index 1.3, A index 5, at 1500 UTC 22 November.",
+        "No band-by-band estimate: that's N0NBH's, from HAMQSL.com.", "From NOAA's Space Weather Prediction Center."],
+          "NOAA's newest flux and K, in words")
+    check(NOAAFigures.parse(flux: Data("<html>".utf8), k: nil) == nil, "NOAA sending something else isn't used")
+    check(NOAAFigures.parse(flux: Data(#"[{"flux":99999}]"#.utf8), k: nil) == nil, "nor is a flux that can't be")
+    let hamqsl = source.fetch
+    source.fetch = { fetches += 1; throw URLError(.cannotFindHost) }
+    source.fetchNOAA = { (noaaFlux, noaaK) }
+    source.showConditions(); await settle()
+    check(shown.first?.0 == "Band Conditions from NOAA" && shown.first?.1.first?.hasPrefix("HAMQSL.com couldn't be reached") == true
+          && shown.first?.1.contains("Solar flux 99, at 2000 UTC 21 November.") == true,
+          "HAMQSL.com down: NOAA's figures instead, saying why: \(shown.first?.1 ?? [])")
+    source.fetchNOAA = { (nil, nil) }
+    shown = []
+    source.showConditions(); await settle()
+    check(shown.first?.0 == "Couldn't Get Band Conditions" && shown.first?.1.last == "NOAA couldn't be reached either.",
+          "both down: says so")
+    source.fetch = hamqsl
+    fetches = 0; shown = []; said = []
     source.showConditions(); await settle()
     check(fetches == 1 && said == ["Getting band conditions."] && shown.first?.0 == "Band Conditions"
           && shown.first?.1.first?.hasPrefix("Now,") == true, "fetched (said as getting), then shown in the window")
@@ -77,6 +100,9 @@ let sample = """
             request.setValue("Solid Copy", forHTTPHeaderField: "User-Agent")
             return try await URLSession.shared.data(for: request).0
         }
+        let noaa = await BandConditionsSource().fetchNOAA()
+        let figures = NOAAFigures.parse(flux: noaa.flux, k: noaa.k)
+        check(figures?.flux != nil && figures?.kIndex != nil, "live: NOAA's figures read (\(figures?.lines.prefix(2).joined(separator: " ") ?? "nothing"))")
         let live = BandConditions.parse(try! await source.fetch())
         check(live != nil && !(live?.bands.isEmpty ?? true), "live: N0NBH's data reads (\(live?.lines(isDay: true).joined(separator: " ") ?? "nothing"))")
     }

@@ -37,6 +37,16 @@ by day and night. Nothing of his ships inside Solid Copy.
 
 With thanks to N0NBH.
 
+## Space weather from NOAA (fetched, not shipped)
+
+When HAMQSL.com can't be reached, Band Conditions… shows NOAA's Space
+Weather Prediction Center figures instead: the 10.7 cm solar flux
+(https://services.swpc.noaa.gov/products/summary/10cm-flux.json) and the
+planetary K index
+(https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json).
+They're US government work, in the public domain, free for any use; the
+window names NOAA as the source anyway.
+
 ## Hamlib (not shipped with Solid Copy)
 
 Solid Copy doesn't ship Hamlib. Its built-in driver talks to Kenwood and

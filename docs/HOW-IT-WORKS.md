@@ -77,7 +77,8 @@ each file does and why, and has recipes for common changes.
     `plain`), puts it in lines for day or night where you are (`isDay`: the sun's
     height at your profile's grid), and `BandConditionsSource` fetches
     it at most hourly, as N0NBH asks, keeping the last answer for when
-    a fetch fails.
+    a fetch fails. Then `NOAAFigures` reads NOAA's newest solar flux and
+    K index from two small JSON files instead.
 - `Sources/Radio`: the radio, through the built-in driver or a rigctld
   you run (Hamlib NET rigctl).
   - `RadioMonitor.swift`: keeps connected and never gives up; says what

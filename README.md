@@ -334,9 +334,12 @@ From HAMQSL.com, N0NBH, updated 1814 UTC.
 - VHF openings (E skip, aurora) are said only when N0NBH reports one.
 - N0NBH updates the figures about once an hour and asks that they're
   fetched no more often, so Solid Copy fetches them at most hourly, and
-  only when you ask ("Getting band conditions" while it does). If it
-  can't, the window says why and shows the last ones, with how old they
-  are; a failure is in Window > Activity.
+  only when you ask ("Getting band conditions" while it does).
+- If HAMQSL.com can't be reached, the window says so and shows NOAA's
+  figures instead (the Space Weather Prediction Center's solar flux and
+  K index, with when each was measured), and N0NBH's last ones with how
+  old they are. NOAA makes no band-by-band estimate, so there's none
+  then. A failure is in Window > Activity.
 
 ## The radio
 
