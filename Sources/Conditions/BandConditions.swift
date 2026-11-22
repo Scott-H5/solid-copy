@@ -2,7 +2,7 @@
 //
 // Speech > Band Conditions… (Option-Command-B; v1.6 item 3): how the
 // bands are, in a window you read line by line and close with OK
-// (Scott, 22 November 2026: a spoken answer can't be reviewed):
+// (the author, 22 November 2026: a spoken answer can't be reviewed):
 //   Now, daytime here: 80 to 40 meters good, 30 to 20 good, 17 to 15
 //     fair, 12 to 10 poor.
 //   Tonight: 17 to 15 poor.
