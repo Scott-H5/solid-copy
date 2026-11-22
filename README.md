@@ -436,11 +436,12 @@ network server **127.0.0.1** and port **4532**. That's all.
 - If another program, such as a rigctld, already has port 4532, Solid
   Copy says so and doesn't share the radio.
 - A short pause in the radio's answers (restarting VoiceOver with a USB
-  braille display does it) isn't passed on: for up to 30 seconds,
+  braille display does it) isn't passed on: for up to 90 seconds,
   programs get the last reading, and a frequency or mode change is held
   and sent when the radio answers again, so WSJT-X doesn't stop and ask
   to set the radio up again. Transmitting is never held: it's refused
-  until the radio answers.
+  until the radio answers. Window > Activity lists each such pause and
+  how long it lasted.
 - Solid Copy says when a program connects ("A program connected to the
   radio through Solid Copy") and when it goes. Window > Activity lists
   those, and when sharing starts and stops.

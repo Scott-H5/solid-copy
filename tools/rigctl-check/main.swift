@@ -128,13 +128,17 @@ MainActor.assumeIsolated {
     server.answer("F 7030000") { said = $0 }
     check(said == "RPRT -5\n" && radio.sent.isEmpty, "no radio: F times out, nothing sent")
     radio.reading = saved
-    server.gapAllowance = 30
+    server.gapAllowance = 90
+    var gaps: [String] = []
+    server.onGap = { gaps.append($0) }
 
     // A short gap (VoiceOver restarting, say): hidden from the program.
     server.answer("f") { _ in }                     // a good reading, remembered
+    gaps = []                                       // (the silent-radio test above left some)
     radio.reading = nil
     server.answer("f") { said = $0 }
     check(said == "7025300\n", "in a gap, questions are answered from the last good reading")
+    check(gaps.count == 1 && gaps[0].contains("covering for programs, for up to 90 seconds"), "the gap's start is listed: \(gaps)")
     server.answer("F 7030000") { said = $0 }
     check(said == "RPRT 0\n" && radio.sent.isEmpty && server.held.map(\.command) == ["F 7030000"],
           "in a gap, a frequency change is held and answered done, not refused")
@@ -147,6 +151,8 @@ MainActor.assumeIsolated {
     radio.reading = saved
     server.answer("f") { _ in }
     check(wait(2) { radio.sent == ["F 7031000"] } && server.held.isEmpty, "the radio back: the held change is sent")
+    check(gaps.count == 2 && gaps[1].contains("answering again after") && gaps[1].contains("weren't told"),
+          "the gap's end is listed, with its length: \(gaps.last ?? "")")
     radio.sent = []
     // A change the radio doesn't take while it hasn't answered lately: a
     // gap starting, held; while it's answering: a real refusal.
@@ -172,8 +178,11 @@ MainActor.assumeIsolated {
     _ = wait(0.4) { false }
     server.answer("f") { said = $0 }
     check(said == "RPRT -5\n", "past the allowance (radio really gone): the program is told it isn't answering")
+    check(gaps.contains { $0.contains("programs are told it isn't answering") }, "running out of allowance is listed")
     radio.reading = saved
-    server.gapAllowance = 30
+    server.answer("f") { _ in }
+    check(gaps.last?.hasPrefix("The radio is answering again, after") == true, "and the radio's return after that")
+    server.gapAllowance = 90
 
     // A second server can't take the same port, and says why.
     let second = RigctlServer(radio: radio)

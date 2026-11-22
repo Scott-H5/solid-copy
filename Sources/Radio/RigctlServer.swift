@@ -46,11 +46,13 @@
 // answering for a few seconds (restarting VoiceOver with a USB braille
 // display does it to the TS-590), and WSJT-X takes any error as a broken
 // radio: it stops and asks to be set up again. So for up to gapAllowance
-// (30 seconds) questions are answered from the last good reading, and a
+// (90 seconds: restarting VoiceOver several times in a row can keep the
+// radio quiet for over 30) questions are answered from the last good reading, and a
 // frequency, mode, VFO or split change is held, answered "done", and sent
 // as soon as the radio answers again. Transmit is never faked: "T 1" in a
-// gap is refused. After 30 seconds the radio is really gone (switched
-// off, say), and the program is told so. Changes go to the radio one at a time, through the
+// gap is refused. After 90 seconds the radio is really gone (switched
+// off, say), and the program is told so. Each gap is listed in Window >
+// Activity (onGap): when it starts, and how long it lasted. Changes go to the radio one at a time, through the
 // same queue as Solid Copy's own (RadioMonitor.change), and are read back,
 // so the next question has the radio's real answer.
 
@@ -127,7 +129,15 @@ final class RigctlServer {
     var isTransmitting: Bool { keyedBy != nil }
 
     // How long a quiet radio is covered for (see the comments at the top).
-    var gapAllowance: TimeInterval = 30
+    var gapAllowance: TimeInterval = 90
+    // Told about each gap: its start, its end and length, or the allowance
+    // running out. Listed in Window > Activity, so a broken session can be
+    // read back.
+    var onGap: (String) -> Void = { _ in }
+    // When the current gap began (the last good reading), and whether
+    // programs have been told the radio is gone.
+    private var gapStart: Date?
+    private var toldGone = false
     // The last reading the radio gave, and when.
     private var lastGood: (reading: RadioReading, at: Date)?
     // Changes held during a gap, one per kind (the latest frequency, the
@@ -137,10 +147,28 @@ final class RigctlServer {
     // The radio's reading, or during a gap the last good one.
     private var reading: RadioReading? {
         if let now = radio.reading {
+            if let gapStart {
+                let seconds = Int(Date().timeIntervalSince(gapStart).rounded())
+                onGap(toldGone ? "The radio is answering again, after \(seconds) seconds."
+                               : "The radio is answering again after \(seconds) seconds; programs weren't told.")
+            }
+            gapStart = nil
+            toldGone = false
             lastGood = (now, Date())
             return now
         }
-        guard let lastGood, Date().timeIntervalSince(lastGood.at) < gapAllowance else { return nil }
+        guard let lastGood else { return nil }
+        if gapStart == nil {
+            gapStart = lastGood.at
+            onGap("The radio is quiet: Solid Copy is covering for programs, for up to \(Int(gapAllowance)) seconds.")
+        }
+        guard Date().timeIntervalSince(lastGood.at) < gapAllowance else {
+            if !toldGone {
+                toldGone = true
+                onGap("The radio has been quiet for \(Int(gapAllowance)) seconds: programs are told it isn't answering.")
+            }
+            return nil
+        }
         return lastGood.reading
     }
 
