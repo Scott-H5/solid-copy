@@ -113,6 +113,13 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     reading = RadioReading(hertz: hz(14.352), mode: "USB")
     warning.radioChanged(); await wait()
     check(said.isEmpty, "no license class: no warnings")
+    // The window's line says where the warning is set.
+    check(BandPlanWindowController.warningText == "No warnings: choose your license class in Settings > Band Plan.",
+          "no class: the window says where to choose one")
+    Settings.licenseClass = "Extra"
+    check(BandPlanWindowController.warningText == "Warnings for Extra (Settings > Band Plan).", "a class: whose warnings")
+    Settings.bandWarning = false
+    check(BandPlanWindowController.warningText == "Warnings off (Settings > Band Plan).", "turned off: says so")
     for key in ["bandPlan.class", "bandPlan.warn"] { UserDefaults.standard.removeObject(forKey: key) }
     print("All band plan checks passed.")
 }

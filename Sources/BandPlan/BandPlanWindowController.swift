@@ -10,7 +10,9 @@
 // Above the list, Band, Class and Mode narrow it: Class starts on your
 // license class, and shows the segments that class may use and the
 // activities inside them. A line above says where the radio is: "Radio:
-// 14.074 MHz: CW and data for Extra. FT8."
+// 14.074 MHz: CW and data for Extra. FT8." It ends with where the
+// warning is set: "Warnings for Extra (Settings > Band Plan)", or "No
+// warnings: choose your license class in Settings > Band Plan."
 //   Up, Down   through the list
 //   Return     tunes the radio there: an activity's frequency, or 5 kHz
 //              into a segment (the middle of a narrow one), never its edge
@@ -200,12 +202,19 @@ final class BandPlanWindowController: NSWindowController, NSWindowDelegate, NSTa
 
     private func showRadio() {
         let count = rows.count == 1 ? "1 line" : "\(rows.count) lines"
-        guard let hertz = RadioMonitor.shared.reading?.hertz else {
-            status.stringValue = "\(plan.name): \(count). No radio connected."
-            return
-        }
-        status.stringValue = "\(plan.name): \(count). Radio: "
-            + plan.whereYouAre(hertz, licenseClass: chosenClass ?? Settings.licenseClass)
+        let radio = RadioMonitor.shared.reading.map {
+            " Radio: " + plan.whereYouAre($0.hertz, licenseClass: chosenClass ?? Settings.licenseClass)
+        } ?? " No radio connected."
+        status.stringValue = "\(plan.name): \(count).\(radio) \(Self.warningText)"
+    }
+
+    // Where the warning is set: the Class pop-up here only narrows the
+    // list (the author expected it to set the warning, 22 November 2026).
+    static var warningText: String {
+        let licenseClass = Settings.licenseClass
+        if licenseClass.isEmpty { return "No warnings: choose your license class in Settings > Band Plan." }
+        if !Settings.bandWarning { return "Warnings off (Settings > Band Plan)." }
+        return "Warnings for \(licenseClass) (Settings > Band Plan)."
     }
 
     private func tune() {

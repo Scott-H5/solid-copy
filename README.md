@@ -708,7 +708,10 @@ list, low to high, one line each:
   no privileges.
 - The line above the list says where the radio is: "Radio: 14.074 MHz:
   CW and data for Extra. FT8." The line for it is selected when the
-  window opens.
+  window opens. The same line ends with the warning's setting ("Warnings
+  for Extra (Settings > Band Plan)", or "No warnings: choose your license
+  class in Settings > Band Plan"): the window's Class pop-up only narrows
+  the list.
 - **Return** tunes the radio there: an activity's frequency, or 5 kHz
   into a segment (never its edge). Escape goes back to logging.
 
