@@ -1,10 +1,11 @@
 // AwardsWindowController.swift
 //
-// Window > Awards (Command-5): how far the log is towards DXCC, WAS, WAZ
-// and WPX (Awards.swift), one line each, so VoiceOver reads an award in
-// one stop:
+// Window > Awards (Command-5): how far the log is towards DXCC, WAS, WAZ,
+// WPX and SKCC's Centurion, Tribune and Senator (Awards.swift), one line
+// each, so VoiceOver reads an award in one stop:
 //
 //   "WAS: 38 states worked, 31 confirmed, 19 more confirmed for the award."
+//   "SKCC Centurion: 63 members count, 37 more for Centurion."
 //
 // Below that, the chosen award's list, one line per country, state, zone
 // or prefix:
@@ -12,7 +13,12 @@
 //   "Utah: not worked"
 //   "Texas: worked, not confirmed, 2 contacts"
 //   "Ohio: confirmed by LoTW, 5 contacts"
+//   "K3ABC, SKCC 12345T: counts, 2 contacts"
+//   "W1XYZ, SKCC 2345: doesn't count, you weren't a Centurion yet, 1 contact"
 //
+// For SKCC, a member counts or doesn't (no QSL is needed): Confirmed in
+// Show is the members that count, and Still needed the ones that don't,
+// with why. SKCC counts CW only, whatever Mode says.
 //   Up, Down   move between awards, or through the list
 //   Return     from an award, to its list
 //   Escape     back to the logging window (this window stays open)
@@ -90,6 +96,9 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
     required init?(coder: NSCoder) { fatalError("Not used") }
 
     func show() {
+        // SKCC's member list: read from disk now (fetched later if old),
+        // so the first count has it.
+        SKCCRoster.shared.start()
         reload()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
@@ -104,8 +113,10 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         // Instructions are a note you can read again (contract rule 40),
         // linked to the awards list (VO-Command-J).
         let note = NSTextField(wrappingLabelWithString:
-            "Counts contacts confirmed by LoTW or a paper card, as ARRL and CQ do. Choose an award, then "
-            + "Tab to choose a band, a mode and what its list shows. Return goes to the list.")
+            "Counts contacts confirmed by LoTW or a paper card, as ARRL and CQ do. SKCC awards need no QSL: "
+            + "a member counts if both of you had joined, or reached the level, by the day of the contact, "
+            + "from SKCC's member list. Choose an award, then Tab to choose a band, a mode and what its list "
+            + "shows. Return goes to the list.")
         note.preferredMaxLayoutWidth = 660
         note.isSelectable = true
         status.preferredMaxLayoutWidth = 660
@@ -141,7 +152,7 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         awardsTable.onEscape = { [weak self] in self?.onEscape?() }
         awardsTable.setAccessibilityLinkedUIElements([note])
         let row = Award.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.award") } ?? 0
-        awardsScroll.heightAnchor.constraint(equalToConstant: 96).isActive = true
+        awardsScroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
 
         let itemsScroll = Self.scroll(for: itemsTable, label: "List", id: "item")
         itemsTable.dataSource = self
@@ -212,9 +223,14 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
             return found
         }
         let all = table.all
+        // SKCC: your dates and each member's, from SKCC's list, if it's on.
+        let roster = SKCCRoster.shared
+        let myCall = Settings.currentProfile.station["station_callsign"] ?? ""
+        let skcc = roster.isReady ? Awards.SKCC(mine: roster.number(for: myCall).flatMap(roster.dates(forNumber:)),
+                                                number: roster.number(for:), dates: roster.dates(forNumber:)) : nil
         progress = Award.allCases.map {
             Awards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode,
-                            country: country, allCountries: all)
+                            country: country, allCountries: all, skcc: skcc)
         }
         let awardRow = max(0, awardsTable.selectedRow)
         awardsTable.reloadData()
@@ -234,7 +250,8 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         UserDefaults.standard.set(award.rawValue, forKey: "awards.award")
         let band = chosenBand.map { "on " + Bands.spoken($0) } ?? "on all bands"
         let count = shownItems.count == 1 ? "1 line" : "\(shownItems.count) lines"
-        var text = "\(award.title) \(band), \(chosenMode.title.lowercased()). \(chosenShow.title): \(count)."
+        let mode = award.isSKCC ? "CW" : chosenMode.title.lowercased()
+        var text = "\(award.title) \(band), \(mode). \(chosenShow.title): \(count)."
         if award == .dxcc, Countries.shared.all.isEmpty {
             text += " The country list (cty.dat) isn't here yet, so DXCC can't be counted. It's fetched from "
                 + "country-files.com when Solid Copy is online."

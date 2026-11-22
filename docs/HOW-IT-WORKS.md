@@ -60,7 +60,8 @@ each file does and why, and has recipes for common changes.
   - `Awards.swift`: the counting, with no windows, so
     `tools/check-awards.sh` can test it: what each contact counts for
     (LoTW's details first, then the contact's fields, then the call),
-    and WPX's prefix rules.
+    WPX's prefix rules, and SKCC's Centurion, Tribune and Senator rules
+    (from SKCCRoster.swift's dates for each member).
   - `AwardsWindowController.swift`: the window: the awards, Band, Mode
     and Show, and the chosen award's list.
 - `Sources/Radio`: the radio, through the built-in driver or a rigctld

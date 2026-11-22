@@ -102,6 +102,70 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     check(many.line == "WAZ: 40 zones worked, 40 confirmed, enough for the award (40).", "earned: \(many.line)")
     many.items[0].confirmedBy = []
     check(many.line.hasSuffix("1 more confirmed for the award."), "one to go")
+    // SKCC.
+    func on(_ text: String) -> Date { SKCCRoster.date(text)! }
+    let roster = SKCCRoster.parse("""
+    SKCCNR|CALL|NAME|QTH|SPC|OLDCALL|SKCC|DXCODE|JOINDATE|CENTDATE|TRIBDATE|TX8DATE|SENDATE|DXENTITY
+    100T|N3ABC|Me|Here|PA||100|291|01 Jan 2010|01 Jan 2012|01 Jan 2014|01 Jan 2016||USA
+    200C|K1AAA|A|There|CT||200|291|01 Jan 2010|01 Jun 2015||||USA
+    300T|K2BBB|B|There|NY||300|291|01 Jan 2011|01 Jan 2012|01 Jan 2017|||USA
+    400|K3CCC|C|There|PA||400|291|01 Jan 2020|||||USA
+    500S|W9OLD/SK|D|There|IL||500|291|01 Jan 2008|01 Jan 2009|01 Jan 2010|01 Jan 2011|01 Jan 2012|USA
+    """)
+    check(roster.dates["100"] == SKCCDates(joined: on("01 Jan 2010"), centurion: on("01 Jan 2012"), tribune: on("01 Jan 2014"),
+                                           tribuneX8: on("01 Jan 2016"), senator: nil), "SKCC: a member's dates read")
+    check(roster.dates["500"]?.senator == on("01 Jan 2012") && roster.byCall["W9OLD"] == nil,
+          "a silent key's dates are kept, though the call isn't looked up")
+    let skcc = Awards.SKCC(mine: roster.dates["100"], number: { roster.byCall[$0] }, dates: { roster.dates[SKCCRoster.digits($0) ?? ""] })
+
+    var keyLog: [QSO] = []
+    func key(_ call: String, _ day: String, skcc number: String = "", mode: String = "CW", band: String = "20m") {
+        var qso = QSO(call: call, timeOn: on(day).addingTimeInterval(3600)); qso["mode"] = mode; qso["band"] = band
+        qso["skcc"] = number
+        keyLog.append(qso)
+    }
+    key("K1AAA", "01 Jan 2016", skcc: "200C")   // counts for C and T (a Centurion since June 2015)
+    key("K1AAA", "01 Feb 2016", skcc: "200C")   // the same member again
+    key("K2BBB", "01 Jun 2013")                 // number from the list by call; T: counts (both C by then)
+    key("K3CCC", "01 Jun 2019", skcc: "400")    // before they joined
+    key("W9OLD", "01 Jun 2017", skcc: "500S")   // a silent key since: still counts
+    key("K2BBB", "01 Jan 2018", mode: "SSB")    // not CW: left out
+    key("W1NOT", "01 Jan 2018", skcc: "99999")  // not in the list
+    key("K9SKC", "01 Jan 2018", skcc: "1")      // the club call
+    func skccLine(_ award: Award, _ log: [QSO]) -> AwardProgress {
+        Awards.progress(award, log: log, band: nil, mode: .mixed, country: country, allCountries: [], skcc: skcc)
+    }
+    let cent = skccLine(.centurion, keyLog)
+    check(cent.confirmed == 3, "Centurion: K1AAA, K2BBB and the silent key count (\(cent.confirmed)): \(cent.items.map(\.line))")
+    check(cent.items.first { $0.key == "200" }!.line == "K1AAA, SKCC 200C: counts, 2 contacts", "a member counts once")
+    check(cent.items.first { $0.key == "400" }!.line == "K3CCC, SKCC 400: doesn't count, they hadn't joined SKCC yet, 1 contact",
+          "before they joined")
+    check(cent.items.first { $0.key == "99999" }!.why == "not in SKCC's member list", "a number not in the list")
+    check(cent.items.first { $0.key == "1" }!.why == "the club's own call doesn't count", "K9SKC")
+    check(cent.line == "SKCC Centurion: 3 members count, 97 more for Centurion.", "Centurion's line: \(cent.line)")
+    let trib = skccLine(.tribune, keyLog)
+    check(trib.confirmed == 3 && trib.items.first { $0.key == "300" }!.isConfirmed, "Tribune: C or higher, both, that day")
+    let sen = skccLine(.senator, keyLog)
+    let senCounts = sen.items.filter(\.isConfirmed).map(\.key)
+    check(senCounts == ["500"], "Senator: only the Tribune worked after your Tx8 day (\(senCounts))")
+    check(sen.items.first { $0.key == "200" }!.why == "they weren't a Tribune yet", "a Centurion isn't enough for Senator")
+    check(sen.items.first { $0.key == "300" }!.why == "before Senator began, 1 August 2013", "Senator's start")
+    var before = keyLog; before.removeAll { $0.call != "K2BBB" }
+    let early = Awards.progress(.tribune, log: before, band: nil, mode: .mixed, country: country, allCountries: [],
+                                skcc: Awards.SKCC(mine: SKCCDates(joined: on("01 Jan 2010"), centurion: on("01 Jan 2014")),
+                                                  number: skcc.number, dates: skcc.dates))
+    check(early.items.first?.why == "you weren't a Centurion yet", "Tribune: not before your own Centurion day")
+    check(Awards.progress(.senator, log: keyLog, band: nil, mode: .mixed, country: country, allCountries: [],
+                          skcc: Awards.SKCC(mine: SKCCDates(joined: on("01 Jan 2010")), number: skcc.number, dates: skcc.dates)).line
+          == "SKCC Senator: it starts once you're Tribune x8.", "Senator waits for Tx8")
+    check(skccLine(.centurion, keyLog).items.count == 6 && skccLine(.centurion, keyLog.filter { $0["band"] == "40m" }).items.isEmpty,
+          "SSB left out; band filter")
+    check(Awards.progress(.centurion, log: keyLog, band: nil, mode: .mixed, country: country, allCountries: []).line
+          == "SKCC Centurion: turn on SKCC numbers in Settings > Clubs to count it.", "no member list")
+    var levels = AwardProgress(award: .tribune, mode: .cw, items: (1...120).map { AwardItem(key: "\($0)", name: "", contacts: 1, confirmedBy: ["SKCC"]) })
+    check(levels.line == "SKCC Tribune: 120 members count, enough for Tx2; 30 more for Tx3.", "levels: \(levels.line)")
+    levels.items = Array(levels.items.prefix(1))
+    check(levels.line == "SKCC Tribune: 1 member counts, 49 more for Tribune.", "one member")
     print("All award checks passed.")
 }
 

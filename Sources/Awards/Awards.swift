@@ -7,6 +7,7 @@
 //   WAS  (ARRL)  the 50 US states (DC counts as Maryland, so isn't one)
 //   WAZ  (CQ)    the 40 CQ zones
 //   WPX  (CQ)    different prefixes: 400 for mixed modes, 300 for one
+//   SKCC Centurion, Tribune and Senator: straight key members (below)
 //
 // Each can be for one band and one kind of mode (all CW on 20 meters, say),
 // as the awards' own endorsements are.
@@ -23,13 +24,32 @@
 //     zone from cty.dat when the country is all in one zone, and its
 //     prefix by WPX's rules (WPX.prefix below)
 //
+// SKCC (Straight Key Century Club) awards count members, not places, and
+// need no QSL: a member counts if the contact was made by the rules,
+// judged on the day of the contact from SKCC's member list (SKCCRoster),
+// which says when each member joined and reached each level. From
+// skccgroup.com/operating_awards (read 22 November 2026):
+//   Centurion  100 different members; both stations members that day
+//   Tribune    50 different Centurions, Tribunes or Senators, worked on
+//              or after the day you became a Centurion and they had too;
+//              from 1 March 2007. Tx2 is 100, Tx3 150, ... Tx10 500, then
+//              Tx15 750, Tx20 1000, and on by 250.
+//   Senator    after Tribune x8: 200 different Tribunes or Senators worked
+//              on or after your Tx8 day, and after they were Tribunes;
+//              from 1 August 2013. Sx2 is 400, up to Sx10.
+// Each member counts once, by number (Senator's rule; Centurion's says
+// by call, and a number follows a member who changes call). Only CW
+// contacts count; the key used (straight, bug or cootie) isn't in the
+// log, so that's taken on trust. K9SKC, the club's own call, doesn't
+// count from the days the rules give.
+//
 // No windows here, and the country data is passed in, so
 // tools/check-awards.sh can check the counting with a made-up log.
 
 import Foundation
 
 enum Award: String, CaseIterable {
-    case dxcc, was, waz, wpx
+    case dxcc, was, waz, wpx, centurion, tribune, senator
 
     var title: String {
         switch self {
@@ -37,8 +57,13 @@ enum Award: String, CaseIterable {
         case .was: "WAS"
         case .waz: "WAZ"
         case .wpx: "WPX"
+        case .centurion: "SKCC Centurion"
+        case .tribune: "SKCC Tribune"
+        case .senator: "SKCC Senator"
         }
     }
+
+    var isSKCC: Bool { [.centurion, .tribune, .senator].contains(self) }
 
     // What it counts, said after a number ("38 states").
     var counts: String {
@@ -47,6 +72,7 @@ enum Award: String, CaseIterable {
         case .was: "states"
         case .waz: "zones"
         case .wpx: "prefixes"
+        case .centurion, .tribune, .senator: "members"
         }
     }
 
@@ -57,6 +83,25 @@ enum Award: String, CaseIterable {
         case .was: 50
         case .waz: 40
         case .wpx: mode == .mixed ? 400 : 300
+        case .centurion: 100
+        case .tribune: 50
+        case .senator: 200
+        }
+    }
+
+    // SKCC's levels, lowest first: (how many members, its name).
+    var levels: [(count: Int, name: String)] {
+        switch self {
+        case .centurion:
+            return [(100, "Centurion")] + (2...10).map { ($0 * 100, "Cx\($0)") }
+                + stride(from: 15, through: 100, by: 5).map { ($0 * 100, "Cx\($0)") }
+        case .tribune:
+            return [(50, "Tribune")] + (2...10).map { ($0 * 50, "Tx\($0)") }
+                + stride(from: 15, through: 200, by: 5).map { ($0 * 50, "Tx\($0)") }
+        case .senator:
+            return [(200, "Senator")] + (2...10).map { ($0 * 200, "Sx\($0)") }
+        default:
+            return []
         }
     }
 }
@@ -90,7 +135,9 @@ struct AwardItem: Equatable {
     var key: String         // "TX", "5", "United States", "K3"
     var name: String        // "Texas", "Zone 5", "United States", "K3"
     var contacts = 0        // contacts that count for it
-    var confirmedBy: [String] = []   // "LoTW", "card": any confirmation
+    var confirmedBy: [String] = []   // "LoTW", "card": any confirmation; "SKCC": it counts
+    // For an SKCC member that doesn't count: why not.
+    var why = ""
 
     var isWorked: Bool { contacts > 0 }
     var isConfirmed: Bool { !confirmedBy.isEmpty }
@@ -98,6 +145,8 @@ struct AwardItem: Equatable {
     // One line, read in one stop by VoiceOver.
     var line: String {
         let times = contacts == 1 ? "1 contact" : "\(contacts) contacts"
+        if confirmedBy == ["SKCC"] { return "\(name): counts, \(times)" }
+        if !why.isEmpty { return "\(name): doesn't count, \(why), \(times)" }
         if isConfirmed { return "\(name): confirmed by \(confirmedBy.joined(separator: " and ")), \(times)" }
         if isWorked { return "\(name): worked, not confirmed, \(times)" }
         return "\(name): not worked"
@@ -110,12 +159,26 @@ struct AwardProgress: Equatable {
     // Everything that could count, worked or not, in the order shown. For
     // WPX, only prefixes worked: there's no fixed list of them.
     var items: [AwardItem]
+    // Said instead of the counts when the award can't be counted (SKCC
+    // without the member list, say).
+    var blocked: String?
 
     var worked: Int { items.filter(\.isWorked).count }
     var confirmed: Int { items.filter(\.isConfirmed).count }
 
     // "WAS: 38 states worked, 31 confirmed, 19 more confirmed for the award."
     var line: String {
+        if let blocked { return "\(award.title): \(blocked)" }
+        if award.isSKCC {
+            // "SKCC Tribune: 120 members count, enough for Tx2; 30 more for Tx3."
+            let start = "\(award.title): \(confirmed) \(confirmed == 1 ? "member counts" : "members count")"
+            let earned = award.levels.last { $0.count <= confirmed }
+            guard let next = award.levels.first(where: { $0.count > confirmed }) else {
+                return start + ", enough for \(earned?.name ?? award.title)."
+            }
+            let more = "\(next.count - confirmed) more for \(next.name)."
+            return start + (earned.map { ", enough for \($0.name); " + more } ?? ", " + more)
+        }
         let goal = award.goal(mode: mode)
         let start = "\(award.title): \(worked) \(award.counts) worked, \(confirmed) confirmed"
         return confirmed >= goal ? start + ", enough for the award (\(goal))."
@@ -139,7 +202,9 @@ enum Awards {
     // all) and kind of mode. `country` and `allCountries` are cty.dat's
     // (Countries.shared), passed in so the check can use its own.
     static func progress(_ award: Award, log: [QSO], band: String?, mode: AwardMode,
-                         country: (String) -> Country?, allCountries: [Country]) -> AwardProgress {
+                         country: (String) -> Country?, allCountries: [Country],
+                         skcc: SKCC? = nil) -> AwardProgress {
+        if award.isSKCC { return skccProgress(award, log: log, band: band, skcc: skcc) }
         var items: [String: AwardItem] = [:]
         var order: [String] = []
         func add(_ key: String, _ name: String) {
@@ -155,7 +220,7 @@ enum Awards {
                 add(code, USStates.name(for: code) ?? code)
             }
         case .waz: for zone in 1...40 { add(String(zone), "Zone \(zone)") }
-        case .wpx: break
+        case .wpx, .centurion, .tribune, .senator: break
         }
 
         for qso in log {
@@ -198,7 +263,94 @@ enum Awards {
         case .wpx:
             let given = qso["pfx"].uppercased()
             return given.isEmpty ? WPX.prefix(qso.call) : given
+        case .centurion, .tribune, .senator:
+            return nil
         }
+    }
+
+    // MARK: - SKCC
+
+    // What the SKCC awards need from the member list, passed in so the
+    // check can use its own: your dates (nil if your call isn't in the
+    // list), and a member's number and dates.
+    struct SKCC {
+        var mine: SKCCDates?
+        var number: (String) -> String?        // a call's number ("12345T")
+        var dates: (String) -> SKCCDates?      // a number's dates
+    }
+
+    // The days the rules start from, and K9SKC's (the club call's) last.
+    static let tribuneFrom = day(2007, 3, 1)
+    static let senatorFrom = day(2013, 8, 1)
+    static let clubCallUntil: [Award: Date] = [.centurion: day(2009, 12, 1), .tribune: day(2008, 10, 1)]
+
+    private static func day(_ year: Int, _ month: Int, _ day: Int) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar.date(from: DateComponents(year: year, month: month, day: day))!
+    }
+
+    static func skccProgress(_ award: Award, log: [QSO], band: String?, skcc: SKCC?) -> AwardProgress {
+        func blocked(_ why: String) -> AwardProgress { AwardProgress(award: award, mode: .cw, items: [], blocked: why) }
+        guard let skcc else { return blocked("turn on SKCC numbers in Settings > Clubs to count it.") }
+        guard let mine = skcc.mine, mine.joined != nil else {
+            return blocked("your callsign (Settings > Profiles) isn't in SKCC's member list.")
+        }
+        if award == .tribune, mine.centurion == nil { return blocked("it starts once you're a Centurion.") }
+        if award == .senator, mine.tribuneX8 == nil { return blocked("it starts once you're Tribune x8.") }
+
+        var items: [String: AwardItem] = [:]
+        for qso in log where Spot.group(of: qso["mode"]) == "CW" {
+            if let band, qso["band"].lowercased() != band.lowercased() { continue }
+            // Their number as logged, or from the list by call.
+            let logged = qso["skcc"].isEmpty ? (skcc.number(qso.call) ?? "") : qso["skcc"]
+            guard let number = SKCCRoster.digits(logged) else { continue }
+            var item = items[number] ?? AwardItem(key: number, name: "\(qso.call), SKCC \(logged.uppercased())")
+            item.contacts += 1
+            if !item.isConfirmed {
+                let why = Self.why(award, qso, theirs: skcc.dates(number), mine: mine)
+                if why.isEmpty {
+                    item.confirmedBy = ["SKCC"]
+                    item.why = ""
+                    // The contact that counts names the member.
+                    item.name = "\(qso.call), SKCC \(logged.uppercased())"
+                } else if item.why.isEmpty {
+                    item.why = why
+                }
+            }
+            items[number] = item
+        }
+        // Members that count first, then the rest, each by call.
+        let shown = items.values.sorted {
+            $0.isConfirmed != $1.isConfirmed ? $0.isConfirmed : $0.name < $1.name
+        }
+        return AwardProgress(award: award, mode: .cw, items: shown)
+    }
+
+    // Why a contact doesn't count for an SKCC award, or "" if it does.
+    static func why(_ award: Award, _ qso: QSO, theirs: SKCCDates?, mine: SKCCDates) -> String {
+        let on = qso.timeOn
+        // A date is "by the day of the contact" if it's no later than it.
+        func by(_ date: Date?) -> Bool { date.map { $0 <= on } ?? false }
+        if Callsign.normalized(qso.call).hasPrefix("K9SKC"), clubCallUntil[award].map({ on >= $0 }) ?? true {
+            return "the club's own call doesn't count"
+        }
+        guard let theirs, theirs.joined != nil else { return "not in SKCC's member list" }
+        guard by(theirs.joined) else { return "they hadn't joined SKCC yet" }
+        guard by(mine.joined) else { return "you hadn't joined SKCC yet" }
+        switch award {
+        case .tribune:
+            guard on >= tribuneFrom else { return "before Tribune began, 1 March 2007" }
+            guard by(mine.centurion) else { return "you weren't a Centurion yet" }
+            guard by(theirs.centurion) else { return "they weren't a Centurion yet" }
+        case .senator:
+            guard on >= senatorFrom else { return "before Senator began, 1 August 2013" }
+            guard by(mine.tribuneX8) else { return "you weren't Tribune x8 yet" }
+            guard by(theirs.tribune) else { return "they weren't a Tribune yet" }
+        default:
+            break
+        }
+        return ""
     }
 }
 

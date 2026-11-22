@@ -572,7 +572,7 @@ When you leave Callsign:
 
 ## Awards
 
-**Window > Awards** (Command-5) shows how far your log is towards four
+**Window > Awards** (Command-5) shows how far your log is towards these
 awards, one line each:
 
 - **DXCC** (ARRL): countries. 100 confirmed earns it.
@@ -581,6 +581,8 @@ awards, one line each:
 - **WAZ** (CQ): the 40 CQ zones.
 - **WPX** (CQ): different callsign prefixes. 400 earns it for mixed
   modes, 300 for one mode.
+- **SKCC Centurion, Tribune and Senator** (Straight Key Century Club):
+  members worked on CW (below).
 
 For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
 the award." Only contacts confirmed by LoTW or a paper card count as
@@ -601,6 +603,31 @@ prefix in the contact (from a lookup or typed), then the call itself.
 A call's zone is only worked out from its country when the whole
 country is one zone, so a US contact with no CQ zone isn't counted for
 WAZ until it has one.
+
+### SKCC awards
+
+The SKCC awards count members, and need no QSL. They use SKCC's member
+list (turn on SKCC numbers in Settings > Clubs), which says when each
+member joined and reached each level, and your callsign from Settings >
+Profiles. A member counts if the contact was made by SKCC's rules on
+that day:
+
+- **Centurion:** 100 different members, both of you members that day.
+- **Tribune:** 50 different Centurions, Tribunes or Senators, worked
+  once you were a Centurion and they were too. Tx2 is 100, Tx3 150, and
+  so on.
+- **Senator:** once you're Tribune x8, 200 different Tribunes or
+  Senators worked after your Tx8 day.
+
+For example: "SKCC Tribune: 120 members count, enough for Tx2; 30 more
+for Tx3." Each member counts once, by SKCC number, and only CW contacts
+count (the log doesn't know your key, so a straight key, bug or cootie
+is taken on trust). The member's number comes from the contact's SKCC
+number, or the member list by call. In the list, a member that doesn't
+count says why: "W1XYZ, SKCC 2345: doesn't count, you weren't a
+Centurion yet, 1 contact". In Show, Confirmed is the members that
+count and Still needed the ones that don't. Members who have since
+become silent keys still count.
 
 ## Callsign lookups
 

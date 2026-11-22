@@ -16,16 +16,30 @@
 //     real call too).
 //
 // The file is pipe-separated, with a header line:
-//   SKCCNR|CALL|NAME|QTH|SPC|OLDCALL|SKCC|DXCODE|JOINDATE|...
-//   3S|N6WK/SK|Gordon|Santa Ana|CA|N6WK|3|291|02 Jan 2006|...
+//   SKCCNR|CALL|NAME|QTH|SPC|OLDCALL|SKCC|DXCODE|JOINDATE|CENTDATE|TRIBDATE|TX8DATE|SENDATE|DXENTITY
+//   3S|N6WK/SK|Gordon|Santa Ana|CA|N6WK|3|291|02 Jan 2006|19 Oct 2006|09 Sep 2007|14 Feb 2013|02 Nov 2013|USA
+// The dates (when each member joined and made Centurion, Tribune,
+// Tribune x8 and Senator) are kept for the SKCC awards (Awards.swift),
+// which count a contact only if both stations had joined, or reached a
+// level, by the day of the contact.
 // SKCCNR is the number with the member's award letter, if any: C
 // Centurion, T Tribune, S Senator. That's what goes in the log (ADIF's
 // SKCC field holds it that way). Calls ending /SK (silent keys) and /EX
 // (former members) are left out: those calls may since have gone to
-// someone else. The file repeats its header now and then in the middle;
+// someone else; their dates are still kept, by number, since an old
+// contact with them still counts for an award. The file repeats its header now and then in the middle;
 // those lines are skipped.
 
 import Foundation
+
+// When an SKCC member joined and reached each level; nil if they haven't.
+struct SKCCDates: Equatable {
+    var joined: Date?
+    var centurion: Date?
+    var tribune: Date?
+    var tribuneX8: Date?
+    var senator: Date?
+}
 
 @MainActor
 final class SKCCRoster {
@@ -43,6 +57,9 @@ final class SKCCRoster {
         var byCall: [String: String] = [:]
         // "3" -> "N6WK": the number without its award letter.
         var byNumber: [String: String] = [:]
+        // "3" -> when member 3 joined and reached each level, silent keys
+        // and former members too.
+        var dates: [String: SKCCDates] = [:]
         var count: Int { byCall.count }
     }
 
@@ -67,6 +84,12 @@ final class SKCCRoster {
     func call(forNumber number: String) -> String? {
         guard Settings.skccLookup, let digits = Self.digits(number) else { return nil }
         return members.byNumber[digits]
+    }
+
+    // When member "12345" (or "12345T") joined and reached each level.
+    func dates(forNumber number: String) -> SKCCDates? {
+        guard isReady, let digits = Self.digits(number) else { return nil }
+        return members.dates[digits]
     }
 
     // Whether the list is on and loaded, so a check means something.
@@ -135,6 +158,12 @@ final class SKCCRoster {
             guard columns.count >= 2 else { continue }
             let number = columns[0].trimmingCharacters(in: .whitespaces).uppercased()
             guard let digits = digits(number), let value = Int(digits) else { continue }
+            // JOINDATE to SENDATE are columns 9 to 13.
+            if columns.count >= 13 {
+                let day = { (index: Int) in Self.date(String(columns[index])) }
+                members.dates[digits] = SKCCDates(joined: day(8), centurion: day(9), tribune: day(10),
+                                                  tribuneX8: day(11), senator: day(12))
+            }
             let raw = columns[1].trimmingCharacters(in: .whitespaces).uppercased()
             // "N6WK/SK" and "K1ABC/EX" are left out; any other "/" part
             // is dropped ("K1ABC/W1XYZ" is K1ABC).
@@ -150,6 +179,20 @@ final class SKCCRoster {
         }
         return members
     }
+
+    // "02 Jan 2006" as a date (the start of that day, UTC), or nil.
+    nonisolated static func date(_ text: String) -> Date? {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty, text.count <= 12 else { return nil }
+        return dayFormat.date(from: text)
+    }
+    nonisolated(unsafe) private static let dayFormat: DateFormatter = {
+        let format = DateFormatter()
+        format.locale = Locale(identifier: "en_US_POSIX")
+        format.timeZone = TimeZone(identifier: "UTC")
+        format.dateFormat = "dd MMM yyyy"
+        return format
+    }()
 
     // MARK: The copy on disk
 
