@@ -432,6 +432,14 @@ enum Settings {
         set { defaults.set(newValue, forKey: "bandPlan.warn") }
     }
 
+    // Settings > Radio: a frequency typed in Callsign also sets the band
+    // plan's usual mode there (BandPlan.usualMode; on to start, a
+    // tester's wish, 22 November 2026).
+    static var typedFrequencyMode: Bool {
+        get { defaults.object(forKey: "radio.typedFrequencyMode") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "radio.typedFrequencyMode") }
+    }
+
     static var wsjtxAlwaysListen: Bool {
         get { defaults.bool(forKey: "wsjtx.alwaysListen") }
         set { defaults.set(newValue, forKey: "wsjtx.alwaysListen") }

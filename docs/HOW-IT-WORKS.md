@@ -74,8 +74,10 @@ each file does and why, and has recipes for common changes.
 - `Sources/BandPlan`: band plans (v1.6 items 5 and 6).
   - `BandPlan.swift`: a plan file read (`parse`: segments with modes and
     classes, activities), questions about a frequency (`modes(at:for:)`,
-    `verdict`) and their words; `BandPlanList` keeps the Band Plans
-    folder, writing the US plan once (a `.written` list, as contests do).
+    `verdict`, and `usualMode` for a frequency typed in Callsign) and
+    their words; `BandPlanList` keeps the Band Plans folder: the US plan
+    is written once, and a newer one replaces it only if the file is
+    still as given (its SHA-256 in the `.written` list).
   - `BandPlanUS.swift`: the United States plan, from Part 97, and the
     folder's README.
   - `BandWarning.swift`: the out-of-band warning: watches the radio,

@@ -323,13 +323,23 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
 
     // Saves the contact, resets the form and goes back to Callsign.
     @objc func logContact(_ sender: Any?) {
-        // A frequency or mode typed in Callsign ("14060", "CW"): tune or
-        // change mode, rather than log (see RadioControl.swift).
+        // A frequency or mode typed in Callsign ("14060", "CW", "14.050
+        // CW"): tune or change mode, rather than log (see RadioControl.swift).
+        // A frequency alone gets the band plan's usual mode there, if
+        // Settings > Radio says so (BandPlan.usualMode).
         if let entry = RadioEntry.parse(callsignField.stringValue, currentHertz: RadioMonitor.shared.reading?.hertz) {
             callsignField.stringValue = ""
+            let monitor = RadioMonitor.shared
             switch entry {
-            case .frequency(let hertz): RadioMonitor.shared.tuneAndSay(toHertz: hertz)
-            case .mode(let mode): RadioMonitor.shared.setMode(mode)
+            case .frequency(let hertz):
+                if Settings.typedFrequencyMode, let reading = monitor.reading,
+                   let mode = BandWarning.shared.plan.usualMode(at: hertz, radioMode: reading.mode) {
+                    monitor.tuneAndSay(toHertz: hertz, mode: mode)
+                } else {
+                    monitor.tuneAndSay(toHertz: hertz)
+                }
+            case .mode(let mode): monitor.setMode(mode)
+            case .frequencyAndMode(let hertz, let mode): monitor.tuneAndSay(toHertz: hertz, mode: mode)
             }
             return
         }

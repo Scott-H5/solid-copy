@@ -47,6 +47,17 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     check(BandPlan.megahertz(hz(7.0475)) == "7.0475" && BandPlan.megahertz(hz(5.3515)) == "5.3515"
           && BandPlan.megahertz(hz(146.52)) == "146.520", "frequencies, with as many decimals as needed")
 
+    // The usual mode for a frequency typed in Callsign.
+    func usual(_ mhz: Double, _ radio: String = "USB") -> String? { us.usualMode(at: hz(mhz), radioMode: radio) }
+    check(usual(14.050) == "CW" && usual(3.530) == "CW" && usual(10.120) == "CW", "CW and data segments: CW")
+    check(usual(14.074) == "PKTUSB" && usual(7.0745, "CW") == "PKTUSB", "FT8 frequencies: data (within 1 kHz)")
+    check(usual(14.250, "CW") == "USB" && usual(7.200) == "LSB" && usual(3.900) == "LSB" && usual(5.357 + 0.003) == "USB",
+          "phone segments: SSB on the usual sideband (upper on 60 meters)")
+    check(usual(14.090, "PKTUSB") == nil, "already in data where data's allowed: left as it is")
+    check(usual(1.825) == "CW" && usual(1.900) == "LSB", "160 meters: CW below 1.843 by custom, SSB above")
+    check(usual(29.600) == "FM" && usual(50.050) == "CW" && usual(146.94) == nil && usual(146.52) == "FM",
+          "FM calling frequencies; CW only below 50.1; above 6 meters left alone but for activities")
+
     // Files: bad lines are refused with why; the folder gets the US plan once.
     for bad in ["name: X\nclasses: A\nsegment: 14-13 | CW | A\n", "name: X\nclasses: A\nsegment: 14.0-14.1 | voice | A\n",
                 "name: X\nclasses: A\nsegment: 14.0-14.1 | CW | B\n", "classes: A\nsegment: 14.0-14.1 | CW | A\n",
@@ -68,6 +79,28 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
           "a deleted US plan isn't put back; a bad file is named: \(loaded.problems)")
     check(BandPlanList.current(named: "United States (FCC)", in: loaded).name == "United States (FCC)",
           "with no plan that reads, the built-in US one is used")
+
+    // A folder from 1.6: its list names the file without a SHA-256, and
+    // the file is as 1.6 wrote it, or edited. Unedited, it's brought up to
+    // date; edited, it's left alone.
+    for edited in [false, true] {
+        let older = FileManager.default.temporaryDirectory.appendingPathComponent("bandplans-old-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: older) }
+        try! FileManager.default.createDirectory(at: older, withIntermediateDirectories: true)
+        let file = older.appendingPathComponent("United States (FCC).txt")
+        let oldText = BandPlan.unitedStates.components(separatedBy: "\n").filter { !$0.hasPrefix("usual:") }
+            .joined(separator: "\n")
+        try! Data((edited ? oldText + "# mine\n" : oldText).utf8).write(to: file)
+        try! Data("United States (FCC).txt\n".utf8).write(to: older.appendingPathComponent(".written"))
+        // The check stands in 1.6's SHA-256 for this text.
+        let saved = BandPlanList.earlierVersionsForChecks
+        BandPlanList.earlierVersionsForChecks = ["United States (FCC).txt": BandPlanList.sha256(oldText)]
+        _ = BandPlanList.load(from: older)
+        BandPlanList.earlierVersionsForChecks = saved
+        let now = try! String(contentsOf: file, encoding: .utf8)
+        check(edited ? now.hasSuffix("# mine\n") : now == BandPlan.unitedStates,
+              edited ? "an edited plan file is left as it is" : "an unedited plan file from 1.6 is brought up to date")
+    }
 
     // The warning: a pretend radio, settled 0.1 s here.
     let warning = BandWarning.shared

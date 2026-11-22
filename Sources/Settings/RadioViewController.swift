@@ -48,6 +48,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let shareBox = NSButton(checkboxWithTitle: "Share the radio with other programs", target: nil, action: nil)
     private let transmitBox = NSButton(checkboxWithTitle: "Let them transmit", target: nil, action: nil)
     // WSJT-X in the background (WSJTXAlerts.swift).
+    // A frequency typed in Callsign sets the usual mode (Settings.typedFrequencyMode).
+    private let modeBox = NSButton(checkboxWithTitle: "A frequency typed in Callsign sets the usual mode there",
+                                   target: nil, action: nil)
     private let wsjtxBox = NSButton(checkboxWithTitle: "Listen for WSJT-X all the time", target: nil, action: nil)
     private let wsjtxAlertsBox = NSButton(checkboxWithTitle: "Alert me with the decodes window closed",
                                           target: nil, action: nil)
@@ -161,6 +164,17 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         rotorAddress.widthAnchor.constraint(equalToConstant: 200).isActive = true
         let rotorRow = NSStackView(views: [FieldLabel("rotctld address"), rotorAddress])
 
+        modeBox.target = self
+        modeBox.action = #selector(toggleTypedMode(_:))
+        let modeNote = NSTextField(wrappingLabelWithString:
+            "Type a frequency in Callsign and press Return to tune (14050 or 14.050). With this on, the mode "
+            + "follows the band plan (Settings > Band Plan): CW where phone isn't allowed, SSB on the usual "
+            + "sideband where it is, data on FT8 and FT4 frequencies. Above 6 meters the mode is left as it is. "
+            + "Type a mode as well to choose it yourself: 14.050 CW, 7.200 LSB.")
+        modeNote.preferredMaxLayoutWidth = 520
+        modeNote.isSelectable = true
+        modeBox.setAccessibilityLinkedUIElements([modeNote])
+
         wsjtxBox.target = self
         wsjtxBox.action = #selector(toggleWSJTX(_:))
         let wsjtxNote = NSTextField(wrappingLabelWithString:
@@ -183,7 +197,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         alertsNote.isSelectable = true
         wsjtxAlertsBox.setAccessibilityLinkedUIElements([alertsNote])
 
-        let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote, transmitBox,
+        let stack = NSStackView(views: [top, buttons, details, note, modeBox, modeNote, shareBox, shareNote, transmitBox,
                                         transmitNote, wsjtxBox, wsjtxNote, wsjtxAlertsBox, alertsNote,
                                         rotorBox, rotorRow, rotorNote])
         stack.orientation = .vertical
@@ -192,6 +206,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         stack.setCustomSpacing(24, after: buttons)
         stack.setCustomSpacing(20, after: details)
         stack.setCustomSpacing(20, after: note)
+        stack.setCustomSpacing(20, after: modeNote)
         stack.setCustomSpacing(20, after: transmitNote)
         stack.setCustomSpacing(20, after: alertsNote)
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
@@ -199,7 +214,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
         // Tab order, top to bottom (the pop-ups and buttons only when
         // Keyboard navigation is on in System Settings).
-        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox, wsjtxBox, wsjtxAlertsBox,
+        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [modeBox, shareBox, transmitBox, wsjtxBox, wsjtxAlertsBox,
                                                                        rotorBox, rotorAddress]
         for (index, item) in order.enumerated() {
             item.nextKeyView = order[(index + 1) % order.count]
@@ -242,6 +257,10 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     // Return or leaving the field: the new address is used from the next
     // rotor command.
+    @objc private func toggleTypedMode(_ sender: NSButton) {
+        Settings.typedFrequencyMode = sender.state == .on
+    }
+
     @objc private func toggleWSJTX(_ sender: NSButton) {
         Settings.wsjtxAlwaysListen = sender.state == .on
         wsjtxAlertsBox.isEnabled = sender.state == .on
@@ -283,6 +302,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         shareBox.state = Settings.shareRadio ? .on : .off
         transmitBox.state = Settings.shareRadioTransmit ? .on : .off
         transmitBox.isEnabled = Settings.shareRadio
+        modeBox.state = Settings.typedFrequencyMode ? .on : .off
         wsjtxBox.state = Settings.wsjtxAlwaysListen ? .on : .off
         wsjtxAlertsBox.state = Settings.wsjtxAlerts ? .on : .off
         wsjtxAlertsBox.isEnabled = Settings.wsjtxAlwaysListen

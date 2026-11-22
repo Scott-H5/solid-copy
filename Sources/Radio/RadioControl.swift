@@ -20,22 +20,51 @@ import AppKit
 enum RadioEntry: Equatable {
     case frequency(hertz: Int)
     case mode(String)
+    // Both at once: "14.050 CW", "7200 lsb", "cw 14050" (a tester asked,
+    // 22 November 2026).
+    case frequencyAndMode(hertz: Int, mode: String)
 
     // "14060" or "14060.5": kilohertz (1000 or more). "14.06", "7": megahertz.
     // "CW", "USB", "LSB", "AM", "FM", "RTTY", "DATA", and "SSB" (the usual
-    // sideband for the band: lower below 10 MHz, upper above).
+    // sideband for the band: lower below 10 MHz, upper above, and upper on
+    // 60 meters). A frequency and a mode, either way round, do both; SSB
+    // then means the sideband for the frequency typed.
     static func parse(_ text: String, currentHertz: Int?) -> RadioEntry? {
-        let text = text.trimmingCharacters(in: .whitespaces).uppercased()
-        if let number = Double(text), number > 0, text.allSatisfy({ $0.isNumber || $0 == "." }) {
-            let hertz = number >= 1_000 ? number * 1_000 : number * 1_000_000
-            return .frequency(hertz: Int(hertz.rounded()))
+        let words = text.trimmingCharacters(in: .whitespaces).uppercased().split(separator: " ").map(String.init)
+        if words.count == 2 {
+            if let hertz = frequency(words[0]), let mode = mode(words[1], at: hertz) {
+                return .frequencyAndMode(hertz: hertz, mode: mode)
+            }
+            if let hertz = frequency(words[1]), let mode = mode(words[0], at: hertz) {
+                return .frequencyAndMode(hertz: hertz, mode: mode)
+            }
+            return nil
         }
+        guard words.count == 1 else { return nil }
+        if let hertz = frequency(words[0]) { return .frequency(hertz: hertz) }
+        return mode(words[0], at: currentHertz ?? 14_000_000).map { .mode($0) }
+    }
+
+    private static func frequency(_ text: String) -> Int? {
+        guard let number = Double(text), number > 0, text.allSatisfy({ $0.isNumber || $0 == "." }) else { return nil }
+        let hertz = number >= 1_000 ? number * 1_000 : number * 1_000_000
+        return Int(hertz.rounded())
+    }
+
+    private static func mode(_ text: String, at hertz: Int) -> String? {
         switch text {
-        case "CW", "CWR", "USB", "LSB", "AM", "FM", "RTTY", "RTTYR": return .mode(text)
-        case "DATA", "DIGI", "PKT": return .mode("PKTUSB")
-        case "SSB": return .mode((currentHertz ?? 14_000_000) < 10_000_000 ? "LSB" : "USB")
+        case "CW", "CWR", "USB", "LSB", "AM", "FM", "RTTY", "RTTYR": return text
+        case "DATA", "DIGI", "PKT": return "PKTUSB"
+        case "SSB": return sideband(at: hertz)
         default: return nil
         }
+    }
+
+    // The usual sideband: lower below 10 MHz, upper above, and upper on
+    // 60 meters (the FCC's rule there).
+    static func sideband(at hertz: Int) -> String {
+        if (5_300_000...5_410_000).contains(hertz) { return "USB" }
+        return hertz < 10_000_000 ? "LSB" : "USB"
     }
 }
 
@@ -60,6 +89,24 @@ extension RadioMonitor {
         tune(toHertz: hertz)
         let megahertz = RadioReading.trimmedMegahertz(hertz)
         Speaker.say(.radio, full: "\(megahertz) megahertz.", cue: .radio)
+    }
+
+    // Tunes and changes the mode, and says both once the radio has the
+    // mode: "14.05 megahertz, CW, 500 hertz."
+    func tuneAndSay(toHertz hertz: Int, mode: String) {
+        guard let reading else { return Speaker.announce(notConnectedText) }
+        tune(toHertz: hertz)
+        let megahertz = RadioReading.trimmedMegahertz(hertz)
+        guard mode.uppercased() != reading.mode.uppercased() else {
+            return Speaker.say(.radio, full: "\(megahertz) megahertz.", cue: .radio)
+        }
+        change("M \(mode) 0") { reading in
+            guard let reading else {
+                return Speaker.announce("\(megahertz) megahertz. The radio didn't take \(mode).")
+            }
+            Speaker.say(.radio, full: ([megahertz + " megahertz", reading.spokenMode] + [reading.filterSpoken].compactMap { $0 })
+                .joined(separator: ", ") + ".", cue: .radio)
+        }
     }
 
     // Changes the mode, keeping the radio's usual filter for it.

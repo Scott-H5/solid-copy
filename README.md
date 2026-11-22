@@ -396,8 +396,9 @@ time, whatever the profile.
 | Control-Command-Up, Down Arrow | Band up and down ("20 meters, 14.03 megahertz, CW"): the radio's own band keys, or back to where you last were on that band, or a usual spot for the mode |
 | Control-Command-W | Dual watch on and off (KX3). Not D: Control-Command-D is macOS's Look Up |
 | Option-Command-S | Say the S-meter ("S 7", "S 9 plus 10 dB") |
-| 14060 or 7.0255, then Return, in Callsign | Tune there (1000 or more is kHz, less is MHz) |
-| CW, USB, LSB, SSB, AM, FM, RTTY or DATA, then Return, in Callsign | Change mode (SSB is LSB below 10 MHz, USB above) |
+| 14060 or 7.0255, then Return, in Callsign | Tune there (1000 or more is kHz, less is MHz), in the band plan's usual mode there (below) |
+| CW, USB, LSB, SSB, AM, FM, RTTY or DATA, then Return, in Callsign | Change mode (SSB is LSB below 10 MHz, USB above, and USB on 60 meters) |
+| 14.050 CW, 7200 LSB or CW 14050, then Return, in Callsign | Tune there in that mode: "14.05 megahertz, CW, 500 hertz" |
 | Control-Command-M | Next mode |
 | Control-Command-] and [ | Wider and narrower filter |
 | Control-Command-= (or +) and - | Keyer faster and slower |
@@ -728,6 +729,15 @@ seconds, says it once, and is quiet far from any band (broadcast
 listening). While WSJT-X is working, the radio counts as in a data mode
 even in plain USB. It's about where the radio is: Solid Copy can't tell
 listening from transmitting. Window > Activity lists each warning.
+
+**A frequency typed in Callsign gets the usual mode there** (Settings >
+Radio, on to start): CW where phone isn't allowed, SSB on the usual
+sideband where it is (LSB below 10 MHz, USB above and on 60 meters), data
+on FT8 and FT4 frequencies, and FM on FM calling frequencies. On 160
+meters, where every mode is allowed, CW is the custom below 1.843 MHz.
+Already in a data mode where data is allowed, the radio stays in it.
+Above 6 meters, where FM and SSB share the bands, the mode is left as it
+is. To choose the mode yourself, type it with the frequency: "14.050 CW".
 
 **Other countries.** A band plan is a text file in the Band Plans folder
 (Settings > Band Plan > **Show Band Plan Files**, with a README on the

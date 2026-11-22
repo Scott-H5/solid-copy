@@ -19,15 +19,19 @@
 //   classes: Extra, Advanced, General, Technician, Novice
 //   segment: 14.000-14.025 | CW, data | Extra | a note, if any
 //   activity: 14.074 | data | FT8
+//   usual: 1.800-1.843 | CW       where a mode is the custom, though
+//                                 others are allowed (160 meters)
 // Frequencies are in MHz. Modes are CW, data, phone and image. A segment
 // lists the classes that may use it for those modes; the same range can
 // appear again for other classes with other modes (Technicians on 40
 // meters: CW only). "all" means every class. An activity is a frequency
 // where something usually happens; it gives no privileges.
 //
-// Foundation only, so tools/check-bandplan.sh can check all of it.
+// Foundation (and CryptoKit, for the files' SHA-256) only, so
+// tools/check-bandplan.sh can check all of it.
 
 import Foundation
+import CryptoKit
 
 struct BandPlan: Equatable {
     enum Mode: String, CaseIterable, Equatable {
@@ -56,12 +60,21 @@ struct BandPlan: Equatable {
     var classes: [String]
     var segments: [Segment] = []
     var activities: [Activity] = []
+    // Ranges where one mode is the custom (usual: lines).
+    var usual: [(low: Int, high: Int, mode: Mode)] = []
+
+    static func == (a: BandPlan, b: BandPlan) -> Bool {
+        a.name == b.name && a.classes == b.classes && a.segments == b.segments && a.activities == b.activities
+            && a.usual.map(\.low) == b.usual.map(\.low) && a.usual.map(\.high) == b.usual.map(\.high)
+            && a.usual.map(\.mode) == b.usual.map(\.mode)
+    }
 
     // MARK: Reading a file
 
     static func parse(_ text: String) -> Result<BandPlan, BandPlanError> {
         var name = "", classes: [String] = []
         var segments: [Segment] = [], activities: [Activity] = []
+        var usual: [(low: Int, high: Int, mode: Mode)] = []
         for (number, raw) in text.components(separatedBy: .newlines).enumerated() {
             let line = raw.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first
                 .map(String.init)?.trimmingCharacters(in: .whitespaces) ?? ""
@@ -113,8 +126,15 @@ struct BandPlan: Equatable {
                 let mode = word.isEmpty ? nil : Mode(rawValue: word == "cw" ? "CW" : word)
                 guard word.isEmpty || mode != nil else { return problem("mode \"\(word)\" isn't CW, data, phone or image") }
                 activities.append(Activity(hertz: hertz, mode: mode, what: String(parts[2].prefix(120))))
+            case "usual":
+                let word = parts.count == 2 ? parts[1].lowercased() : ""
+                guard parts.count == 2, let range = Self.range(parts[0]),
+                      let mode = Mode(rawValue: word == "cw" ? "CW" : word) else {
+                    return problem("a usual line is a range in MHz | a mode, like 1.800-1.843 | CW")
+                }
+                usual.append((range.low, range.high, mode))
             default:
-                return problem("\(key) isn't a band plan setting (name, classes, segment, activity)")
+                return problem("\(key) isn't a band plan setting (name, classes, segment, activity, usual)")
             }
             guard segments.count + activities.count < 2_000 else { return problem("too many lines for a band plan") }
         }
@@ -122,7 +142,7 @@ struct BandPlan: Equatable {
         guard !classes.isEmpty else { return .failure(.init("it needs a classes: line")) }
         guard !segments.isEmpty else { return .failure(.init("it has no segment: lines")) }
         return .success(BandPlan(name: name, classes: classes, segments: segments.sorted { ($0.low, $0.high) < ($1.low, $1.high) },
-                                 activities: activities.sorted { $0.hertz < $1.hertz }))
+                                 activities: activities.sorted { $0.hertz < $1.hertz }, usual: usual))
     }
 
     // "14.074" MHz -> 14074000 hertz. Nil outside 8 kHz to 300 GHz.
@@ -198,6 +218,38 @@ struct BandPlan: Equatable {
             else { merged.append((segment.low, segment.high)) }
         }
         return merged.map { Self.spokenRange($0.0, $0.1) }.joined(separator: " and ")
+    }
+
+    // MARK: The usual mode
+
+    // The mode a frequency typed in Callsign should get (hamlib's names:
+    // CW, USB, LSB, FM, PKTUSB), or nil to leave the radio's as it is:
+    //   - an activity within 1 kHz: its mode (FM if it's an FM one);
+    //   - a usual: range: its mode;
+    //   - HF and 6 meters: SSB where phone is allowed (any class), on the
+    //     usual sideband; otherwise CW, or data if the radio's already in
+    //     a data mode and data's allowed there;
+    //   - above 6 meters (FM and SSB share the bands): left as it is.
+    func usualMode(at hertz: Int, radioMode: String) -> String? {
+        func radio(_ mode: Mode) -> String {
+            switch mode {
+            case .cw: return "CW"
+            case .data: return "PKTUSB"
+            case .phone, .image: return RadioEntry.sideband(at: hertz)
+            }
+        }
+        if let activity = activities.filter({ abs($0.hertz - hertz) <= 1_000 && $0.mode != nil })
+            .min(by: { abs($0.hertz - hertz) < abs($1.hertz - hertz) }), let mode = activity.mode {
+            return activity.what.uppercased().contains("FM") ? "FM" : radio(mode)
+        }
+        if let custom = usual.first(where: { hertz >= $0.low && hertz <= $0.high }) { return radio(custom.mode) }
+        guard hertz < 54_000_000 else { return nil }
+        let modes = Set(segments.filter { $0.contains(hertz) }.flatMap(\.modes))
+        guard !modes.isEmpty else { return nil }
+        if modes.contains(.phone) { return radio(.phone) }
+        if Self.mode(ofRadioMode: radioMode) == .data, modes.contains(.data) { return nil }
+        if modes.contains(.cw) { return "CW" }
+        return modes.contains(.data) ? "PKTUSB" : nil
     }
 
     // MARK: Words
@@ -277,27 +329,58 @@ enum BandPlanList {
 
     static func folder(in base: URL) -> URL { base.appendingPathComponent("Band Plans", isDirectory: true) }
 
-    // Solid Copy's own files, each written once (like ContestList's): a
-    // file you deleted or changed is left alone.
+    // Solid Copy's own files. Each is written once; when a new version of
+    // Solid Copy has a newer one, it replaces the old only if you haven't
+    // changed it (its SHA-256 still matches what was written), and a file
+    // you deleted stays deleted. ".written" lists each file given and the
+    // SHA-256 of the version given.
     static let startingFiles: [(file: String, text: String)] = [("United States (FCC).txt", BandPlan.unitedStates)]
     static let writtenList = ".written"
+    // What 1.6 wrote, before ".written" kept a SHA-256 (its list has the
+    // name only).
+    static let earlierVersions: [String: String] = [
+        "United States (FCC).txt": "0b57d4c9b8fbffe6d74734f433b0a13281e9e3be9b1f9bb2cf352e4e5bd41c91",
+    ]
+    // The checks stand in their own earlier version here.
+    nonisolated(unsafe) static var earlierVersionsForChecks: [String: String]?
+
+    static func sha256(_ text: String) -> String {
+        SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
+    }
 
     static func load(from folder: URL) -> Loaded {
         let files = FileManager.default
-        if !files.fileExists(atPath: folder.path) {
-            try? files.createDirectory(at: folder, withIntermediateDirectories: true)
-        }
+        let isNew = !files.fileExists(atPath: folder.path)
+        if isNew { try? files.createDirectory(at: folder, withIntermediateDirectories: true) }
         let listURL = folder.appendingPathComponent(writtenList)
-        var written = Set(((try? String(contentsOf: listURL, encoding: .utf8)) ?? "")
-            .components(separatedBy: .newlines).filter { !$0.isEmpty })
-        let new = startingFiles.filter { !written.contains($0.file) }
-        if !new.isEmpty {
-            for file in new where !files.fileExists(atPath: folder.appendingPathComponent(file.file).path) {
-                try? Data(file.text.utf8).write(to: folder.appendingPathComponent(file.file))
+        // File name -> the SHA-256 given (or "" if the list didn't say).
+        var written: [String: String] = [:]
+        for line in ((try? String(contentsOf: listURL, encoding: .utf8)) ?? "").components(separatedBy: .newlines)
+        where !line.isEmpty {
+            let parts = line.components(separatedBy: "\t")
+            written[parts[0]] = parts.count > 1 ? parts[1] : ((earlierVersionsForChecks ?? earlierVersions)[parts[0]] ?? "")
+        }
+        var changed = false
+        for file in startingFiles {
+            let url = folder.appendingPathComponent(file.file)
+            let newest = sha256(file.text)
+            guard written[file.file] != newest else { continue }
+            if let given = written[file.file] {
+                // A newer version: in place of the old one, only if it's
+                // still exactly as given.
+                if let text = try? String(contentsOf: url, encoding: .utf8), !given.isEmpty, sha256(text) == given {
+                    try? Data(file.text.utf8).write(to: url)
+                }
+            } else if !files.fileExists(atPath: url.path) {
+                try? Data(file.text.utf8).write(to: url)
             }
+            written[file.file] = newest
+            changed = true
+        }
+        if changed {
             try? Data(BandPlan.readme.utf8).write(to: folder.appendingPathComponent("README.txt"))
-            written.formUnion(new.map(\.file))
-            try? Data((written.sorted().joined(separator: "\n") + "\n").utf8).write(to: listURL)
+            let lines = written.keys.sorted().map { "\($0)\t\(written[$0] ?? "")" }
+            try? Data((lines.joined(separator: "\n") + "\n").utf8).write(to: listURL)
         }
         var loaded = Loaded(plans: [], problems: [])
         let names = ((try? files.contentsOfDirectory(atPath: folder.path)) ?? [])

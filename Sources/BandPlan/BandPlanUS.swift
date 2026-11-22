@@ -35,8 +35,9 @@ extension BandPlan {
     segment: 0.1357-0.1378 | CW, data, phone, image | Extra, Advanced, General | 2200 meters; 1 W EIRP; notify UTC first
     segment: 0.472-0.479 | CW, data, phone, image | Extra, Advanced, General | 630 meters; 5 W EIRP; notify UTC first
 
-    # 160 meters
+    # 160 meters: every mode is allowed; CW is the custom below 1.843.
     segment: 1.800-2.000 | CW, data, phone, image | Extra, Advanced, General
+    usual: 1.800-1.843 | CW
     activity: 1.810 | CW | QRP CW
     activity: 1.840 | data | FT8
 
@@ -190,12 +191,15 @@ extension BandPlan {
     classes: Extra, Advanced, General, ...    required, every license class
     segment: 14.000-14.025 | CW, data | Extra | a note (optional)
     activity: 14.074 | data | FT8
+    usual: 1.800-1.843 | CW                   where a mode is the custom
 
     A segment says which classes may use a range, and for what: CW, data,
     phone, image. The same range can come again for other classes with
     other modes. "all" means every class. An activity is a frequency where
     something usually happens (FT8, a calling frequency); it gives no
-    privileges, and its mode can be left empty.
+    privileges, and its mode can be left empty. A usual line says where
+    one mode is the custom though others are allowed (CW low on 160
+    meters): a frequency typed in Callsign gets that mode.
 
     To add another country, copy the United States file, change its name,
     classes and segments, and save it here with a new file name.

@@ -316,6 +316,14 @@ MainActor.assumeIsolated {
           "mode names; SSB is lower sideband below 10 MHz, upper above")
     check(RadioEntry.parse("W1AW", currentHertz: nil) == nil && RadioEntry.parse("K1ABC/P", currentHertz: nil) == nil
           && RadioEntry.parse("", currentHertz: nil) == nil, "callsigns aren't radio commands")
+    check(RadioEntry.parse("14.050 CW", currentHertz: nil) == .frequencyAndMode(hertz: 14_050_000, mode: "CW")
+          && RadioEntry.parse("cw 14050", currentHertz: nil) == .frequencyAndMode(hertz: 14_050_000, mode: "CW")
+          && RadioEntry.parse("7200 ssb", currentHertz: 14_000_000) == .frequencyAndMode(hertz: 7_200_000, mode: "LSB")
+          && RadioEntry.parse("5.3305 ssb", currentHertz: nil) == .frequencyAndMode(hertz: 5_330_500, mode: "USB")
+          && RadioEntry.parse("14.074 data", currentHertz: nil) == .frequencyAndMode(hertz: 14_074_000, mode: "PKTUSB"),
+          "a frequency and a mode together, either way round; SSB is the sideband for the frequency typed")
+    check(RadioEntry.parse("14.050 W1AW", currentHertz: nil) == nil && RadioEntry.parse("14.050 CW extra", currentHertz: nil) == nil,
+          "anything else with a frequency isn't a radio command")
 
     // Status line: read every 5 seconds.
     check(monitor.status != nil, "the status line's settings were read on connecting")
