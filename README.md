@@ -583,6 +583,7 @@ awards, one line each:
   modes, 300 for one mode.
 - **SKCC Centurion, Tribune and Senator** (Straight Key Century Club):
   members worked on CW (below).
+- **POTA Hunter** (Parks on the Air): different parks worked (below).
 
 For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
 the award." Only contacts confirmed by LoTW or a paper card count as
@@ -628,6 +629,22 @@ count says why: "W1XYZ, SKCC 2345: doesn't count, you weren't a
 Centurion yet, 1 contact". In Show, Confirmed is the members that
 count and Still needed the ones that don't. Members who have since
 become silent keys still count.
+
+### POTA Hunter
+
+POTA Hunter counts the different parks you've worked, on any band or
+mode, towards POTA's levels: Bronze 10, Silver 20, Gold 30, Platinum 40,
+Diamond 50, Sapphire 75, then every 100 parks to 1000, then 1500 and
+2000. For example: "POTA Hunter: 63 parks worked, enough for Diamond; 12
+more for Sapphire." Its list has each park, named from POTA's park list:
+"US-1333, Big Pocono State Park, Pennsylvania: worked, 3 contacts".
+
+The parks come from each contact's park (POTA_REF, or SIG POTA with its
+SIG_INFO). A two-fer counts each park, and an old US reference such as
+K-1333 counts as POTA's US-1333. This is your own count: pota.app gives
+hunters credit from the activators' uploaded logs, so its count is the
+official one, and a park may not show there until the activator
+uploads.
 
 ## Callsign lookups
 

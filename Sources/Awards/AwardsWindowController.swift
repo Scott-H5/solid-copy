@@ -19,6 +19,10 @@
 // For SKCC, a member counts or doesn't (no QSL is needed): Confirmed in
 // Show is the members that count, and Still needed the ones that don't,
 // with why. SKCC counts CW only, whatever Mode says.
+//
+// POTA Hunter lists the parks worked ("US-1333, Big Pocono State Park,
+// Pennsylvania: worked, 3 contacts"); there's no confirmation to show, so
+// Show doesn't apply. pota.app keeps the official count.
 //   Up, Down   move between awards, or through the list
 //   Return     from an award, to its list
 //   Escape     back to the logging window (this window stays open)
@@ -152,7 +156,7 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         awardsTable.onEscape = { [weak self] in self?.onEscape?() }
         awardsTable.setAccessibilityLinkedUIElements([note])
         let row = Award.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.award") } ?? 0
-        awardsScroll.heightAnchor.constraint(equalToConstant: 150).isActive = true
+        awardsScroll.heightAnchor.constraint(equalToConstant: 170).isActive = true
 
         let itemsScroll = Self.scroll(for: itemsTable, label: "List", id: "item")
         itemsTable.dataSource = self
@@ -228,9 +232,11 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         let myCall = Settings.currentProfile.station["station_callsign"] ?? ""
         let skcc = roster.isReady ? Awards.SKCC(mine: roster.number(for: myCall).flatMap(roster.dates(forNumber:)),
                                                 number: roster.number(for:), dates: roster.dates(forNumber:)) : nil
+        let parks = ParkList.shared
         progress = Award.allCases.map {
             Awards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode,
-                            country: country, allCountries: all, skcc: skcc)
+                            country: country, allCountries: all, skcc: skcc,
+                            parkName: { parks.park($0)?.spoken })
         }
         let awardRow = max(0, awardsTable.selectedRow)
         awardsTable.reloadData()
@@ -242,7 +248,7 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         let selectedKey = shownItems.indices.contains(itemsTable.selectedRow) ? shownItems[itemsTable.selectedRow].key : nil
         let award = chosenAward
         let items = progress.first { $0.award == award }?.items ?? []
-        shownItems = items.filter(chosenShow.includes)
+        shownItems = award == .pota ? items : items.filter(chosenShow.includes)
         itemsTable.reloadData()
         if let selectedKey, let row = shownItems.firstIndex(where: { $0.key == selectedKey }) {
             itemsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
@@ -251,7 +257,10 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         let band = chosenBand.map { "on " + Bands.spoken($0) } ?? "on all bands"
         let count = shownItems.count == 1 ? "1 line" : "\(shownItems.count) lines"
         let mode = award.isSKCC ? "CW" : chosenMode.title.lowercased()
-        var text = "\(award.title) \(band), \(mode). \(chosenShow.title): \(count)."
+        var text = "\(award.title) \(band), \(mode). \(award == .pota ? "Parks worked" : chosenShow.title): \(count)."
+        if award == .pota {
+            text += " pota.app keeps the official count, from the activators' logs."
+        }
         if award == .dxcc, Countries.shared.all.isEmpty {
             text += " The country list (cty.dat) isn't here yet, so DXCC can't be counted. It's fetched from "
                 + "country-files.com when Solid Copy is online."

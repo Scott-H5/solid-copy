@@ -166,6 +166,36 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     check(levels.line == "SKCC Tribune: 120 members count, enough for Tx2; 30 more for Tx3.", "levels: \(levels.line)")
     levels.items = Array(levels.items.prefix(1))
     check(levels.line == "SKCC Tribune: 1 member counts, 49 more for Tribune.", "one member")
+    // POTA.
+    var parkLog: [QSO] = []
+    func hunt(_ call: String, _ park: String, sig: String = "", band: String = "20m", mode: String = "CW") {
+        var qso = QSO(call: call, timeOn: Date(timeIntervalSince1970: TimeInterval(1_750_000_000 + parkLog.count * 60)))
+        qso["band"] = band; qso["mode"] = mode
+        if sig == "POTA" { qso["sig"] = sig; qso["sig_info"] = park } else { qso["pota_ref"] = park; qso["sig"] = sig }
+        parkLog.append(qso)
+    }
+    hunt("K3AAA", "US-1333")
+    hunt("K3BBB", "K-1333", mode: "SSB")                   // the old prefix: the same park
+    hunt("K3CCC", "US-0001, US-0002@US-PA", band: "40m")   // a two-fer, with a place after "@"
+    hunt("K3DDD", "VE-0100", sig: "POTA")                 // in SIG and SIG_INFO
+    hunt("K3EEE", "US-12x4")                              // a slip: not a park
+    hunt("K3FFF", "US-0003", sig: "WWFF")                 // POTA_REF is used whatever SIG says
+    check(Awards.parks(in: parkLog[2]) == ["US-0001", "US-0002"] && Awards.parks(in: parkLog[1]) == ["US-1333"],
+          "parks: a two-fer is two parks; K-1333 is US-1333")
+    let names = ["US-1333": "US-1333, Big Pocono State Park, Pennsylvania"]
+    let pota = Awards.progress(.pota, log: parkLog, band: nil, mode: .mixed, country: country, allCountries: [],
+                               parkName: { names[$0] })
+    check(pota.items.map(\.key) == ["US-0001", "US-0002", "US-0003", "US-1333", "VE-0100"], "parks worked: \(pota.items.map(\.key))")
+    check(pota.items.first { $0.key == "US-1333" }!.line == "US-1333, Big Pocono State Park, Pennsylvania: worked, 2 contacts",
+          "a park's line, named from the park list")
+    check(pota.items.first { $0.key == "VE-0100" }!.line == "VE-0100: worked, 1 contact", "a park not in the list: its reference")
+    check(pota.line == "POTA Hunter: 5 parks worked, 5 more for Bronze.", "POTA's line: \(pota.line)")
+    check(Awards.progress(.pota, log: parkLog, band: "40m", mode: .mixed, country: country, allCountries: []).worked == 2
+          && Awards.progress(.pota, log: parkLog, band: nil, mode: .phone, country: country, allCountries: []).worked == 1,
+          "band and mode")
+    let lots = AwardProgress(award: .pota, mode: .mixed, items: (1...312).map { AwardItem(key: "US-\($0)", name: "", contacts: 1, noQSL: true) })
+    check(lots.line == "POTA Hunter: 312 parks worked, enough for the 300 park award; 88 more for the 400 park award.",
+          "higher levels: \(lots.line)")
     print("All award checks passed.")
 }
 

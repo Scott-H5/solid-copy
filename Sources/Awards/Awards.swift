@@ -8,6 +8,7 @@
 //   WAZ  (CQ)    the 40 CQ zones
 //   WPX  (CQ)    different prefixes: 400 for mixed modes, 300 for one
 //   SKCC Centurion, Tribune and Senator: straight key members (below)
+//   POTA Hunter  different parks hunted (below)
 //
 // Each can be for one band and one kind of mode (all CW on 20 meters, say),
 // as the awards' own endorsements are.
@@ -43,13 +44,24 @@
 // log, so that's taken on trust. K9SKC, the club's own call, doesn't
 // count from the days the rules give.
 //
+// POTA (Parks on the Air) hunter awards count different parks, any band
+// or mode: Bronze 10, Silver 20, Gold 30, Platinum 40, Diamond 50,
+// Sapphire 75, then 100 to 1000 by 100, 1500 and 2000 (docs.pota.app,
+// Achievements, read 22 November 2026; the higher ones have flower and
+// animal names, said here as "the 300 park award"). Credit comes from the
+// activators' logs, so pota.app's count is the official one: this is your
+// own count of parks worked, from each contact's park (POTA_REF, or SIG
+// POTA with SIG_INFO). A contact with several parks (a two-fer) counts
+// each. Old US references (K-1333) are POTA's US-1333 now, so they're
+// counted as that.
+//
 // No windows here, and the country data is passed in, so
 // tools/check-awards.sh can check the counting with a made-up log.
 
 import Foundation
 
 enum Award: String, CaseIterable {
-    case dxcc, was, waz, wpx, centurion, tribune, senator
+    case dxcc, was, waz, wpx, centurion, tribune, senator, pota
 
     var title: String {
         switch self {
@@ -60,6 +72,7 @@ enum Award: String, CaseIterable {
         case .centurion: "SKCC Centurion"
         case .tribune: "SKCC Tribune"
         case .senator: "SKCC Senator"
+        case .pota: "POTA Hunter"
         }
     }
 
@@ -73,6 +86,7 @@ enum Award: String, CaseIterable {
         case .waz: "zones"
         case .wpx: "prefixes"
         case .centurion, .tribune, .senator: "members"
+        case .pota: "parks"
         }
     }
 
@@ -86,6 +100,7 @@ enum Award: String, CaseIterable {
         case .centurion: 100
         case .tribune: 50
         case .senator: 200
+        case .pota: 10
         }
     }
 
@@ -100,6 +115,9 @@ enum Award: String, CaseIterable {
                 + stride(from: 15, through: 200, by: 5).map { ($0 * 50, "Tx\($0)") }
         case .senator:
             return [(200, "Senator")] + (2...10).map { ($0 * 200, "Sx\($0)") }
+        case .pota:
+            return [(10, "Bronze"), (20, "Silver"), (30, "Gold"), (40, "Platinum"), (50, "Diamond"), (75, "Sapphire")]
+                + (stride(from: 100, through: 1000, by: 100).map { $0 } + [1500, 2000]).map { ($0, "the \($0) park award") }
         default:
             return []
         }
@@ -138,6 +156,9 @@ struct AwardItem: Equatable {
     var confirmedBy: [String] = []   // "LoTW", "card": any confirmation; "SKCC": it counts
     // For an SKCC member that doesn't count: why not.
     var why = ""
+    // A park: there's no confirmation in the log to speak of (POTA credits
+    // hunters from the activators' logs), so it's just worked.
+    var noQSL = false
 
     var isWorked: Bool { contacts > 0 }
     var isConfirmed: Bool { !confirmedBy.isEmpty }
@@ -146,6 +167,7 @@ struct AwardItem: Equatable {
     var line: String {
         let times = contacts == 1 ? "1 contact" : "\(contacts) contacts"
         if confirmedBy == ["SKCC"] { return "\(name): counts, \(times)" }
+        if noQSL { return "\(name): worked, \(times)" }
         if !why.isEmpty { return "\(name): doesn't count, \(why), \(times)" }
         if isConfirmed { return "\(name): confirmed by \(confirmedBy.joined(separator: " and ")), \(times)" }
         if isWorked { return "\(name): worked, not confirmed, \(times)" }
@@ -169,14 +191,17 @@ struct AwardProgress: Equatable {
     // "WAS: 38 states worked, 31 confirmed, 19 more confirmed for the award."
     var line: String {
         if let blocked { return "\(award.title): \(blocked)" }
-        if award.isSKCC {
+        if award.isSKCC || award == .pota {
             // "SKCC Tribune: 120 members count, enough for Tx2; 30 more for Tx3."
-            let start = "\(award.title): \(confirmed) \(confirmed == 1 ? "member counts" : "members count")"
-            let earned = award.levels.last { $0.count <= confirmed }
-            guard let next = award.levels.first(where: { $0.count > confirmed }) else {
+            // "POTA Hunter: 63 parks worked, enough for Diamond; 12 more for Sapphire."
+            let count = award == .pota ? worked : confirmed
+            let start = award == .pota ? "\(award.title): \(count) \(count == 1 ? "park" : "parks") worked"
+                : "\(award.title): \(count) \(count == 1 ? "member counts" : "members count")"
+            let earned = award.levels.last { $0.count <= count }
+            guard let next = award.levels.first(where: { $0.count > count }) else {
                 return start + ", enough for \(earned?.name ?? award.title)."
             }
-            let more = "\(next.count - confirmed) more for \(next.name)."
+            let more = "\(next.count - count) more for \(next.name)."
             return start + (earned.map { ", enough for \($0.name); " + more } ?? ", " + more)
         }
         let goal = award.goal(mode: mode)
@@ -203,8 +228,9 @@ enum Awards {
     // (Countries.shared), passed in so the check can use its own.
     static func progress(_ award: Award, log: [QSO], band: String?, mode: AwardMode,
                          country: (String) -> Country?, allCountries: [Country],
-                         skcc: SKCC? = nil) -> AwardProgress {
+                         skcc: SKCC? = nil, parkName: (String) -> String? = { _ in nil }) -> AwardProgress {
         if award.isSKCC { return skccProgress(award, log: log, band: band, skcc: skcc) }
+        if award == .pota { return potaProgress(log: log, band: band, mode: mode, parkName: parkName) }
         var items: [String: AwardItem] = [:]
         var order: [String] = []
         func add(_ key: String, _ name: String) {
@@ -220,7 +246,7 @@ enum Awards {
                 add(code, USStates.name(for: code) ?? code)
             }
         case .waz: for zone in 1...40 { add(String(zone), "Zone \(zone)") }
-        case .wpx, .centurion, .tribune, .senator: break
+        case .wpx, .centurion, .tribune, .senator, .pota: break
         }
 
         for qso in log {
@@ -263,9 +289,49 @@ enum Awards {
         case .wpx:
             let given = qso["pfx"].uppercased()
             return given.isEmpty ? WPX.prefix(qso.call) : given
-        case .centurion, .tribune, .senator:
+        case .centurion, .tribune, .senator, .pota:
             return nil
         }
+    }
+
+    // MARK: - POTA
+
+    // Each park worked, by reference, named from POTA's park list
+    // ("US-1333, Big Pocono State Park, Pennsylvania") when it's there.
+    static func potaProgress(log: [QSO], band: String?, mode: AwardMode,
+                             parkName: (String) -> String?) -> AwardProgress {
+        var items: [String: AwardItem] = [:]
+        for qso in log {
+            if let band, qso["band"].lowercased() != band.lowercased() { continue }
+            guard mode.includes(qso["mode"]) else { continue }
+            for park in parks(in: qso) {
+                var item = items[park] ?? AwardItem(key: park, name: parkName(park) ?? park, noQSL: true)
+                item.contacts += 1
+                items[park] = item
+            }
+        }
+        return AwardProgress(award: .pota, mode: mode, items: items.values.sorted { $0.key < $1.key })
+    }
+
+    // The parks a contact was with: "US-1333", or several for a two-fer.
+    static func parks(in qso: QSO) -> [String] {
+        var text = qso["pota_ref"]
+        if text.isEmpty, qso["sig"].uppercased() == "POTA" { text = qso["sig_info"] }
+        var parks: [String] = []
+        for part in text.split(separator: ",") {
+            // ADIF allows a place after "@" ("US-1333@US-PA"); it isn't
+            // part of the park.
+            var park = part.split(separator: "@").first.map(String.init)?
+                .trimmingCharacters(in: .whitespaces).uppercased() ?? ""
+            if park.hasPrefix("K-") { park = "US-" + park.dropFirst(2) }
+            // "US-1333": letters or digits, a dash, then the number. Anything
+            // else (a typing slip) isn't a park.
+            let halves = park.split(separator: "-", omittingEmptySubsequences: false)
+            guard halves.count == 2, (1...4).contains(halves[0].count), halves[0].allSatisfy({ $0.isLetter || $0.isNumber }),
+                  (4...6).contains(halves[1].count), halves[1].allSatisfy(\.isNumber), !parks.contains(park) else { continue }
+            parks.append(park)
+        }
+        return parks
     }
 
     // MARK: - SKCC
