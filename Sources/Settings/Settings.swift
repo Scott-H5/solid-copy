@@ -405,6 +405,33 @@ enum Settings {
     // for WSJT-X all the time, not only with the decodes window open, so
     // its contacts are logged whenever you make them; and, with the
     // window closed, alert you to a call to you or a needed station.
+    // Settings > Logging Form, "Log a contact with": Command-Return only
+    // (the starting choice, from 22 November 2026: a firmer key, so a
+    // stray Return never logs), or Return and Command-Return (as before).
+    static var logWithCommandReturnOnly: Bool {
+        get { defaults.object(forKey: "logging.commandReturnOnly") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "logging.commandReturnOnly") }
+    }
+    // The key that logs, in words, for messages ("press Command-Return").
+    static var logKeyWords: String { logWithCommandReturnOnly ? "Command-Return" : "Return" }
+
+    // Settings > Band Plan (BandPlan.swift; v1.6 items 5 and 6): your
+    // license class ("" until chosen: no warning without it), the plan
+    // used (a name from the Band Plans folder), and whether to warn when
+    // the radio is outside your privileges.
+    static var licenseClass: String {
+        get { defaults.string(forKey: "bandPlan.class") ?? "" }
+        set { defaults.set(newValue, forKey: "bandPlan.class") }
+    }
+    static var bandPlanName: String {
+        get { defaults.string(forKey: "bandPlan.name") ?? "United States (FCC)" }
+        set { defaults.set(newValue, forKey: "bandPlan.name") }
+    }
+    static var bandWarning: Bool {
+        get { defaults.object(forKey: "bandPlan.warn") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "bandPlan.warn") }
+    }
+
     static var wsjtxAlwaysListen: Bool {
         get { defaults.bool(forKey: "wsjtx.alwaysListen") }
         set { defaults.set(newValue, forKey: "wsjtx.alwaysListen") }

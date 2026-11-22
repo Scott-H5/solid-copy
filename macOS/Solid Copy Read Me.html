@@ -108,8 +108,10 @@ and grid) and <strong>Settings &gt; CW</strong> (name). <strong>Set Up Stationâ€
 Profiles shows this sheet again at any time. A profile with a callsign
 already never shows the sheet on its own.</p>
 <p>Then, to log a contact: type the callsign in the Callsign field and press
-Tab through the fields, then Return to log it. The log keeps every contact
-as you go.</p>
+Tab through the fields, then Command-Return to log it. The log keeps every
+contact as you go. (Settings &gt; Logging Form, <strong>Log a contact with</strong>, can
+let plain Return log too; Command-Return only is the starting choice, so
+a stray Return never logs. Plain Return then says "Command-Return logs".)</p>
 <h2 id="using-it">Using it</h2>
 <table>
 <thead>
@@ -124,8 +126,8 @@ as you go.</p>
 <td>Move between Callsign, Name, RST sent, RST received (and any other fields you add in Settings)</td>
 </tr>
 <tr>
-<td>Return</td>
-<td>Log the contact and go back to Callsign</td>
+<td>Command-Return</td>
+<td>Log the contact and go back to Callsign (plain Return too, if Settings &gt; Logging Form says so)</td>
 </tr>
 <tr>
 <td>Escape or Command-K</td>
@@ -221,7 +223,7 @@ as you go.</p>
 </tr>
 <tr>
 <td>Up Arrow (in an empty Callsign)</td>
-<td>Correct the last contact: it comes back into the form; Up and Down go to older and newer ones; Return saves the change to that contact, Escape leaves it as it was</td>
+<td>Correct the last contact: it comes back into the form; Up and Down go to older and newer ones; Command-Return saves the change to that contact (or Return, as Settings &gt; Logging Form says), Escape leaves it as it was</td>
 </tr>
 <tr>
 <td>Command-Z</td>
@@ -383,7 +385,7 @@ SOTA log (it has MY_SOTA_REF and SOTA_REF).</p>
 <h2 id="settings">Settings</h2>
 <p>Settings (Command-comma) is laid out like System Settings: a list of
 sections down the left (Lookup, Profiles, Logging Form, Log Columns,
-Radio, Speech, Spots, Uploads, Clubs, Backups) and the chosen section on the right,
+Radio, Speech, Spots, Uploads, Clubs, Backups, CW, QSL Card, Band Plan) and the chosen section on the right,
 scrolling if it's tall. Command-1 to Command-9 go straight to a section. In the list, Up and Down
 choose a section and Return or Right Arrow go into it; Tab goes round the
 section and back to the list. Escape or Command-W closes Settings.</p>
@@ -933,6 +935,45 @@ If you need it, you hear it with the lookup: "needed: new country",
 country is said on its own when the lookup gives no place, and it goes
 in the contact's Country when the lookup doesn't fill it.</li>
 </ul>
+<h2 id="band-plan">Band plan</h2>
+<p><strong>Settings &gt; Band Plan</strong> has your <strong>license class</strong> and the <strong>band plan</strong>
+(the United States one, from the FCC's Part 97 rules as amended in
+January 2026, to start). <strong>Window &gt; Band Plan</strong> (Command-6) shows it as a
+list, low to high, one line each:</p>
+<pre><code>14.000 to 14.025 MHz, 20 meters: CW and data. Extra only.
+14.074 MHz, 20 meters: FT8.
+14.150 to 14.175 MHz, 20 meters: CW, phone and image. Extra only.
+</code></pre>
+<ul>
+<li>
+<strong>Band</strong>, <strong>Class</strong> and <strong>Mode</strong> narrow it. Class starts on your
+license class, and then shows only the segments yours may use, and the
+activities inside them.</li>
+<li>Activities are where things usually happen (FT8 and FT4, QRP and SKCC
+frequencies, the NCDXF beacons, SSTV, calling frequencies); they give
+no privileges.</li>
+<li>The line above the list says where the radio is: "Radio: 14.074 MHz:
+CW and data for Extra. FT8." The line for it is selected when the
+window opens.</li>
+<li>
+<strong>Return</strong> tunes the radio there: an activity's frequency, or 5 kHz
+into a segment (never its edge). Escape goes back to logging.</li>
+</ul>
+<p><strong>The out-of-band warning.</strong> With a license class chosen and <strong>Warn when
+the radio is outside my privileges</strong> on, Solid Copy plays the warning
+sound and says so when the radio settles somewhere that isn't yours:
+"Outside your Extra privileges: 14.352 MHz. Nearest: 14.225 to 14.350",
+or "Phone isn't allowed at 14.100 MHz for Extra; here it's CW and data.
+Phone: 14.150 to 14.350". It waits until the radio has stayed there 1.5
+seconds, says it once, and is quiet far from any band (broadcast
+listening). While WSJT-X is working, the radio counts as in a data mode
+even in plain USB. It's about where the radio is: Solid Copy can't tell
+listening from transmitting. Window &gt; Activity lists each warning.</p>
+<p><strong>Other countries.</strong> A band plan is a text file in the Band Plans folder
+(Settings &gt; Band Plan &gt; <strong>Show Band Plan Files</strong>, with a README on the
+format), so another country's plan can be added as a file, and it's then
+in the Band plan pop-up. There's no official list to download them from,
+so Solid Copy comes with the United States plan.</p>
 <h2 id="awards">Awards</h2>
 <p><strong>Window &gt; Awards</strong> (Command-5) shows how far your log is towards these
 awards, one line each:</p>
@@ -1533,6 +1574,8 @@ hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</l
 <code>tools/check-rotor.sh</code>: rotor control, against a pretend rotctld (<code>--live</code> adds hamlib's dummy rotor)</li>
 <li>
 <code>tools/check-spots.sh</code>: spots</li>
+<li>
+<code>tools/check-bandplan.sh</code>: band plans, the US privileges and the out-of-band warning</li>
 <li>
 <code>tools/check-conditions.sh</code>: band conditions (add <code>--live</code> to read
 N0NBH's real figures once)</li>

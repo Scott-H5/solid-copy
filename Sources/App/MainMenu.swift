@@ -335,6 +335,11 @@ enum MainMenu {
         // (AwardsWindowController.swift).
         let awards = menu.addItem(withTitle: "Awards", action: #selector(AppDelegate.showAwards(_:)), keyEquivalent: "5")
         awards.target = appDelegate
+        // Command-6: the band plan, by license class and mode
+        // (BandPlanWindowController.swift).
+        let bandPlan = menu.addItem(withTitle: "Band Plan", action: #selector(AppDelegate.showBandPlan(_:)),
+                                    keyEquivalent: "6")
+        bandPlan.target = appDelegate
         let next = menu.addItem(withTitle: "Next Window",
                                 action: #selector(AppDelegate.nextWindow(_:)), keyEquivalent: "`")
         let previous = menu.addItem(withTitle: "Previous Window",

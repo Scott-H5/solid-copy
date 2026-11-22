@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 xcrun swiftc -swift-version 5 Sources/Conditions/*.swift Sources/Model/*.swift Sources/Accessibility/*.swift \
-  Sources/Activity/*.swift Sources/Settings/*.swift Sources/Lookup/*.swift Sources/Radio/*.swift Sources/Keyer/*.swift \
+  Sources/Activity/*.swift Sources/Settings/*.swift Sources/WSJTX/*.swift Sources/BandPlan/*.swift Sources/Lookup/*.swift Sources/Radio/*.swift Sources/Keyer/*.swift \
   Sources/LogTable/*.swift Sources/EditContact/*.swift Sources/LogEntry/*.swift Sources/Rotor/*.swift Sources/Spots/*.swift \
   Sources/LoTW/*.swift Sources/Export/*.swift Sources/Import/*.swift Sources/Uploads/*.swift \
   tools/conditions-check/main.swift -o "$WORK/check" 2>&1 | grep -E "error" || true

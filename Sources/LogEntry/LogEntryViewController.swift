@@ -416,7 +416,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
             noBandWarnedFor = call
             Speaker.Cue.warning.play()
             let radio = RadioMonitor.shared.reading == nil ? "The radio isn't connected. " : ""
-            Speaker.announce("No band. \(radio)Type the band or frequency, or press Return again to log without it.")
+            Speaker.announce("No band. \(radio)Type the band or frequency, or press \(Settings.logKeyWords) again to log without it.")
             return
         }
         do {
@@ -1039,6 +1039,18 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
            parkSearch.key(commandSelector, in: field) { return true }
         switch commandSelector {
         case #selector(NSResponder.insertNewline(_:)):
+            // Command-Return is the Contact menu's Log Contact, which
+            // takes it before the field does; plain Return logs only if
+            // Settings > Logging Form says so (Settings.logWithCommandReturnOnly).
+            // A frequency or mode typed in Callsign ("14060", "CW") still
+            // tunes with plain Return: that isn't logging.
+            if Settings.logWithCommandReturnOnly,
+               NSApp.currentEvent?.modifierFlags.contains(.command) != true,
+               RadioEntry.parse(callsignField.stringValue, currentHertz: RadioMonitor.shared.reading?.hertz) == nil {
+                NSSound(named: "Tink")?.play()
+                Speaker.announce("Command-Return logs.")
+                return true
+            }
             logContact(control)
             return true
         case #selector(NSResponder.cancelOperation(_:)):

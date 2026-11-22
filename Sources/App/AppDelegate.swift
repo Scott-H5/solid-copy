@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var decodesWindow: DecodesWindowController?
     // Window > Awards (Command-5), made the first time (AwardsWindowController.swift).
     var awardsWindow: AwardsWindowController?
+    var bandPlanWindow: BandPlanWindowController?
     // Window > Activity (Command-2), made the first time (ActivityWindowController.swift).
     var activityWindow: ActivityWindowController?
     // Window > Log (Command-3), made the first time (LogBrowserWindowController.swift).
@@ -89,6 +90,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         WSJTXAlerts.shared.windowIsOpen = { [weak self] in self?.decodesWindow?.window?.isVisible == true }
         WSJTXAlerts.shared.log = { [weak self] in self?.logbook?.contacts ?? [] }
         WSJTXAlerts.shared.apply()
+        // The out-of-band warning (BandWarning.swift; Settings > Band Plan).
+        BandWarning.shared.start()
         fillRadioMenu()
         // POTA's park list, if you have one and it's a month old.
         ParkList.shared.updateIfStale()
@@ -584,9 +587,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             if response == .alertSecondButtonReturn {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(details.isEmpty ? title : "\(title)\n\n\(details)", forType: .string)
-                Speaker.announce("Copied.")
             }
             self?.logEntry?.focusCallsign()
+            // Said after focus is back in Callsign, naming what was copied:
+            // a bare "Copied" right after VoiceOver says "Callsign" sounded
+            // like the call had been copied (the author, 22 November 2026).
+            if response == .alertSecondButtonReturn {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    Speaker.announce("\(title) copied to the clipboard.")
+                }
+            }
         }
     }
 
@@ -718,6 +728,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func sayRotorHeading(_ sender: Any?) { RotorControl.shared.sayHeading() }
     @objc func stopRotor(_ sender: Any?) { RotorControl.shared.stop() }
+
+    // Window > Band Plan (Command-6). Not tied to a log, so it's kept
+    // when the log changes.
+    @objc func showBandPlan(_ sender: Any?) {
+        if bandPlanWindow == nil {
+            let plan = BandPlanWindowController()
+            plan.onEscape = { [weak self] in self?.showLoggingWindow(nil) }
+            bandPlanWindow = plan
+        }
+        bandPlanWindow?.show()
+    }
 
     @objc func showAwards(_ sender: Any?) {
         guard let logbook else { return }

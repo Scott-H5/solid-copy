@@ -52,6 +52,11 @@
 // Section 11, CW: the WinKeyer's port and speed, and the messages F1 to
 // F8 send (see CWSettingsViewController.swift). Also in the CW menu.
 //
+// Section 12, QSL Card (QSLCardSettingsViewController.swift).
+//
+// Section 13, Band Plan: your license class, the band plan, and the
+// out-of-band warning (BandPlanSettingsViewController.swift).
+//
 // Keys: it opens in the QRZ username field. Tab moves through the text
 // fields (and the checkboxes and button too, if Keyboard navigation is on
 // in System Settings). Escape or Command-W closes it. Everything except
@@ -89,10 +94,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     let backups = BackupsSettingsViewController()
     private let cw = CWSettingsViewController()
     private let card = QSLCardSettingsViewController()
+    private let bandPlan = BandPlanSettingsViewController()
 
     // The Logging Form tab's heading ("Logging form for the Home profile"),
     // and the Starting value field for the selected field.
     private let formHeading = NSTextField(labelWithString: "")
+    // Logging Form, "Log a contact with" (Settings.logWithCommandReturnOnly).
+    private let logKeyMenu = NSPopUpButton()
     private let startingValueField = NSTextField(string: "")
     // The Logging Form section, rebuilt when the profile changes.
     private var formView = NSView()
@@ -268,6 +276,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         uploads.refresh()
         clubs.refresh()
         backups.refresh()
+        bandPlan.refresh()
         cw.refresh()
         card.refresh()
         reloadFormList()
@@ -330,6 +339,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         cw.onEscape = { [weak self] in self?.window?.performClose(nil) }
         _ = card.view
         card.onEscape = { [weak self] in self?.window?.performClose(nil) }
+        _ = bandPlan.view
+        bandPlan.onEscape = { [weak self] in self?.window?.performClose(nil) }
         backups.onEscape = { [weak self] in self?.window?.performClose(nil) }
         clubs.onEscape = { [weak self] in self?.window?.performClose(nil) }
         // A club field named or renamed: the form and column lists show it.
@@ -363,6 +374,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                     firstControl: { [unowned self] in cw.firstControl }),
             Section(title: "QSL Card", view: { [unowned self] in card.view },
                     firstControl: { [unowned self] in card.firstControl }),
+            Section(title: "Band Plan", view: { [unowned self] in bandPlan.view },
+                    firstControl: { [unowned self] in bandPlan.firstControl }),
         ]
 
         // The sidebar: one column, no header, in the source-list style
@@ -499,6 +512,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         return stack
     }
 
+    @objc private func logKeyChanged(_ sender: NSPopUpButton) {
+        Settings.logWithCommandReturnOnly = sender.indexOfSelectedItem == 0
+        Speaker.announce(Settings.logWithCommandReturnOnly ? "Only Command-Return logs a contact."
+                         : "Return or Command-Return logs a contact.")
+    }
+
     // Builds the Logging Form tab for the profile in use: a heading, the
     // list, and the Starting value field. Rebuilt when the profile changes.
     private func reloadFormList() {
@@ -514,14 +533,33 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         startingValueField.removeFromSuperview()
         let startingRow = NSStackView(views: [FieldLabel("Starting value for the selected field"), startingValueField])
         startingRow.spacing = 8
-        let stack = NSStackView(views: [formHeading, list.view, startingRow])
+        // How a contact is logged: for every profile, so it's said so.
+        if logKeyMenu.numberOfItems == 0 {
+            logKeyMenu.addItems(withTitles: ["Command-Return only", "Return or Command-Return"])
+            logKeyMenu.setAccessibilityLabel("Log a contact with, for every profile")
+            logKeyMenu.target = self
+            logKeyMenu.action = #selector(logKeyChanged(_:))
+        }
+        logKeyMenu.selectItem(at: Settings.logWithCommandReturnOnly ? 0 : 1)
+        logKeyMenu.removeFromSuperview()
+        let logKeyNote = NSTextField(wrappingLabelWithString:
+            "Command-Return only: plain Return in the form logs nothing and says \"Command-Return logs\", so a "
+            + "stray Return never logs a contact. Corrections are saved with the same key. This is for every "
+            + "profile.")
+        logKeyNote.preferredMaxLayoutWidth = 520
+        logKeyNote.isSelectable = true
+        logKeyMenu.setAccessibilityLinkedUIElements([logKeyNote])
+        let logKeyRow = NSStackView(views: [FieldLabel("Log a contact with"), logKeyMenu])
+        logKeyRow.spacing = 8
+        let stack = NSStackView(views: [formHeading, list.view, startingRow, logKeyRow, logKeyNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         formView = stack
         list.list.nextKeyView = startingValueField
-        startingValueField.nextKeyView = list.list
+        startingValueField.nextKeyView = logKeyMenu
+        logKeyMenu.nextKeyView = list.list
         showStartingValue(for: list.selectedItem)
         // Showing now: put the new one in place (the old one is gone).
         if sections.indices.contains(current), sections[current].title == "Logging Form" {

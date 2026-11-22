@@ -95,15 +95,17 @@ Profiles shows this sheet again at any time. A profile with a callsign
 already never shows the sheet on its own.
 
 Then, to log a contact: type the callsign in the Callsign field and press
-Tab through the fields, then Return to log it. The log keeps every contact
-as you go.
+Tab through the fields, then Command-Return to log it. The log keeps every
+contact as you go. (Settings > Logging Form, **Log a contact with**, can
+let plain Return log too; Command-Return only is the starting choice, so
+a stray Return never logs. Plain Return then says "Command-Return logs".)
 
 ## Using it
 
 | Key | What it does |
 | --- | --- |
 | Tab, Shift-Tab | Move between Callsign, Name, RST sent, RST received (and any other fields you add in Settings) |
-| Return | Log the contact and go back to Callsign |
+| Command-Return | Log the contact and go back to Callsign (plain Return too, if Settings > Logging Form says so) |
 | Escape or Command-K | Clear the form |
 | Command-L | Go to Callsign |
 | Command-I | Go to the newest contact in the log |
@@ -127,7 +129,7 @@ as you go.
 | Left, Right (in the log) | Choose a column; says its name and the selected contact's value ("Date (UTC), 2026-11-16") |
 | Option-Command-Left, Option-Command-Right (in the log) | Move the chosen column; says where it went ("Date (UTC), now column 2 of 8"). Call stays first. The order is saved |
 | Delete or Command-Delete (in the log) | Delete the selected contacts |
-| Up Arrow (in an empty Callsign) | Correct the last contact: it comes back into the form; Up and Down go to older and newer ones; Return saves the change to that contact, Escape leaves it as it was |
+| Up Arrow (in an empty Callsign) | Correct the last contact: it comes back into the form; Up and Down go to older and newer ones; Command-Return saves the change to that contact (or Return, as Settings > Logging Form says), Escape leaves it as it was |
 | Command-Z | Undo: right after logging, takes the contact back out of the log and puts it in the form to fix; after clearing, brings the form back; in the log, puts a deleted contact back |
 | Shift-Command-Z | Redo |
 | Escape (in the log) | Go back to Callsign |
@@ -258,7 +260,7 @@ SOTA log (it has MY_SOTA_REF and SOTA_REF).
 
 Settings (Command-comma) is laid out like System Settings: a list of
 sections down the left (Lookup, Profiles, Logging Form, Log Columns,
-Radio, Speech, Spots, Uploads, Clubs, Backups) and the chosen section on the right,
+Radio, Speech, Spots, Uploads, Clubs, Backups, CW, QSL Card, Band Plan) and the chosen section on the right,
 scrolling if it's tall. Command-1 to Command-9 go straight to a section. In the list, Up and Down
 choose a section and Return or Right Arrow go into it; Tab goes round the
 section and back to the list. Escape or Command-W closes Settings.
@@ -684,6 +686,48 @@ When you leave Callsign:
   "new band" or "new mode", counted from the log that's open. The
   country is said on its own when the lookup gives no place, and it goes
   in the contact's Country when the lookup doesn't fill it.
+
+## Band plan
+
+**Settings > Band Plan** has your **license class** and the **band plan**
+(the United States one, from the FCC's Part 97 rules as amended in
+January 2026, to start). **Window > Band Plan** (Command-6) shows it as a
+list, low to high, one line each:
+
+```
+14.000 to 14.025 MHz, 20 meters: CW and data. Extra only.
+14.074 MHz, 20 meters: FT8.
+14.150 to 14.175 MHz, 20 meters: CW, phone and image. Extra only.
+```
+
+- **Band**, **Class** and **Mode** narrow it. Class starts on your
+  license class, and then shows only the segments yours may use, and the
+  activities inside them.
+- Activities are where things usually happen (FT8 and FT4, QRP and SKCC
+  frequencies, the NCDXF beacons, SSTV, calling frequencies); they give
+  no privileges.
+- The line above the list says where the radio is: "Radio: 14.074 MHz:
+  CW and data for Extra. FT8." The line for it is selected when the
+  window opens.
+- **Return** tunes the radio there: an activity's frequency, or 5 kHz
+  into a segment (never its edge). Escape goes back to logging.
+
+**The out-of-band warning.** With a license class chosen and **Warn when
+the radio is outside my privileges** on, Solid Copy plays the warning
+sound and says so when the radio settles somewhere that isn't yours:
+"Outside your Extra privileges: 14.352 MHz. Nearest: 14.225 to 14.350",
+or "Phone isn't allowed at 14.100 MHz for Extra; here it's CW and data.
+Phone: 14.150 to 14.350". It waits until the radio has stayed there 1.5
+seconds, says it once, and is quiet far from any band (broadcast
+listening). While WSJT-X is working, the radio counts as in a data mode
+even in plain USB. It's about where the radio is: Solid Copy can't tell
+listening from transmitting. Window > Activity lists each warning.
+
+**Other countries.** A band plan is a text file in the Band Plans folder
+(Settings > Band Plan > **Show Band Plan Files**, with a README on the
+format), so another country's plan can be added as a file, and it's then
+in the Band plan pop-up. There's no official list to download them from,
+so Solid Copy comes with the United States plan.
 
 ## Awards
 
@@ -1282,6 +1326,7 @@ of them touch your Solid Copy log.
 - `tools/check-awards.sh`: counting DXCC, WAS, WAZ and WPX
 - `tools/check-rotor.sh`: rotor control, against a pretend rotctld (`--live` adds hamlib's dummy rotor)
 - `tools/check-spots.sh`: spots
+- `tools/check-bandplan.sh`: band plans, the US privileges and the out-of-band warning
 - `tools/check-conditions.sh`: band conditions (add `--live` to read
   N0NBH's real figures once)
 - `tools/check-cards.sh`: scanned and electronic QSL cards
