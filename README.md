@@ -364,6 +364,10 @@ is on, it takes the arrow keys; VO-Up and VO-Down tune instead.
 - Solid Copy never gives up: switch the radio on before or after it, off
   and on again, or unplug and replug it, and it reconnects by itself.
   Radio > Reconnect Radio starts afresh if you ever want to.
+- A radio that stops answering through the built-in driver has its port
+  closed and opened again every few seconds until it answers, since a
+  port can go stale while staying open (repeated VoiceOver restarts with
+  a USB braille display did it to a TS-590).
 - A missed answer or two isn't called a lost radio: Solid Copy says
   "lost" only after 4 seconds without one. Restarting VoiceOver with a
   USB braille display plugged in can make the radio miss a second's

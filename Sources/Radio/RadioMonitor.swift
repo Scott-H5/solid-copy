@@ -170,6 +170,15 @@ final class RadioMonitor {
     // and calling that "lost" then "back" is a false alarm. A radio
     // really switched off is still said within a few seconds.
     static var missedAnswerGrace: TimeInterval = 4
+    // The built-in driver's port is closed and opened afresh when the
+    // radio has been silent this long. A port can go stale while staying
+    // open: after VoiceOver restarted several times with a USB braille
+    // display, the TS-590 stopped answering for good until the radio was
+    // chosen again (which reopens the port), 22 November 2026. Opening
+    // again costs a few milliseconds, so it's done on every silent look.
+    static var reopenAfter: TimeInterval = 3
+    // Said in Window > Activity once per silence, not on every reopen.
+    private var reopenListed = false
     // Without a reading for this long, look every slowEvery seconds.
     static var slowAfter: TimeInterval = 60
     static var slowEvery = 15
@@ -554,6 +563,7 @@ final class RadioMonitor {
         switch result {
         case .success(let reading):
             notAnsweringSince = nil
+            reopenListed = false
             lastReading = Date()
             set(.connected(reading))
         case .failure(let error):
@@ -565,6 +575,16 @@ final class RadioMonitor {
             if failure == .notAnswering || failure == .rejected {
                 let since = notAnsweringSince ?? Date()
                 notAnsweringSince = since
+                // Built-in driver, silent a while: close the port, so the
+                // next look opens it afresh (reopenAfter).
+                if settings.builtIn, Date().timeIntervalSince(since) >= Self.reopenAfter {
+                    queue.async { client.disconnect() }
+                    if !reopenListed {
+                        reopenListed = true
+                        Activity.shared.record("Radio", radioName, ok: true,
+                                               latest: "Not answering: opening its port afresh to reach it again.")
+                    }
+                }
                 // Still connected, as far as anyone hears, for a missed
                 // read or two (missedAnswerGrace).
                 if case .connected = state, Date().timeIntervalSince(since) < Self.missedAnswerGrace { return }
