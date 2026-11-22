@@ -131,6 +131,9 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     // frequency, band and mode when there's no radio), logged with the
     // contact. Cleared with the form.
     private var spotFields: [String: String] = [:]
+    // The park filled in because the call is spotted at one on POTA
+    // (fillParkFromSpots), so changing the call can take it back out.
+    private var spottedPark: (call: String, reference: String)?
     // Club numbers for the call in Callsign (ClubNumbers.swift): from
     // SKCC's list and your log, worked out when you leave Callsign. Put
     // in empty form fields then, and logged in fields not on the form.
@@ -681,6 +684,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     private func resetForm() {
         correctingID = nil
         spotFields = [:]
+        spottedPark = nil
         clubNumbers = nil
         serialSent = nil
         noBandWarnedFor = nil
@@ -1075,6 +1079,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         if let id = correctingID, let index = logbook.index(of: id), logbook.contacts[index].call == call { return }
         dupeWarning = correctingID == nil ? dupeText(for: call) : nil
         fillClubNumbers(for: call)
+        fillParkFromSpots(for: call)
         let lookingUp = startLookup(for: call)
         // No lookup to say it with (lookups off, or already looked up):
         // the warning is said on its own.
@@ -1087,16 +1092,60 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         // numbers are said on their own (with a lookup, they're said with it).
         if !Settings.lookupEnabled, dupeWarning == nil, Callsign.looksValid(call) {
             let entity = entityWords(for: call, lookupPlace: "")
-            let clubs = clubNumbers.map { ClubNumbers.spoken($0.values) } ?? ""
+            let clubs = clubsSpoken(call)
             let spoken = [entity.spoken, clubs].filter { !$0.isEmpty }.joined(separator: ". ")
             if !spoken.isEmpty {
-                let shownClubs = clubNumbers.map { ClubNumbers.shown($0.values) } ?? ""
-                setLookupLine("\(call): \(entity.shown)\(shownClubs.isEmpty ? "" : shownClubs + ".")")
+                setLookupLine("\(call): \(entity.shown)\(clubsShown(call))")
                 sayLookupSpeech(full: spoken + ".", brief: spoken, cue: .found, needed: entityText(for: call)?.needed != nil)
             }
         }
         // An SKCC number typed before the call is checked now.
         if clubNumbers?.values["skcc"] == nil { checkSKCC() }
+    }
+
+    // Hunting a park you tuned to yourself (v1.6 item 1): if the call is
+    // spotted at a POTA park, the park goes in (their park field if it's
+    // on the form and empty, and is logged either way). It's said with
+    // the lookup, or on its own if the lookup was already said, since the
+    // spots may need fetching first. Not when correcting a contact, not
+    // when a spot or you already gave a park.
+    private func fillParkFromSpots(for call: String) {
+        // A park filled in for an earlier call in this form comes out.
+        if let old = spottedPark {
+            if spotFields["pota_ref"] == old.reference { spotFields["pota_ref"] = nil }
+            if let field = fieldsByName["pota_ref"], field.stringValue == old.reference { field.stringValue = "" }
+            spottedPark = nil
+        }
+        guard correctingID == nil, Callsign.looksValid(call), spotFields["pota_ref"] == nil,
+              (fieldsByName["pota_ref"]?.stringValue ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        else { return }
+        var answeredAtOnce = true
+        SpotList.shared.withRecentPOTASpots { [weak self] spots in
+            guard let self, Callsign.normalized(self.callsignField.stringValue) == call,
+                  self.correctingID == nil, self.spotFields["pota_ref"] == nil,
+                  let spot = POTASpots.matchingPark(for: call, in: spots) else { return }
+            if let field = self.fieldsByName["pota_ref"] {
+                guard field.stringValue.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+                field.stringValue = spot.reference
+            }
+            self.spotFields["pota_ref"] = spot.reference
+            self.spottedPark = (call, spot.reference)
+            // Said with the lookup unless that's already been said.
+            let key = CallsignLookup.lookupCall(for: call)
+            guard !answeredAtOnce, !self.lookupsUnderWay.contains(key) else { return }
+            let park = self.spottedParkText(call)
+            self.setLookupLine(self.lookupLabel.stringValue + " " + park.shown)
+            Speaker.say(.lookup, full: park.spoken + ".", brief: spot.reference, cue: .found)
+        }
+        answeredAtOnce = false
+    }
+
+    // "At park US-1333 Big Pocono State Park, Pennsylvania", for the
+    // lookup line (shown) and speech, or empty.
+    private func spottedParkText(_ call: String) -> (shown: String, spoken: String) {
+        guard let park = spottedPark, park.call == Callsign.normalized(call) else { return ("", "") }
+        let name = ParkList.shared.park(park.reference)?.spoken ?? park.reference
+        return ("At park \(name). ", "at park \(name)")
     }
 
     // The call's club numbers, into any empty club field on the form.
@@ -1585,14 +1634,17 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
 
     // The call's club numbers for the lookup line ("SKCC 12345T. ") and
     // speech ("SKCC 12345 Tribune"), or empty.
+    // A park the call is spotted at comes after them (fillParkFromSpots).
     private func clubsShown(_ call: String) -> String {
-        guard let clubs = clubNumbers, clubs.call == call, !clubs.values.isEmpty else { return "" }
-        return ClubNumbers.shown(clubs.values) + ". "
+        let park = spottedParkText(call).shown
+        guard let clubs = clubNumbers, clubs.call == call, !clubs.values.isEmpty else { return park }
+        return ClubNumbers.shown(clubs.values) + ". " + park
     }
 
     private func clubsSpoken(_ call: String) -> String {
-        guard let clubs = clubNumbers, clubs.call == call else { return "" }
-        return ClubNumbers.spoken(clubs.values)
+        let park = spottedParkText(call).spoken
+        guard let clubs = clubNumbers, clubs.call == call else { return park }
+        return [ClubNumbers.spoken(clubs.values), park].filter { !$0.isEmpty }.joined(separator: ", ")
     }
 
     // Says a lookup at the level chosen for lookups, or in full if

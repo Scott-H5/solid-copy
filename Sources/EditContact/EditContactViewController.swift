@@ -15,6 +15,10 @@
 //     Address), where Return starts a new line. Command-Return and
 //     Command-S (File > Save Contact) save from anywhere.
 //   - Escape cancels, from any field, without changing anything.
+//   - POTA park and My POTA park search POTA's park list, as on the
+//     logging form (ParkSearch.swift): type a reference or part of a
+//     name, Down and Up go through the matches. Save won't keep a
+//     half-typed search as a park. This is how past hunts are added.
 //   - QSL statuses and "via" are menus in words (Yes, No, Requested ...;
 //     Bureau, Direct ...), not ADIF's letters; QSL dates read and type
 //     as 2025-12-17. Tab reaches the menus only when Keyboard navigation
@@ -47,6 +51,8 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
     // ADIF letter behind each item; and QSL dates shown as 2025-12-17.
     private var menus: [String: (button: NSPopUpButton, values: [String])] = [:]
     private var dateFieldNames: [String] = []
+    // The park fields search POTA's park list.
+    private let parkSearch = ParkSearch()
 
     init(qso: QSO) {
         original = qso
@@ -237,6 +243,15 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
             timeOn = parsed
         }
 
+        // Each park field must hold parks, not a half-typed search.
+        for adif in ParkSearch.fields.sorted() {
+            guard let field = lineFields[adif] else { continue }
+            guard parkSearch.resolve(field, label: LogField.named(adif)?.label ?? "Park") else {
+                view.window?.makeFirstResponder(field)
+                return
+            }
+        }
+
         var updated = original
         updated.call = call
         updated.timeOn = timeOn
@@ -298,6 +313,9 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
     // Return and Escape in the single-line fields.
     func control(_ control: NSControl, textView: NSTextView,
                  doCommandBy commandSelector: Selector) -> Bool {
+        // Down and Up go through park matches in a park field.
+        if let field = control as? NSTextField, isParkField(field),
+           parkSearch.key(commandSelector, in: field) { return true }
         switch commandSelector {
         case #selector(NSResponder.insertNewline(_:)):
             save(control)
@@ -329,8 +347,20 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
         }
     }
 
-    // Keeps the callsign in capitals as you type.
+    private func isParkField(_ field: NSTextField) -> Bool {
+        ParkSearch.fields.contains { lineFields[$0] === field }
+    }
+
+    // Leaving a park field: a search with one match becomes that park.
+    func controlTextDidEndEditing(_ notification: Notification) {
+        if let field = notification.object as? NSTextField, isParkField(field) { parkSearch.left(field) }
+    }
+
+    // Keeps the callsign in capitals as you type; a park field searches.
     func controlTextDidChange(_ notification: Notification) {
+        if let field = notification.object as? NSTextField, isParkField(field) {
+            return parkSearch.textChanged(in: field)
+        }
         guard (notification.object as? NSTextField) === callsignField else { return }
         let upper = callsignField.stringValue.uppercased()
         if upper != callsignField.stringValue {

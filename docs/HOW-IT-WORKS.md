@@ -402,7 +402,17 @@ and as a prefix ("POCONO"*), except two-letter state codes.
 `ParkSearch.swift` makes a text field a park search. The controller that
 owns the field passes on its typing (`textChanged`), Down and Up (`key`),
 leaving (`left`) and, before logging, `resolve`, which turns a single
-match into its reference or refuses with a reason.
+match into its reference or refuses with a reason. The logging form,
+Edit Contact and Settings > Profiles each own one.
+
+A call you typed (not a spot you picked) gets its park from POTA's spots
+too: `LogEntryViewController.fillParkFromSpots` asks
+`SpotList.withRecentPOTASpots` for the spots (the list if it's under 90
+seconds old, otherwise one fetch, even with the Spots window closed) and
+`POTASpots.matchingPark` for the call's newest spot in the last hour.
+The park goes into `spotFields`, and `spottedPark` remembers it, so the
+lookup line and speech can say it (with the club numbers) and changing
+the call takes it out.
 
 ## WSJT-X decodes
 

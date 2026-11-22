@@ -144,6 +144,20 @@ enum POTASpots {
         }
     }
 
+    // The park a call is spotted at: its newest POTA spot from the last
+    // hour, or nil. The call is compared without /P, /M or a prefix
+    // (CallsignLookup.lookupCall), since activators sign portable. The
+    // park doesn't depend on band, so any band's spot will do.
+    static let parkSpotSeconds: TimeInterval = 60 * 60
+    static func matchingPark(for call: String, in spots: [Spot], now: Date = Date()) -> Spot? {
+        let key = CallsignLookup.lookupCall(for: call)
+        return spots
+            .filter { $0.source == "POTA" && !$0.reference.isEmpty
+                && now.timeIntervalSince($0.time) < parkSpotSeconds
+                && CallsignLookup.lookupCall(for: $0.call) == key }
+            .max { $0.time < $1.time }
+    }
+
     // "2026-11-15T23:32:21", in UTC.
     static let spotTime: DateFormatter = {
         let formatter = DateFormatter()
@@ -300,6 +314,20 @@ final class SpotList {
         clusterSpots = [:]
     }
 
+    // POTA's spots as they are now, for the logging form's "is this call
+    // at a park?" (v1.6 item 1): the list if it was fetched in the last
+    // 90 seconds, or fetched once now if not (the Spots window may be
+    // closed). `body` runs on the main actor, with whatever came back:
+    // after a failed fetch, the older list, which matchingPark filters by
+    // age anyway.
+    static let freshSeconds: TimeInterval = 90
+    private var waitingForSpots: [([Spot]) -> Void] = []
+    func withRecentPOTASpots(_ body: @escaping ([Spot]) -> Void) {
+        if let fetched, Date().timeIntervalSince(fetched) < Self.freshSeconds { return body(potaSpots) }
+        waitingForSpots.append(body)
+        refresh()
+    }
+
     func refresh() {
         guard !fetching else { return }
         fetching = true
@@ -349,6 +377,9 @@ final class SpotList {
         if newProblem == nil { fetched = Date() }
         problem = newProblem
         post()
+        let waiting = waitingForSpots
+        waitingForSpots = []
+        for body in waiting { body(newSpots) }
     }
 
     // For the checks: a cluster spot, as if it had come in.

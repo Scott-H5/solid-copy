@@ -167,14 +167,29 @@ anything afterwards in Logging Form.
 ## Parks
 
 Park fields search POTA's list of every park, kept on your Mac, so they
-work in a park with no internet: **POTA park** (theirs) on the logging form, and
-**My POTA park** in Settings > Profiles. Type a reference ("US-13"), part of
+work in a park with no internet: **POTA park** (theirs) on the logging form
+and in Edit Contact, and **My POTA park** in Settings > Profiles (and Edit
+Contact). Type a reference ("US-13"), part of
 a name ("big poc") or a state ("pennsylvania state", or "PA"). After a
 pause you hear how many parks match. **Down and Up Arrow** go through
 them, each said in full ("US-1333, Big Pocono State Park, Pennsylvania. 1
 of 3"). Leaving the field with only one match takes it. Return won't log
 a contact whose park is still a search: it says how many match. For a
 two-fer, put a comma between parks ("US-1333,US-1334").
+
+**Hunting a park you tuned to yourself.** You don't have to pick the spot
+in the Spots window. When you leave Callsign, Solid Copy checks POTA's
+spots, and if that call is spotted at a park in the last hour, the park
+goes into the contact and is said with the lookup: "W3XYZ, Ann, Pennsylvania, at
+park US-1333, Big Pocono State Park, Pennsylvania". It's in POTA park if
+that's on your form, so you can change it, and in the contact either way.
+Change the call and the park comes out again. A park you typed, or one
+from a spot you picked, is never replaced. This needs the internet; the
+spots are fetched at most every 90 seconds.
+
+**Past hunts.** In Edit Contact (Command-E on a contact), POTA park
+searches the park list the same way, so you can add the parks of earlier
+contacts and they count in Window > Awards.
 
 The list (about 106,000 parks, 10 MB) is fetched the first time you use
 a park field, and again when it's a month old. **Settings > Lookup > Get

@@ -334,6 +334,37 @@ MainActor.assumeIsolated {
     check(list.numberOfRows == 1 && ((list.view(atColumn: 0, row: 0, makeIfNecessary: true) as? NSTableCellView)?
             .textField?.stringValue.contains("worked today") ?? false), "the SOTA spot now says worked today")
 
+    // A park you tuned to yourself (v1.6 item 1): the call is spotted at
+    // a park on POTA, so the park is logged though no spot was picked.
+    func spot(_ call: String, _ park: String, minutesAgo: Double) -> Spot {
+        Spot(source: "POTA", call: call, hertz: 7_040_000, mode: "CW", reference: park, parkName: "",
+             location: "", time: now.addingTimeInterval(-minutesAgo * 60), comments: "")
+    }
+    let hunted = [spot("K8XYZ", "US-0001", minutesAgo: 20), spot("K8XYZ", "US-0002", minutesAgo: 5),
+                  spot("N2OLD", "US-0003", minutesAgo: 90)]
+    check(POTASpots.matchingPark(for: "K8XYZ", in: hunted, now: now)?.reference == "US-0002",
+          "the call's newest spot gives the park")
+    check(POTASpots.matchingPark(for: "K8XYZ/P", in: hunted, now: now)?.reference == "US-0002",
+          "signing /P still matches")
+    check(POTASpots.matchingPark(for: "N2OLD", in: hunted, now: now) == nil, "a spot over an hour old doesn't")
+    check(POTASpots.matchingPark(for: "W9NOT", in: hunted, now: now) == nil, "a call not spotted gets no park")
+    SpotList.shared.set(hunted, problem: nil)
+    func leaveCallsign(_ call: String) {
+        form.callsignField.stringValue = call
+        form.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification, object: form.callsignField))
+    }
+    leaveCallsign("W9NOT")
+    leaveCallsign("K8XYZ")
+    // No radio and no band: the first Return warns, the second logs.
+    form.logContact(nil); form.logContact(nil)
+    check(logbook.contacts.last?.call == "K8XYZ" && logbook.contacts.last?["pota_ref"] == "US-0002",
+          "typed, not picked: logged with the park it's spotted at (\(logbook.contacts.last?["pota_ref"] ?? "nothing"))")
+    leaveCallsign("K8XYZ")
+    leaveCallsign("W9NOT")
+    form.logContact(nil); form.logContact(nil)
+    check(logbook.contacts.last?.call == "W9NOT" && logbook.contacts.last?["pota_ref"] == "",
+          "changing the call takes the spotted park back out")
+
     // The Spots window's Refresh pace (RefreshPacer.swift).
     func run(for seconds: Double) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
     var shows = 0
