@@ -435,6 +435,12 @@ network server **127.0.0.1** and port **4532**. That's all.
   never cuts off you transmitting with your own microphone.
 - If another program, such as a rigctld, already has port 4532, Solid
   Copy says so and doesn't share the radio.
+- A short pause in the radio's answers (restarting VoiceOver with a USB
+  braille display does it) isn't passed on: for up to 30 seconds,
+  programs get the last reading, and a frequency or mode change is held
+  and sent when the radio answers again, so WSJT-X doesn't stop and ask
+  to set the radio up again. Transmitting is never held: it's refused
+  until the radio answers.
 - Solid Copy says when a program connects ("A program connected to the
   radio through Solid Copy") and when it goes. Window > Activity lists
   those, and when sharing starts and stops.
@@ -527,6 +533,11 @@ folder you cloned (or downloaded) Solid Copy into:
 ```bash
 bash build.sh install
 ```
+
+If you have a Developer ID certificate for that team, the installed copy
+is signed with it, like the downloads, so switching between a copy you
+built and a downloaded one doesn't ask for your password to read your
+saved logins. Without one, the build keeps its own development signature.
 
 That builds the app, quits Solid Copy if it's open, and installs it as
 `/Applications/Solid Copy.app`. It doesn't open it: open it yourself from

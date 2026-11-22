@@ -257,6 +257,10 @@ final class RadioMonitor {
 
     // The radio's name: "Kenwood TS-590SG".
     var radioName: String { settings?.name ?? "Radio" }
+    // When the radio last gave a reading (the rigctl server tells a gap
+    // from a refusal by it).
+    var lastAnswerTime: Date { lastReading }
+
     // The radio in use's settings (the rigctl server reports its model).
     var settingsInUse: RadioSettings? { settings }
 

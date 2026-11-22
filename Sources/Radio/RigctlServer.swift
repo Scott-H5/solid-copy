@@ -40,7 +40,17 @@
 //
 // Questions are answered from the reading Solid Copy already has (it reads
 // the radio every second), so a program polling quickly doesn't load the
-// radio's serial port. Changes go to the radio one at a time, through the
+// radio's serial port.
+//
+// Short gaps are hidden from the program. A radio sometimes stops
+// answering for a few seconds (restarting VoiceOver with a USB braille
+// display does it to the TS-590), and WSJT-X takes any error as a broken
+// radio: it stops and asks to be set up again. So for up to gapAllowance
+// (30 seconds) questions are answered from the last good reading, and a
+// frequency, mode, VFO or split change is held, answered "done", and sent
+// as soon as the radio answers again. Transmit is never faked: "T 1" in a
+// gap is refused. After 30 seconds the radio is really gone (switched
+// off, say), and the program is told so. Changes go to the radio one at a time, through the
 // same queue as Solid Copy's own (RadioMonitor.change), and are read back,
 // so the next question has the radio's real answer.
 
@@ -60,6 +70,9 @@ protocol RigctlRadio: AnyObject {
     // Sends one change ("F 7074000", "M PKTUSB 0", "T 1"); `done` says if
     // it worked.
     func send(_ command: String, done: @escaping @MainActor (Bool) -> Void)
+    // When the radio last answered, to tell a gap (no answer lately) from a
+    // refusal (the radio answering "no").
+    var lastAnswered: Date { get }
     // Back to receive now, waiting for the radio: for quitting.
     func receiveNow()
 }
@@ -112,6 +125,45 @@ final class RigctlServer {
     private var announced: Set<ObjectIdentifier> = []
 
     var isTransmitting: Bool { keyedBy != nil }
+
+    // How long a quiet radio is covered for (see the comments at the top).
+    var gapAllowance: TimeInterval = 30
+    // The last reading the radio gave, and when.
+    private var lastGood: (reading: RadioReading, at: Date)?
+    // Changes held during a gap, one per kind (the latest frequency, the
+    // latest mode, ...), in the order they came.
+    private(set) var held: [(verb: String, command: String)] = []
+
+    // The radio's reading, or during a gap the last good one.
+    private var reading: RadioReading? {
+        if let now = radio.reading {
+            lastGood = (now, Date())
+            return now
+        }
+        guard let lastGood, Date().timeIntervalSince(lastGood.at) < gapAllowance else { return nil }
+        return lastGood.reading
+    }
+
+    private var inGap: Bool { radio.reading == nil && reading != nil }
+
+    private func hold(_ command: String) {
+        let verb = String(command.prefix(while: { $0 != " " }))
+        held.removeAll { $0.verb == verb }
+        held.append((verb, command))
+    }
+
+    // The radio is answering again: send what was held. A change it then
+    // refuses is listed (onRefused), since the program was already told done.
+    private func sendHeld() {
+        guard radio.reading != nil, !held.isEmpty else { return }
+        let toSend = held
+        held = []
+        for (_, command) in toSend {
+            radio.send(command) { [weak self] worked in
+                if !worked { self?.onRefused("A change held while the radio was quiet, \"\(command)\", was refused.", false) }
+            }
+        }
+    }
 
     init(radio: RigctlRadio) { self.radio = radio }
 
@@ -211,7 +263,8 @@ final class RigctlServer {
         var words = line.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
         guard !words.isEmpty else { return done("") }
         if let short = Self.longNames[words[0]] { words[0] = short }
-        let reading = radio.reading
+        sendHeld()
+        let reading = self.reading
         switch words[0] {
         case "q", "Q":
             return done(nil)
@@ -255,14 +308,14 @@ final class RigctlServer {
             // refuses any frequency command), so this saves the radio's port
             // and a needless refusal.
             let target = Int(hertz.rounded())
-            if radio.reading?.hertz == target { return done(Self.ok) }
+            if reading?.hertz == target, !held.contains(where: { $0.verb == "F" }) { return done(Self.ok) }
             return change("F \(target)", done)
         case "M":
             // "M PKTUSB 3000": a width of 0 or -1 means the radio's usual one.
             guard words.count == 3, let width = Int(words[2]) else { return done(Self.invalid) }
             let mode = words[1].uppercased()
             // Already in that mode, with no new width: nothing to send.
-            if radio.reading?.mode == mode, width <= 0 { return done(Self.ok) }
+            if reading?.mode == mode, width <= 0, !held.contains(where: { $0.verb == "M" }) { return done(Self.ok) }
             // While a program transmits, a mode request isn't sent: the radio
             // won't change mode on the air, and programs re-send the mode
             // they already set (WSJT-X's "M PKTUSB -1" before and during each
@@ -370,8 +423,22 @@ final class RigctlServer {
     }
 
     private func change(_ command: String, _ done: @escaping @MainActor (String?) -> Void) {
+        // A quiet radio, within the allowance: held, and sent when it's back.
+        if inGap {
+            hold(command)
+            return done(Self.ok)
+        }
         guard radio.reading != nil else { return done(Self.timedOut) }
-        radio.send(command) { worked in done(worked ? Self.ok : Self.refused) }
+        radio.send(command) { [self] worked in
+            if worked { return done(Self.ok) }
+            // Not taken. If the radio hasn't answered for a moment, it's a
+            // gap starting (not the radio saying no): hold it.
+            if Date().timeIntervalSince(radio.lastAnswered) > 1.5, reading != nil {
+                hold(command)
+                return done(Self.ok)
+            }
+            done(Self.refused)
+        }
     }
 
     // What the radio can do, in the order hamlib's network client reads it

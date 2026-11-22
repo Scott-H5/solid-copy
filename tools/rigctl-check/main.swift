@@ -23,10 +23,17 @@ final class PretendRadio: RigctlRadio {
     var model = 2037
     var maxWatts = 100.0
     var sent: [String] = []
+    var lastAnswered = Date()
+    // When set, the radio doesn't take changes (a gap, or a refusal).
+    var refuses = false
     var receivedNow = 0
     func receiveNow() { receivedNow += 1; sent.append("T 0 (waited)") }
     func send(_ command: String, done: @escaping @MainActor (Bool) -> Void) {
         sent.append(command)
+        if refuses {
+            return DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { MainActor.assumeIsolated { done(false) } }
+        }
+        lastAnswered = Date()
         let words = command.split(separator: " ").map(String.init)
         switch words.first {
         case "F": reading?.hertz = Int(words[1]) ?? 0
@@ -111,14 +118,62 @@ MainActor.assumeIsolated {
     server.answer("\\set_conf foo bar") { said = $0 }
     check(said == "RPRT -4\n", "an unknown command: not implemented")
 
-    // A silent radio: questions and changes time out; nothing is sent.
+    // A silent radio, past the gap allowance: questions and changes time
+    // out; nothing is sent.
     let saved = radio.reading
+    server.gapAllowance = 0
     radio.reading = nil
     server.answer("f") { said = $0 }
     check(said == "RPRT -5\n", "no radio: f times out")
     server.answer("F 7030000") { said = $0 }
     check(said == "RPRT -5\n" && radio.sent.isEmpty, "no radio: F times out, nothing sent")
     radio.reading = saved
+    server.gapAllowance = 30
+
+    // A short gap (VoiceOver restarting, say): hidden from the program.
+    server.answer("f") { _ in }                     // a good reading, remembered
+    radio.reading = nil
+    server.answer("f") { said = $0 }
+    check(said == "7025300\n", "in a gap, questions are answered from the last good reading")
+    server.answer("F 7030000") { said = $0 }
+    check(said == "RPRT 0\n" && radio.sent.isEmpty && server.held.map(\.command) == ["F 7030000"],
+          "in a gap, a frequency change is held and answered done, not refused")
+    server.answer("F 7031000") { said = $0 }
+    check(server.held.map(\.command) == ["F 7031000"], "a newer one replaces it: only the latest is sent")
+    server.allowTransmit = true
+    server.answer("T 1") { said = $0 }
+    check(said == "RPRT -5\n" && radio.sent.isEmpty, "transmit in a gap is refused, never faked")
+    server.allowTransmit = false
+    radio.reading = saved
+    server.answer("f") { _ in }
+    check(wait(2) { radio.sent == ["F 7031000"] } && server.held.isEmpty, "the radio back: the held change is sent")
+    radio.sent = []
+    // A change the radio doesn't take while it hasn't answered lately: a
+    // gap starting, held; while it's answering: a real refusal.
+    radio.refuses = true
+    radio.lastAnswered = Date().addingTimeInterval(-5)
+    said = nil
+    server.answer("F 7040000") { said = $0 }
+    check(wait(2) { said != nil } && said == "RPRT 0\n" && server.held.map(\.command) == ["F 7040000"],
+          "not taken while the radio is quiet: held, not refused")
+    radio.lastAnswered = Date()
+    said = nil
+    server.answer("M FM 0") { said = $0 }
+    check(wait(2) { said != nil } && said == "RPRT -9\n", "not taken while the radio is answering: refused, as the radio said")
+    radio.refuses = false
+    radio.sent = []
+    server.answer("f") { _ in }
+    _ = wait(2) { server.held.isEmpty }
+    radio.sent = []
+    // Past the allowance, the program is told.
+    server.gapAllowance = 0.2
+    server.answer("f") { _ in }
+    radio.reading = nil
+    _ = wait(0.4) { false }
+    server.answer("f") { said = $0 }
+    check(said == "RPRT -5\n", "past the allowance (radio really gone): the program is told it isn't answering")
+    radio.reading = saved
+    server.gapAllowance = 30
 
     // A second server can't take the same port, and says why.
     let second = RigctlServer(radio: radio)

@@ -65,6 +65,21 @@ fi
 
 rm -rf "$INSTALLED"
 cp -R "$BUILT" "$INSTALLED"
+
+# Signed like the downloads (Developer ID), when you have that certificate
+# for this team: the Keychain lets an app read what it saved only while
+# its signature stays the same kind, so a copy built here and one
+# downloaded would otherwise each ask for your password to read your
+# logins. Without a Developer ID certificate (most people building from
+# source), the build's own development signature is kept, as before.
+IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
+  | sed -n "s/.*\"\(Developer ID Application:[^\"]*($TEAM)\)\".*/\1/p" | head -1)"
+if [ -n "$IDENTITY" ]; then
+  codesign --force --deep --options runtime --timestamp=none \
+    --entitlements macOS/SolidCopy.entitlements --sign "$IDENTITY" "$INSTALLED"
+  codesign --verify --deep --strict "$INSTALLED"
+  echo "Signed with $IDENTITY."
+fi
 echo "Installed: $INSTALLED"
 
 echo "Open Solid Copy when you're ready (Dock or Spotlight)."

@@ -682,6 +682,12 @@ aren't, since FT8 keys every 15 seconds. A program saying "receive"
 never cuts off you transmitting with your own microphone.</li>
 <li>If another program, such as a rigctld, already has port 4532, Solid
 Copy says so and doesn't share the radio.</li>
+<li>A short pause in the radio's answers (restarting VoiceOver with a USB
+braille display does it) isn't passed on: for up to 30 seconds,
+programs get the last reading, and a frequency or mode change is held
+and sent when the radio answers again, so WSJT-X doesn't stop and ask
+to set the radio up again. Transmitting is never held: it's refused
+until the radio answers.</li>
 <li>Solid Copy says when a program connects ("A program connected to the
 radio through Solid Copy") and when it goes. Window &gt; Activity lists
 those, and when sharing starts and stops.</li>
@@ -761,6 +767,10 @@ remembers it.</p>
 Developer team ID in a file named <code>team.txt</code> in this folder. From the
 folder you cloned (or downloaded) Solid Copy into:</p>
 <div class="highlight highlight-source-shell"><pre>bash build.sh install</pre></div>
+<p>If you have a Developer ID certificate for that team, the installed copy
+is signed with it, like the downloads, so switching between a copy you
+built and a downloaded one doesn't ask for your password to read your
+saved logins. Without one, the build keeps its own development signature.</p>
 <p>That builds the app, quits Solid Copy if it's open, and installs it as
 <code>/Applications/Solid Copy.app</code>. It doesn't open it: open it yourself from
 the Dock or Spotlight, so it comes up in front and never takes focus

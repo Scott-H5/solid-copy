@@ -16,6 +16,7 @@ extension RadioMonitor: RigctlRadio {
     var maxWatts: Double {
         settingsInUse.flatMap { KenwoodRadio.forModel($0.model)?.maxWatts } ?? 100
     }
+    var lastAnswered: Date { lastAnswerTime }
     func send(_ command: String, done: @escaping @MainActor (Bool) -> Void) {
         change(command) { reading in done(reading != nil) }
     }
