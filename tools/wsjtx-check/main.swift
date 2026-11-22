@@ -6,7 +6,7 @@
 //
 // Run it with:  bash tools/check-wsjtx.sh
 
-import Foundation
+import AppKit
 import Network
 
 func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !ok { exit(1) } }
@@ -261,5 +261,47 @@ MainActor.assumeIsolated {
     check(haltReader.uint32() == 8, "Halt Tx reaches WSJT-X over UDP")
     sender.cancel()
     listener.stop()
+
+    // The decodes window: Refresh paces the list, but a call to you is
+    // said at once, and WSJT-X's Erase shows at once.
+    listener.reset()
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("wsjtx-window-\(UUID().uuidString)")
+    try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let windowBook = try! Logbook(database: LogDatabase(fileURL: folder.appendingPathComponent("Logbook.sqlite")))
+    let decodesWindow = DecodesWindowController(logbook: windowBook)
+    var said: [String] = []
+    Speaker.onAnnounce = { said.append($0) }
+    func find<T: NSView>(_ type: T.Type, _ test: (T) -> Bool = { _ in true }) -> T? {
+        var found: T?
+        func walk(_ view: NSView) { if let match = view as? T, test(match) { found = match }; view.subviews.forEach(walk) }
+        walk(decodesWindow.window!.contentView!)
+        return found
+    }
+    guard let list = find(NSTableView.self), let refresh = find(NSPopUpButton.self, { $0.accessibilityLabel() == "Refresh" })
+    else { return check(false, "the decodes window has its list and Refresh") }
+    check(refresh.itemTitles == RefreshPacer.choices.map(\.title), "Refresh offers Live to every minute")
+    refresh.selectItem(withTitle: "Every 15 seconds")
+    _ = refresh.target?.perform(refresh.action, with: refresh)
+    check(said.last == "New decodes are shown every 15 seconds.", "the choice is said: \(said.last ?? "")")
+    listener.handle(WSJTXMessage.parse(statusMessage(myCall: "N0CALL"))!)
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ W1AW FN31"))!)
+    listener.handle(WSJTXMessage.parse(decodeMessage("N0CALL K1ABC FN42", seconds: 52_230))!)
+    check(list.numberOfRows == 0, "every 15 seconds: new decodes wait (\(list.numberOfRows) shown)")
+    check(said.contains { $0.hasPrefix("K1ABC is calling you in WSJT-X") }, "but a call to you is said at once")
+    let calls = said.filter { $0.contains("calling you") }.count
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ K2ABC FN20", seconds: 52_245))!)
+    check(said.filter { $0.contains("calling you") }.count == calls, "a call to you is said once")
+    refresh.selectItem(withTitle: "Live")
+    _ = refresh.target?.perform(refresh.action, with: refresh)
+    check(list.numberOfRows == 3, "back to Live: the waiting decodes show (\(list.numberOfRows))")
+    refresh.selectItem(withTitle: "Every minute")
+    _ = refresh.target?.perform(refresh.action, with: refresh)
+    listener.handle(.clear(id: "WSJT-X"))
+    check(list.numberOfRows == 0, "WSJT-X's Erase empties the list at once, whatever Refresh says")
+    refresh.selectItem(withTitle: "Live")
+    _ = refresh.target?.perform(refresh.action, with: refresh)
+    UserDefaults.standard.removeObject(forKey: "decodes.refresh")
+    Speaker.onAnnounce = nil
     print("All WSJT-X checks passed.")
 }

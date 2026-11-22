@@ -469,9 +469,16 @@ newest first, one line each, so VoiceOver reads a whole decode at once:
 WSJT-X runs as usual and does the decoding; you rarely need its window.
 Each line says the station's country, and whether it's a new country,
 band or mode for you, or worked before. Tab reaches the filters: **CQs
-only**, **Needed only** and **Hide stations worked before**. The status
-line above the list says WSJT-X's frequency and mode, and whether it's
-transmitting.
+only**, **Needed only** and **Hide stations worked before**, then
+**Refresh**. The status line above the list says WSJT-X's frequency and
+mode, and whether it's transmitting.
+
+On a busy band FT8 brings 20 or more decodes every 15 seconds. If that's
+too fast to follow, **Refresh** shows new decodes every 15, 30 or 45
+seconds or every minute instead of as they arrive (Live). A station
+calling you is still said the moment it's decoded, and a filter you
+change, or WSJT-X clearing its decodes, shows at once. The choice is
+remembered.
 
 Solid Copy listens for WSJT-X while the window is open, at 127.0.0.1
 port 2237, which is what WSJT-X sends to unless you've changed it

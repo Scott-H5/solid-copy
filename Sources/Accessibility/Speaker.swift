@@ -30,7 +30,11 @@ enum Speaker {
     // commands. Tune this by ear.
     static let delay: TimeInterval = 0.3
 
+    // Told each announcement as it's made, for the checks (nil in the app).
+    static var onAnnounce: ((String) -> Void)?
+
     static func announce(_ text: String) {
+        onAnnounce?(text)
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             // High priority interrupts whatever VoiceOver is saying, so a
             // new announcement replaces a stale one (contract, rule 13).

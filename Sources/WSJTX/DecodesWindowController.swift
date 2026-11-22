@@ -14,12 +14,18 @@
 //   Command-period  Stop Transmitting: WSJT-X stops at once (Halt Tx)
 //   Escape     back to the logging window (this window stays open)
 //   Tab        to the filters: CQs Only, Needed Only, Hide Worked, then
-//              Stop Transmitting, then back
+//              Refresh (Live, or every 15, 30 or 45 seconds or minute:
+//              RefreshPacer.swift), then Stop Transmitting, then back
 //
 // WSJT-X runs as usual and does the decoding; Solid Copy listens to it
 // (WSJTXListener.swift) while this window is open. A new decode never
 // moves focus; the one you're on stays selected. Only a station calling
-// you is said, since that's the one you mustn't miss.
+// you is said, since that's the one you mustn't miss, and it's said the
+// moment it's decoded, whatever Refresh says. Refresh only paces the list:
+// on a busy band FT8 brings 20 or more decodes every 15 seconds, too
+// fast to follow by ear. Your own changes (a filter) show at once, and so
+// does WSJT-X clearing its decodes (Erase, or quitting), so the list never
+// offers a decode WSJT-X no longer has to answer.
 //
 // v1.3 item 6, stages 1 and 2. Next: contacts WSJT-X logs arrive in the
 // log.
@@ -37,6 +43,9 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
     private let neededBox = NSButton(checkboxWithTitle: "Needed only", target: nil, action: nil)
     private let hideWorkedBox = NSButton(checkboxWithTitle: "Hide stations worked before", target: nil, action: nil)
     private let stopButton = NSButton(title: "Stop Transmitting", target: nil, action: nil)
+    private let refreshMenu = NSPopUpButton()
+    // Shows new decodes at the Refresh pop-up's pace (made in init).
+    private var pacer: RefreshPacer!
     private let worked = WorkedCountries()
 
     // The decodes shown, after the filters, with their words worked out.
@@ -63,18 +72,22 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         window.contentView = build()
         window.initialFirstResponder = table
         if !window.setFrameUsingName("DecodesWindow") { window.center() }
+        let saved = UserDefaults.standard.integer(forKey: "decodes.refresh")
+        let choice = RefreshPacer.choices.indices.contains(saved) ? saved : 0
+        pacer = RefreshPacer(interval: RefreshPacer.choices[choice].seconds) { [weak self] in self?.reload() }
+        refreshMenu.selectItem(at: choice)
         NotificationCenter.default.addObserver(forName: WSJTXListener.didChange, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reload() }
+            MainActor.assumeIsolated { self?.listenerChanged() }
         }
         // A contact logged: a station may now be worked.
-        logbook.observe { [weak self] in self?.reload() }
+        logbook.observe { [weak self] in self?.pacer.changed() }
     }
 
     required init?(coder: NSCoder) { fatalError("Not used") }
 
     func show() {
         WSJTXListener.shared.start()
-        reload()
+        pacer.showNow()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
         window?.makeFirstResponder(table)
@@ -83,6 +96,32 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
     func windowWillClose(_ notification: Notification) {
         // Nobody's looking: stop listening, so the port is free for others.
         WSJTXListener.shared.stop()
+        pacer.stop()
+    }
+
+    // WSJT-X said something: a call to you is said now; the list follows
+    // Refresh, unless a decode it shows has gone (Erase, WSJT-X quit, or
+    // older than 15 minutes), which shows at once.
+    private func listenerChanged() {
+        announceCallsToYou()
+        let current = Set(WSJTXListener.shared.decodes.map { "\($0.decode.milliseconds) \($0.decode.df) \($0.decode.text)" })
+        if shown.contains(where: { !current.contains($0.key) }) { pacer.showNow() } else { pacer.changed() }
+    }
+
+    // Someone calling you: said once, the moment it's decoded, wherever
+    // focus is and whatever the filters or Refresh say.
+    private func announceCallsToYou() {
+        let myCall = self.myCall
+        for (decode, _) in WSJTXListener.shared.decodes where decode.isNew {
+            guard let words = FT8Text(decode.text), DecodeLine.isToMe(words, myCall: myCall),
+                  said.insert("\(decode.milliseconds) \(decode.text)").inserted else { continue }
+            Speaker.announce("\(words.from) is calling you in WSJT-X: \(words.exchange).")
+        }
+    }
+
+    private var myCall: String {
+        (WSJTXListener.shared.status?.deCall).flatMap { $0.isEmpty ? nil : $0 }
+            ?? Settings.currentProfile.station["station_callsign"] ?? ""
     }
 
     private func build() -> NSView {
@@ -105,7 +144,11 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         stopButton.keyEquivalent = "."
         stopButton.keyEquivalentModifierMask = .command
         stopButton.toolTip = "Stops WSJT-X transmitting at once (Command-period)"
-        let boxes = NSStackView(views: [cqBox, neededBox, hideWorkedBox, stopButton])
+        refreshMenu.addItems(withTitles: RefreshPacer.choices.map(\.title))
+        refreshMenu.setAccessibilityLabel("Refresh")
+        refreshMenu.target = self
+        refreshMenu.action = #selector(refreshChanged(_:))
+        let boxes = NSStackView(views: [cqBox, neededBox, hideWorkedBox, FieldLabel("Refresh"), refreshMenu, stopButton])
         boxes.spacing = 16
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("decode"))
@@ -126,7 +169,7 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         scroll.hasVerticalScroller = true
         scroll.borderType = .bezelBorder
 
-        let order: [NSView] = [table, cqBox, neededBox, hideWorkedBox, stopButton]
+        let order: [NSView] = [table, cqBox, neededBox, hideWorkedBox, refreshMenu, stopButton]
         for (index, view) in order.enumerated() { view.nextKeyView = order[(index + 1) % order.count] }
 
         let stack = NSStackView(views: [heading, status, boxes, scroll])
@@ -175,20 +218,27 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
         Speaker.announce("Told WSJT-X to stop transmitting.")
     }
 
+    @objc private func refreshChanged(_ sender: Any?) {
+        let index = max(0, refreshMenu.indexOfSelectedItem)
+        UserDefaults.standard.set(index, forKey: "decodes.refresh")
+        pacer.interval = RefreshPacer.choices[index].seconds
+        Speaker.announce(index == 0 ? "New decodes are shown as they arrive."
+                                    : "New decodes are shown \(RefreshPacer.choices[index].title.lowercased()).")
+    }
+
     @objc private func filterChanged(_ sender: Any?) {
         let defaults = UserDefaults.standard
         defaults.set(cqBox.state == .on, forKey: "decodes.cqOnly")
         defaults.set(neededBox.state == .on, forKey: "decodes.neededOnly")
         defaults.set(hideWorkedBox.state == .on, forKey: "decodes.hideWorked")
-        reload()
+        pacer.showNow()
         Speaker.announce(status.stringValue)
     }
 
     private func reload() {
         let listener = WSJTXListener.shared
         let selectedKey = shown.indices.contains(table.selectedRow) ? shown[table.selectedRow].key : nil
-        let myCall = (listener.status?.deCall).flatMap { $0.isEmpty ? nil : $0 }
-            ?? Settings.currentProfile.station["station_callsign"] ?? ""
+        let myCall = self.myCall
         let band = listener.status.flatMap { Bands.name(forHertz: Int($0.dialHertz)) }
         let contacts = logbook.contacts
         let workedCalls = Set(contacts.map { Callsign.normalized($0.call) })
@@ -211,11 +261,6 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
             let line = DecodeLine.line(for: decode, words: words, myCall: myCall, country: country?.name,
                                        needed: needed, workedBefore: before)
             rows.append(Row(decode: decode, line: line))
-            // Someone calling you: said once, wherever focus is.
-            if DecodeLine.isToMe(words, myCall: myCall), said.insert("\(decode.milliseconds) \(decode.text)").inserted,
-               decode.isNew {
-                Speaker.announce("\(words.from) is calling you in WSJT-X: \(words.exchange).")
-            }
         }
         shown = rows
         table.reloadData()
