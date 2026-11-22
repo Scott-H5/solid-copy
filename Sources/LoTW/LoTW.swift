@@ -18,11 +18,17 @@
 //
 // Downloading confirmations: LoTW's report service
 //   https://lotw.arrl.org/lotwuser/lotwreport.adi?login=…&password=…
-//     &qso_query=1&qso_qsl=yes&qso_qslsince=<date>
+//     &qso_query=1&qso_qsl=yes&qso_qsldetail=yes&qso_qslsince=<date>
 // answers with ADIF: a header with APP_LoTW_LASTQSL (send it back next
 // time, so only newer confirmations come), and a record for each
 // confirmation (CALL, BAND, MODE, QSO_DATE, TIME_ON, QSL_RCVD, QSLRDATE,
-// APP_LoTW_MODEGROUP). If the login is wrong or anything fails, it sends a
+// APP_LoTW_MODEGROUP). qso_qsldetail adds where the confirming station
+// was, from its own signed TQSL location: DXCC (the entity's number), PFX
+// (the WPX prefix), CQZ, ITUZ, STATE, CNTY and IOTA, each only if LoTW
+// thinks it valid. Those are what LoTW gives award credit for (DXCC, WAS,
+// WAZ, WPX), so they replace a lookup's guess in the contact: a QRZ
+// lookup gives where someone lives today, LoTW where they operated from.
+// If the login is wrong or anything fails, it sends a
 // web page instead, with no <EOH>. ARRL documents only this form, with the
 // login in the address; it travels encrypted (HTTPS). (From
 // https://lotw.arrl.org/lotw-help/developer-query-qsos-qsls/, read
@@ -202,6 +208,38 @@ enum LoTW {
         var mode: String
         var time: Date
         var confirmedOn: String   // QSLRDATE, YYYYMMDD
+        // Where the other station was (qso_qsldetail), by the log's field
+        // names: "state": "PA", "cqz": "5". Only LoTW sends these.
+        var details: [String: String] = [:]
+    }
+
+    // The detail fields taken from a confirmation, by ADIF name. LoTW also
+    // sends COUNTRY and GRIDSQUARE; the country's name is LoTW's own
+    // spelling ("UNITED STATES OF AMERICA"), where the log keeps cty.dat's,
+    // and a grid from the location may be less exact than one the station
+    // gave on the air, so both are left as they are.
+    static let detailFields = ["dxcc", "pfx", "cqz", "ituz", "state", "cnty", "iota"]
+
+    // A detail as the log keeps it, or nil if it isn't believable: LoTW's
+    // reply is from outside, so anything long or odd is ignored.
+    static func detail(_ field: String, _ raw: String?) -> String? {
+        guard let raw else { return nil }
+        let text = raw.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty, text.count <= (field == "cnty" ? 40 : 12) else { return nil }
+        switch field {
+        case "dxcc", "cqz", "ituz":
+            // Numbers, without leading zeros ("05" and "5" are one zone).
+            guard let number = Int(text), number > 0, number < 1000 else { return nil }
+            return String(number)
+        case "cnty":
+            // "PA,Montgomery": letters, spaces and a few marks only.
+            let allowed = CharacterSet.letters.union(.whitespaces).union(CharacterSet(charactersIn: ",.'-"))
+            return text.unicodeScalars.allSatisfy(allowed.contains) ? text : nil
+        default:
+            // State, prefix and IOTA: letters, digits and "-" ("NA-001").
+            let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-"))
+            return text.unicodeScalars.allSatisfy(allowed.contains) ? text.uppercased() : nil
+        }
     }
 
     struct Report {
@@ -217,6 +255,8 @@ enum LoTW {
         parts?.queryItems = [
             URLQueryItem(name: "login", value: username), URLQueryItem(name: "password", value: password),
             URLQueryItem(name: "qso_query", value: "1"), URLQueryItem(name: "qso_qsl", value: "yes"),
+            // Where each confirming station was (see the top of this file).
+            URLQueryItem(name: "qso_qsldetail", value: "yes"),
             URLQueryItem(name: "qso_qslsince", value: since.isEmpty ? beginning : since),
         ]
         // "+" would be read as a space: spell it out, in a password too.
@@ -244,9 +284,11 @@ enum LoTW {
             guard (record["qsl_rcvd"] ?? "").uppercased() == "Y", let call = record["call"], !call.isEmpty,
                   let time = QSO.date(adifDate: record["qso_date"] ?? "", adifTime: record["time_on"] ?? "")
             else { return nil }
+            var details: [String: String] = [:]
+            for field in detailFields { details[field] = detail(field, record[field]) }
             return Confirmation(call: Callsign.normalized(call), band: (record["band"] ?? "").lowercased(),
                                 mode: record["app_lotw_modegroup"] ?? record["mode"] ?? "", time: time,
-                                confirmedOn: record["qslrdate"] ?? "")
+                                confirmedOn: record["qslrdate"] ?? "", details: details)
         }
         return Report(confirmations: confirmations, lastQSL: lastQSL)
     }
@@ -264,7 +306,8 @@ enum LoTW {
     // Each confirmation's contact: the same call and band within 30
     // minutes; among several, the same kind of mode, then the nearest in
     // time. Returns the contacts changed (confirmed, and counted as
-    // uploaded) and the confirmations that matched nothing in the log.
+    // uploaded, or given LoTW's details) and the confirmations that
+    // matched nothing in the log.
     static func apply(_ confirmations: [Confirmation], to contacts: [QSO],
                       marks: Marks = .lotw) -> (changed: [QSO], unmatched: [Confirmation]) {
         var byCall: [String: [Int]] = [:]
@@ -289,11 +332,18 @@ enum LoTW {
             var qso = changed[index] ?? contacts[index]
             // No date from the service: a date already there is kept.
             let date = confirmation.confirmedOn.isEmpty ? qso[marks.date] : confirmation.confirmedOn
+            let before = qso
+            // Already confirmed on that date: only LoTW's details may be
+            // new (an old confirmation fetched again for them).
             let wasConfirmed = qso[marks.status].uppercased() == "Y" && qso[marks.date] == date
-            guard !wasConfirmed else { continue }
-            qso[marks.status] = "Y"
-            qso[marks.date] = date
-            if qso[marks.sent].uppercased() != "Y" { qso[marks.sent] = "Y" }
+            if !wasConfirmed {
+                qso[marks.status] = "Y"
+                qso[marks.date] = date
+                if qso[marks.sent].uppercased() != "Y" { qso[marks.sent] = "Y" }
+            }
+            // LoTW's details win over what's there (see the top of this file).
+            for (field, value) in confirmation.details { qso[field] = value }
+            guard qso.fields != before.fields else { continue }
             changed[index] = qso
         }
         return (changed.keys.sorted().map { changed[$0]! }, unmatched)

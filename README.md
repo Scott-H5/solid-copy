@@ -734,6 +734,15 @@ summary says so and nothing is marked uploaded. Contacts TQSL won't sign
 Confirmations are matched to contacts by call and band, within 30
 minutes; any that match nothing in your log are listed.
 
+Each confirmation also brings where the other station was, from the
+location they signed with in TQSL: their state, county, CQ and ITU
+zones, DXCC entity, WPX prefix and IOTA island. These are what LoTW gives
+award credit for, so they replace what a callsign lookup filled in (a
+lookup gives where someone lives today, which may not be where they
+operated from). The first sync after updating Solid Copy gets all your
+confirmations again, once, so older ones get these details too; it can
+take a minute.
+
 ### QRZ Logbook
 
 **QSL > Sync with QRZ Logbook** (Shift-Command-U) sends the contacts

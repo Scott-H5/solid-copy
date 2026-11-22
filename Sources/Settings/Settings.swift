@@ -455,6 +455,14 @@ enum Settings {
         get { defaults.string(forKey: "lotw.lastQSL") ?? "" }
         set { defaults.set(newValue, forKey: "lotw.lastQSL") }
     }
+    // Whether confirmations have been fetched with their details (where
+    // the other station was) since Solid Copy began asking for them
+    // (v1.5). Until then the next sync asks for every confirmation again,
+    // once, so older ones get their details too.
+    static var lotwHasDetails: Bool {
+        get { defaults.bool(forKey: "lotw.hasDetails") }
+        set { defaults.set(newValue, forKey: "lotw.hasDetails") }
+    }
     // Settings > Uploads, QRZ Logbook (QRZLogbook.swift): your logbook's
     // API key, from the logbook's Settings on qrz.com, kept in the
     // Keychain ("Solid Copy: QRZ Logbook") like a password.

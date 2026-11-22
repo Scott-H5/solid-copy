@@ -205,10 +205,15 @@ enum LoTWSync {
         guard !username.isEmpty, !password.isEmpty else {
             return "Confirmations skipped: add your LoTW username and password in Settings > Uploads."
         }
-        guard let url = LoTW.reportRequest(username: username, password: password, since: Settings.lotwLastQSL) else {
+        // Once, the first time with details: every confirmation again, so
+        // older ones get where the other station was (Settings.lotwHasDetails).
+        let everything = !Settings.lotwHasDetails
+        let since = everything ? "" : Settings.lotwLastQSL
+        guard let url = LoTW.reportRequest(username: username, password: password, since: since) else {
             return "Confirmations: couldn't make the request."
         }
-        progress("Getting confirmations from LoTW.")
+        progress(everything ? "Getting all confirmations from LoTW once, with where each station was. "
+                    + "This can take a minute." : "Getting confirmations from LoTW.")
         let report: LoTW.Report
         do {
             var request = URLRequest(url: url, timeoutInterval: 120)
@@ -221,14 +226,20 @@ enum LoTWSync {
         } catch {
             return "Confirmations: " + error.localizedDescription
         }
+        let wasConfirmed = Set(logbook.contacts.filter { $0["lotw_qsl_rcvd"].uppercased() == "Y" }.map(\.id))
         let (changed, unmatched) = LoTW.apply(report.confirmations, to: logbook.contacts)
         do { try logbook.updateAll(changed) } catch {
             return "Confirmations came, but the log couldn't be changed: \(error.localizedDescription)"
         }
         // Only once they're saved, so a failure asks for them again.
         if !report.lastQSL.isEmpty { Settings.lotwLastQSL = report.lastQSL }
-        var text = changed.isEmpty ? "Confirmations: none new."
-            : "Confirmations: \(count(changed.count)) newly confirmed by LoTW."
+        Settings.lotwHasDetails = true
+        let newly = changed.filter { !wasConfirmed.contains($0.id) }.count
+        let detailed = changed.count - newly
+        var text = newly == 0 ? "Confirmations: none new." : "Confirmations: \(count(newly)) newly confirmed by LoTW."
+        if detailed > 0 {
+            text += " \(count(detailed)) already confirmed got LoTW's state, zone or prefix."
+        }
         if !unmatched.isEmpty {
             let some = unmatched.prefix(10).map { "\($0.call) \($0.band) \(QSO(call: $0.call, timeOn: $0.time).utcDateText)" }
             text += " \(unmatched.count) matched nothing in this log (logged elsewhere?): "

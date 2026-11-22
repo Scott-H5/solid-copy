@@ -104,6 +104,9 @@ final class LogDatabase {
         addColumns((1...LogField.clubSlots).map { "app_solidcopy_club\($0)" }),
         // 9: Club Log uploads (ADIF's names) (2026-11-17).
         addColumns(["clublog_qso_upload_status", "clublog_qso_upload_date"]),
+        // 10: the WPX prefix (ADIF's PFX), which LoTW's confirmations give,
+        // for award tracking (2026-11-22).
+        addColumns(["pfx"]),
     ]
 
     // SQL that adds text columns, each starting empty.

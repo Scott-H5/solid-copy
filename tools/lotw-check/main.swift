@@ -170,3 +170,36 @@ check(done["lotw_qsl_rcvd"] == "Y" && done["lotw_qslrdate"] == "20261110" && don
       "confirmed, dated, and counted as uploaded")
 check(unmatched.map(\.call) == ["K8ZZZ"], "a confirmation for a contact not in the log is reported")
 check(LoTW.apply(parsed.confirmations, to: changed + [vp8later, w1awCW]).changed.isEmpty, "confirming again changes nothing")
+
+// Details: where the confirming station was (qso_qsldetail), v1.5.
+check(url.contains("qso_qsldetail=yes"), "the report asks for each confirmation's details")
+let detailed = """
+<APP_LoTW_LASTQSL:19>2026-11-21 10:00:00
+<eoh>
+<CALL:5>K3ABC <BAND:3>20M <MODE:2>CW <QSO_DATE:8>20261101 <TIME_ON:6>120000 <QSL_RCVD:1>Y <QSLRDATE:8>20261120
+<DXCC:3>291 <COUNTRY:24>UNITED STATES OF AMERICA <PFX:2>K3 <CQZ:2>05 <ITUZ:1>8 <STATE:2>pa <CNTY:13>PA,Montgomery
+<GRIDSQUARE:4>FN20 <eor>
+<CALL:5>K4BAD <BAND:3>20M <MODE:2>CW <QSO_DATE:8>20261101 <TIME_ON:6>120000 <QSL_RCVD:1>Y <QSLRDATE:8>20261120
+<CQZ:3>abc <STATE:7>P<A>;x <PFX:20>K4AAAAAAAAAAAAAAAAAA <eor>
+"""
+let detailReport = try! LoTW.report(from: Data(detailed.utf8))
+let k3 = detailReport.confirmations[0].details
+check(k3 == ["dxcc": "291", "pfx": "K3", "cqz": "5", "ituz": "8", "state": "PA", "cnty": "PA,Montgomery"],
+      "details read and tidied: zone 05 is 5, state upper case, no country name or grid: \(k3)")
+check(detailReport.confirmations[1].details.isEmpty,
+      "odd or overlong details are ignored: \(detailReport.confirmations[1].details)")
+
+var k3abc = QSO(call: "K3ABC", timeOn: at("20261101", "120500")); k3abc["band"] = "20m"; k3abc["mode"] = "CW"
+k3abc["state"] = "NJ"; k3abc["cqz"] = "5"; k3abc["gridsquare"] = "FN20ab"; k3abc["country"] = "United States"
+let first = LoTW.apply(detailReport.confirmations, to: [k3abc]).changed
+check(first.count == 1 && first[0]["state"] == "PA" && first[0]["pfx"] == "K3" && first[0]["cnty"] == "PA,Montgomery"
+      && first[0]["dxcc"] == "291", "LoTW's details replace a lookup's guess")
+check(first[0]["gridsquare"] == "FN20ab" && first[0]["country"] == "United States",
+      "the grid and the country's name are left alone")
+check(LoTW.apply(detailReport.confirmations, to: first).changed.isEmpty, "the same details again change nothing")
+
+// Already confirmed, before details were asked for: the details still come.
+var earlier = k3abc; earlier["lotw_qsl_rcvd"] = "Y"; earlier["lotw_qslrdate"] = "20261120"; earlier["lotw_qsl_sent"] = "Y"
+let refetched = LoTW.apply(detailReport.confirmations, to: [earlier]).changed
+check(refetched.count == 1 && refetched[0]["state"] == "PA", "an old confirmation fetched again gets its details")
+print("All LoTW checks passed.")

@@ -106,6 +106,8 @@ struct LogField {
         LogField(adif: "cqz", label: "CQ zone", group: .location),
         LogField(adif: "ituz", label: "ITU zone", group: .location),
         LogField(adif: "iota", label: "IOTA", group: .location),
+        // The prefix that counts for CQ's WPX award, as LoTW gives it.
+        LogField(adif: "pfx", label: "WPX prefix", group: .location),
         LogField(adif: "address", label: "Address", group: .location, multiline: true),
         LogField(adif: "lat", label: "Latitude", group: .location),
         LogField(adif: "lon", label: "Longitude", group: .location),
