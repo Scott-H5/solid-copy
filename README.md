@@ -22,13 +22,16 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   messages through a WinKeyer
 - tracks QSLs and parks, shows spots, and makes an electronic QSL card
   you can send by email
-- tracks DXCC, WAS, WAZ and WPX: what's worked, confirmed and still
-  needed, on each band and mode
+- tracks awards: DXCC, WAS, WAZ and WPX (worked, confirmed and still
+  needed, on each band and mode), SKCC Centurion, Tribune and Senator,
+  and POTA parks hunted
 - works FT8 and other digital modes with WSJT-X: its decodes in a list
   VoiceOver reads, Return to answer a station, and contacts WSJT-X logs
   arriving in your log
 - shares the radio with programs such as WSJT-X (Hamlib NET rigctl),
   with safeguards when they transmit
+- turns the antenna through hamlib's rotctld: to the station you're
+  logging, the long path, or a heading you type
 - keeps separate logs, imports ADIF, ADX and log files in the SQL
   format (.sql), exports ADIF, ADX, CSV and Cabrillo, and backs up to a
   folder you choose
