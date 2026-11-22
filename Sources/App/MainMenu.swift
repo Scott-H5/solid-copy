@@ -50,7 +50,8 @@ enum MainMenu {
     //   New Log ▸ (New Log…, New Contest Log…, New Test Log…), Open Log ▸,
     //     Delete This Log…, Show Log in Finder: your logs (Logs.swift);
     //   Import…, Export…, Back Up Now: what goes in and out;
-    //   Contests ▸ (Show Contest Files, Save Profile as Contest…): rarely
+    //   Contests ▸ (Contest Score…, Show Contest Files, Save Profile as
+    //     Contest…): rarely
     //     used, so tucked into a submenu;
     //   Save Contact, Close Window.
     // A submenu's shortcuts work from anywhere, as the top level's do:
@@ -95,7 +96,8 @@ enum MainMenu {
         // Contest files (Contest.swift): open their folder, or save the
         // profile in use as one.
         let contests = NSMenu(title: "Contests")
-        for (title, action) in [("Show Contest Files", #selector(AppDelegate.showContestFiles(_:))),
+        for (title, action) in [("Contest Score…", #selector(AppDelegate.showContestScore(_:))),
+                                ("Show Contest Files", #selector(AppDelegate.showContestFiles(_:))),
                                 ("Save Profile as Contest…", #selector(AppDelegate.saveProfileAsContest(_:)))] {
             contests.addItem(withTitle: title, action: action, keyEquivalent: "").target = appDelegate
         }
@@ -286,6 +288,11 @@ enum MainMenu {
                                 action: #selector(LogEntryViewController.sayLastContact(_:)), keyEquivalent: "l")
         last.keyEquivalentModifierMask = [.command, .option]
         last.target = logEntry
+        // The open contest log's score (Logs.swift); C for contest.
+        let score = menu.addItem(withTitle: "Say Contest Score",
+                                 action: #selector(AppDelegate.sayContestScore(_:)), keyEquivalent: "c")
+        score.keyEquivalentModifierMask = [.command, .option]
+        score.target = appDelegate
         // Radio Status (Command-R) is in the Radio menu, beside the radio.
         menu.addItem(.separator())
 

@@ -32,8 +32,8 @@ others (tested with the Kenwood TS-590SG and Elecraft KX3)</li>
 like, and brings LoTW and QRZ confirmations back</li>
 <li>warns about dupes, and says each contact's country and whether it's a
 new one, band or mode</li>
-<li>runs contests (ARRL Field Day first), with serial numbers and CW
-messages through a WinKeyer</li>
+<li>runs contests (ARRL Field Day and SKCC's sprints), with serial
+numbers, scores, and CW messages through a WinKeyer</li>
 <li>tracks QSLs and parks, shows spots, and makes an electronic QSL card
 you can send by email</li>
 <li>tracks awards: DXCC, WAS, WAZ and WPX (worked, confirmed and still
@@ -438,6 +438,10 @@ back what you turned down, whenever you want it:</p>
 <tr>
 <td>Option-Command-L</td>
 <td>Say the last contact logged</td>
+</tr>
+<tr>
+<td>Option-Command-C</td>
+<td>Say the contest log's score (see Contests)</td>
 </tr>
 <tr>
 <td>Command-R (Radio menu)</td>
@@ -1267,7 +1271,7 @@ unplugged from the radio, or into a dummy load.</p>
 <p>Contests are plain text files in Solid Copy's Contests folder (<strong>File &gt;
 Contests &gt; Show Contest Files</strong> opens it, with a README explaining the format). A
 change to a file, or a new file, works at once, with no new version of
-Solid Copy. ARRL Field Day's file is there to start:</p>
+Solid Copy. ARRL Field Day's file and SKCC's events are there to start:</p>
 <pre><code>name: ARRL Field Day
 id: ARRL-FIELD-DAY
 exchange: class and section
@@ -1282,21 +1286,70 @@ ADIF name); <strong>serial: yes</strong> adds Serial sent and received; <strong>
 once, band, or band and mode (modes grouped as CW, phone and digital);
 <strong>messages</strong> are the CW messages, split by |; <strong>submit: dupe sheet</strong>
 offers Field Day's dupe sheet in File &gt; Export….</p>
+<h3 id="scores-and-skccs-events">Scores, and SKCC's events</h3>
+<p>A contest file can say how it's scored, and then <strong>File &gt; Contests &gt;
+Contest Score…</strong> shows the open contest log's totals (with a Copy
+button), and <strong>Speech &gt; Say Contest Score</strong> (Option-Command-C) says
+them: "SKCC Sprint: 7 contacts (1 dupe not counted). 5 multipliers. 1
+Centurion, 5 points. 1 Tribune, 10 points. 2 Senators, 30 points. NX1K:
+2 bands, 50 points. Score 130." The lines, all optional:</p>
+<pre><code>points: 1                          each contact that isn't a dupe
+multipliers: spc                   different values of a field multiply
+skcc bonus: C 5, T 10, S 15        once per station, by their SKCC letter
+bonus station: KS1KCC 25 per band  or "25 once"; commas for more
+grid bonus: 5                      each different 4-character grid
+name bonus: /BD 30                 each station whose name ends /BD
+</code></pre>
+<p>The score is points times multipliers (just the points without a
+multipliers line), plus the bonuses. A call signing /4 or /P is the
+same station for the bonuses.</p>
+<p>Solid Copy comes with files for SKCC's regular events: <strong>SKCC Sprint</strong>
+(SKS), <strong>Sprint Europe</strong> (SKSE), <strong>Asia Sprint</strong> (SKSA), <strong>Weekend
+Sprintathon</strong> (WES), the <strong>QSO Party</strong> and the <strong>Slow Speed Saunter</strong>.
+Each file's comments give its times, rules and where to submit. They're
+added to your Contests folder once: if you delete or change one, it's
+left that way. SKCC asks for your totals in a web form rather than a
+log, and Contest Score… gives you those totals in the form's order.</p>
 <ul>
 <li>
-<strong>File &gt; New Log &gt; New Contest Log…</strong> offers each contest file, and "Other: use
+<p>The exchange is RST sent and received, SPC (state, province, or the
+country's code outside the US and Canada), name and SKCC number. A
+lookup fills in the state and name, and the SKCC member list the
+number with its C, T or S, so often you only type the RST.</p>
+</li>
+<li>
+<p>Put your own exchange in Exchange sent on the profile: "PA SAM 12345T".</p>
+</li>
+<li>
+<p>SKCC's events are for a straight key, bug or sideswiper, so their
+files have no CW messages for the keyer.</p>
+</li>
+<li>
+<p>The SKS special station changes every month: edit <strong>bonus station</strong>
+in "SKCC Sprint.txt" before each sprint. WES's monthly theme bonus is
+yours to add, as SKCC asks.</p>
+</li>
+<li>
+<p>Start a log for each event (File &gt; New Log &gt; New Contest Log…): the
+score counts every contact in the log.</p>
+</li>
+<li>
+<p><strong>File &gt; New Log &gt; New Contest Log…</strong> offers each contest file, and "Other: use
 a profile" for a contest with no file. A contest log comes with a
 profile built from the file (its form and messages), brings it back
 whenever it's opened, and warns of dupes by the contest's rule over
-the whole log.</li>
+the whole log.</p>
+</li>
 <li>
-<strong>File &gt; Contests &gt; Save Profile as Contest…</strong> writes the profile in use as a
-contest file: a contest set up by hand, kept or shared.</li>
+<p><strong>File &gt; Contests &gt; Save Profile as Contest…</strong> writes the profile in use as a
+contest file: a contest set up by hand, kept or shared.</p>
+</li>
 <li>
-<strong>File &gt; Export…, Dupe sheet</strong> lists the calls worked by band and
+<p><strong>File &gt; Export…, Dupe sheet</strong> lists the calls worked by band and
 mode, headed with the contest and your call: what ARRL asks for with
 a Field Day entry. (ARRL treats a Cabrillo log as optional for Field
-Day and publishes no Field Day layout, so there's none yet.)</li>
+Day and publishes no Field Day layout, so there's none yet.)</p>
+</li>
 </ul>
 <h2 id="serial-numbers">Serial numbers</h2>
 <p>Put <strong>Serial sent</strong> on a profile's form (Settings &gt; Logging Form) and it
@@ -1314,7 +1367,7 @@ the form. None of this needs the keyer.</p>
 Log</strong> (a submenu: New Log…, New Contest Log…, New Test Log…), <strong>Open
 Log</strong> (a submenu of every log), <strong>Delete This Log…</strong> and <strong>Show Log in
 Finder</strong>. Then Import…, Export… and Back Up Now; then <strong>Contests</strong> (a
-submenu: Show Contest Files, Save Profile as Contest…); then Save
+submenu: Contest Score…, Show Contest Files, Save Profile as Contest…); then Save
 Contact and Close Window.</p>
 <p>Solid Copy starts with one log, the <strong>main log</strong>. You can make more:</p>
 <ul>
@@ -1323,8 +1376,8 @@ Contact and Close Window.</p>
 contest kept apart from everyday contacts. It uploads like the main
 log.</li>
 <li>
-<strong>File &gt; New Log &gt; New Contest Log…</strong>: a log for one contest (ARRL Field Day for
-now), with that contest's profile: its form and CW messages. If you
+<strong>File &gt; New Log &gt; New Contest Log…</strong>: a log for one contest (ARRL Field Day
+or one of SKCC's events, or one of your own files), with that contest's profile: its form and CW messages. If you
 have no profile for it yet, one is made from the contest's template.
 Opening the log always brings that profile back.</li>
 <li>

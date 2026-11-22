@@ -209,8 +209,8 @@ nothing changed for it when there became more than one.
 
 `Sources/Model/Contest.swift` reads contest files (`Contest.parse`: one
 "key: value" per line; problems come back in words with the line) from
-the Contests folder (`ContestList.load`, which writes Field Day's file
-and a README into a new folder). A contest has its exchange fields, serial
+the Contests folder (`ContestList.load`, which writes the starting files
+and a README; see Scoring below). A contest has its exchange fields, serial
 yes or no, a dupe rule (`dupe(of:band:mode:in:)`, modes grouped by
 `modeGroup` as CW, Phone, Digital), CW messages and what to submit
 (`dupeSheet`). `fileText` writes one back out (Save Profile as Contest…).
@@ -225,6 +225,18 @@ Serial sent isn't on the form. File > New Contest Log… (Logs.swift) adds
 a log with `LogInfo.contest` set and links it to `Settings.profile(for:)`,
 which finds a profile whose Contest field starts as the contest's ID or
 makes one from its template.
+
+Scoring: the file's scoring lines (`points`, `multipliers`, `skccBonus`,
+`bonusStations`, `gridBonus`, `nameBonus`) are added up by
+`Contest.score`, which walks the log in time order so the first contact
+counts and later ones are dupes by the contest's own rule. Bonuses
+counted once per station use `baseCall` (NX1K/4 is NX1K). `scoreLines`
+puts it in words, in the order SKCC's forms ask; Logs.swift shows it
+(Contest Score…) or says it (Say Contest Score). `Contest.startingFiles`
+is Field Day plus SKCC's events; `ContestList.addStartingFiles` writes
+each one once, keeping a `.written` list in the folder so a file you
+deleted stays deleted (a folder from before 1.6 counts as having had
+Field Day).
 
 ## Separate logs and test logs
 

@@ -21,8 +21,24 @@
 //   messages: CQ FD {MYCALL} | ... CW messages F1, F2 ..., split by |
 //   submit: dupe sheet             what File > Export… offers for it:
 //                                  "dupe sheet" (calls by band and mode)
+// Scoring (v1.6 item 2, for SKCC's events, whose web forms ask for your
+// totals rather than a log). All optional; Speech > Say Contest Score
+// and File > Contests > Contest Score… add them up (Contest.score):
+//   points: 1                      each contact that isn't a dupe
+//   multipliers: state             a field (exchange words work) whose
+//                                  different values multiply the points,
+//                                  once each in the contest
+//   skcc bonus: C 5, T 10, S 15    once per station, from the letter on
+//                                  their SKCC number
+//   bonus station: KS1KCC 25 per band   a station worth points, per band
+//                                  or once; several split by commas
+//   grid bonus: 5                  each different 4-character grid
+//   name bonus: /BD 30             each station whose name ends so, once
+// Score: points times multipliers (or just points, with no multipliers
+// line), plus the bonuses.
 // Only name and id are needed; the rest has defaults (exchange: exchange,
-// serial: no, dupes: band and mode, no messages, nothing to submit).
+// serial: no, dupes: band and mode, no messages, nothing to submit, 1
+// point a contact, no multipliers or bonuses).
 //
 // A contest log (File > New Contest Log…) is a log made for one contest
 // (LogInfo.contest): it comes with a profile built from the file (its
@@ -65,10 +81,32 @@ struct Contest: Equatable {
     var dupes: DupeRule = .bandAndMode
     var messages: [String] = []
     var submit: Submit = .none
+    // Scoring (see the top of this file).
+    var points = 1
+    var multipliers: [String] = []
+    var skccBonus: [Character: Int] = [:]
+    var bonusStations: [BonusStation] = []
+    var gridBonus = 0
+    var nameBonus: (ending: String, points: Int)?
+
+    struct BonusStation: Equatable {
+        var call: String
+        var points: Int
+        var perBand: Bool
+    }
+
+    // Whether the file says anything about scoring, so Say Contest Score
+    // can say a score is just a count of contacts.
+    var hasScoring: Bool {
+        !multipliers.isEmpty || !skccBonus.isEmpty || !bonusStations.isEmpty || gridBonus > 0 || nameBonus != nil
+    }
 
     static func == (a: Contest, b: Contest) -> Bool {
         a.id == b.id && a.name == b.name && a.exchange == b.exchange && a.serial == b.serial
             && a.dupes == b.dupes && a.messages == b.messages && a.submit == b.submit
+            && a.points == b.points && a.multipliers == b.multipliers && a.skccBonus == b.skccBonus
+            && a.bonusStations == b.bonusStations && a.gridBonus == b.gridBonus
+            && a.nameBonus?.ending == b.nameBonus?.ending && a.nameBonus?.points == b.nameBonus?.points
     }
 
     // MARK: Reading a file
@@ -77,7 +115,7 @@ struct Contest: Equatable {
     // Any of the log's ADIF names (LogField.swift) works too.
     static let exchangeWords: [String: String] = [
         "exchange": "srx_string", "name": "name", "state": "state", "province": "state", "county": "cnty",
-        "rst": "rst_rcvd", "report": "rst_rcvd", "zone": "cqz", "cq zone": "cqz",
+        "rst": "rst_rcvd", "report": "rst_rcvd", "rst sent": "rst_sent", "spc": "state", "zone": "cqz", "cq zone": "cqz",
         "itu zone": "ituz", "grid": "gridsquare", "park": "pota_ref", "summit": "sota_ref",
         "skcc": "skcc", "fists": "fists", "cwops": "app_solidcopy_cwops", "licw": "app_solidcopy_licw",
         "ten-ten": "ten_ten", "member": "srx_string", "number": "srx_string", "class and section": "srx_string",
@@ -103,16 +141,72 @@ struct Contest: Equatable {
         else { return .failure(.init("it needs an id: line, such as ARRL-FIELD-DAY (letters, figures, hyphens)")) }
         var contest = Contest(id: id, name: name)
 
-        if let exchange = values["exchange"], !exchange.isEmpty {
+        // A list of fields, in exchange words or ADIF names.
+        func fields(_ key: String) -> Result<[String], ContestFileError> {
             var fields: [String] = []
-            for word in exchange.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces).lowercased() })
-            where !word.isEmpty {
+            for word in (values[key] ?? "").split(separator: ",")
+                .map({ $0.trimmingCharacters(in: .whitespaces).lowercased() }) where !word.isEmpty {
                 guard let field = exchangeWords[word] ?? (knownFields.contains(word) ? word : nil) else {
-                    return .failure(.init("exchange word \"\(word)\" isn't one Solid Copy knows"))
+                    return .failure(.init("\(key) word \"\(word)\" isn't one Solid Copy knows"))
                 }
                 if !fields.contains(field) { fields.append(field) }
             }
-            if !fields.isEmpty { contest.exchange = fields }
+            return .success(fields)
+        }
+        switch fields("exchange") {
+        case .success(let list): if !list.isEmpty { contest.exchange = list }
+        case .failure(let error): return .failure(error)
+        }
+        switch fields("multipliers") {
+        case .success(let list): contest.multipliers = list
+        case .failure(let error): return .failure(error)
+        }
+        // A whole number of points, 0 to 10,000 (no file needs more).
+        func number(_ text: String, _ what: String) -> Result<Int, ContestFileError> {
+            guard let value = Int(text.trimmingCharacters(in: .whitespaces)), (0...10_000).contains(value) else {
+                return .failure(.init("\(what) needs a whole number of points, not \(text)"))
+            }
+            return .success(value)
+        }
+        if let text = values["points"], !text.isEmpty {
+            switch number(text, "points") {
+            case .success(let value): contest.points = value
+            case .failure(let error): return .failure(error)
+            }
+        }
+        if let text = values["grid bonus"], !text.isEmpty {
+            switch number(text, "grid bonus") {
+            case .success(let value): contest.gridBonus = value
+            case .failure(let error): return .failure(error)
+            }
+        }
+        // "C 5, T 10, S 15"
+        for part in (values["skcc bonus"] ?? "").split(separator: ",") {
+            let words = part.split(separator: " ").map(String.init)
+            guard words.count == 2, let letter = words[0].uppercased().first, words[0].count == 1,
+                  "CTS".contains(letter), let value = Int(words[1]), (0...10_000).contains(value) else {
+                return .failure(.init("skcc bonus is a letter and points, like C 5, T 10, S 15, not \(part)"))
+            }
+            contest.skccBonus[letter] = value
+        }
+        // "KS1KCC 25 per band, K9SKC 10 once"
+        for part in (values["bonus station"] ?? "").split(separator: ",") {
+            let words = part.split(separator: " ").map { $0.lowercased() }
+            let perBand = words.suffix(2) == ["per", "band"]
+            let once = words.last == "once"
+            guard words.count == (perBand ? 4 : once ? 3 : 2), let value = Int(words[1]),
+                  (0...10_000).contains(value) else {
+                return .failure(.init("bonus station is a call and points, then per band or once, like KS1KCC 25 per band, not \(part)"))
+            }
+            contest.bonusStations.append(BonusStation(call: words[0].uppercased(), points: value, perBand: perBand))
+        }
+        // "/BD 30"
+        if let text = values["name bonus"], !text.isEmpty {
+            let words = text.split(separator: " ").map(String.init)
+            guard words.count == 2, let value = Int(words[1]), (0...10_000).contains(value) else {
+                return .failure(.init("name bonus is an ending and points, like /BD 30, not \(text)"))
+            }
+            contest.nameBonus = (words[0].uppercased(), value)
         }
         switch values["serial"]?.lowercased() {
         case nil, "", "no": break
@@ -144,7 +238,135 @@ struct Contest: Equatable {
                      "serial: \(serial ? "yes" : "no")", "dupes: \(dupes.words)"]
         if !messages.isEmpty { lines.append("messages: " + messages.joined(separator: " | ")) }
         if submit == .dupeSheet { lines.append("submit: dupe sheet") }
+        if points != 1 { lines.append("points: \(points)") }
+        if !multipliers.isEmpty { lines.append("multipliers: " + multipliers.joined(separator: ", ")) }
+        if !skccBonus.isEmpty {
+            lines.append("skcc bonus: " + "CTS".compactMap { letter in skccBonus[letter].map { "\(letter) \($0)" } }
+                .joined(separator: ", "))
+        }
+        if !bonusStations.isEmpty {
+            lines.append("bonus station: " + bonusStations
+                .map { "\($0.call) \($0.points) \($0.perBand ? "per band" : "once")" }.joined(separator: ", "))
+        }
+        if gridBonus > 0 { lines.append("grid bonus: \(gridBonus)") }
+        if let nameBonus { lines.append("name bonus: \(nameBonus.ending) \(nameBonus.points)") }
         return lines.joined(separator: "\n") + "\n"
+    }
+
+    // MARK: Score
+
+    // What a contest log adds up to, by the file's scoring lines: the
+    // numbers SKCC's score forms ask for, and the total.
+    struct Score: Equatable {
+        var contacts = 0              // counted: dupes left out
+        var dupes = 0
+        var points = 0
+        var multipliers = 0
+        var members: [Character: Int] = [:]   // C, T and S stations, once each
+        var memberPoints = 0
+        var bonusStations: [String: Int] = [:]   // call: bands (or 1)
+        var bonusStationPoints = 0
+        var grids = 0
+        var gridPoints = 0
+        var named = 0
+        var namedPoints = 0
+        var total = 0
+    }
+
+    func score(_ contacts: [QSO]) -> Score {
+        var score = Score()
+        var counted: [QSO] = []
+        // In time order, so the first contact counts and later ones are
+        // the dupes.
+        for qso in contacts.sorted(by: { $0.timeOn < $1.timeOn }) {
+            if dupe(of: qso.call, band: qso["band"], mode: qso["mode"], in: counted) != nil {
+                score.dupes += 1
+            } else {
+                counted.append(qso)
+            }
+        }
+        score.contacts = counted.count
+        score.points = counted.count * points
+        func clean(_ text: String) -> String { text.trimmingCharacters(in: .whitespaces).uppercased() }
+        var multiplierValues = Set<String>()
+        for qso in counted {
+            for field in multipliers where !clean(qso[field]).isEmpty { multiplierValues.insert(field + " " + clean(qso[field])) }
+        }
+        score.multipliers = multiplierValues.count
+        // C, T and S, once per station.
+        var members: [String: Character] = [:]
+        for qso in counted {
+            let station = Self.baseCall(qso.call)
+            guard members[station] == nil, let letter = Self.skccLetter(qso["skcc"]), skccBonus[letter] != nil
+            else { continue }
+            members[station] = letter
+        }
+        for letter in members.values {
+            score.members[letter, default: 0] += 1
+            score.memberPoints += skccBonus[letter] ?? 0
+        }
+        for station in bonusStations {
+            let worked = counted.filter { Self.baseCall($0.call) == station.call }
+            guard !worked.isEmpty else { continue }
+            let times = station.perBand ? Set(worked.map { $0["band"].lowercased() }).count : 1
+            score.bonusStations[station.call] = times
+            score.bonusStationPoints += times * station.points
+        }
+        if gridBonus > 0 {
+            score.grids = Set(counted.map { String(clean($0["gridsquare"]).prefix(4)) }.filter { $0.count == 4 }).count
+            score.gridPoints = score.grids * gridBonus
+        }
+        if let nameBonus {
+            score.named = Set(counted.filter { clean($0["name"]).hasSuffix(nameBonus.ending) }
+                .map { Self.baseCall($0.call) }).count
+            score.namedPoints = score.named * nameBonus.points
+        }
+        let base = multipliers.isEmpty ? score.points : score.points * score.multipliers
+        score.total = base + score.memberPoints + score.bonusStationPoints + score.gridPoints + score.namedPoints
+        return score
+    }
+
+    // The station behind a call, for bonuses counted once per station:
+    // NX1K/4 and W1/NX1K are NX1K (the longest part).
+    static func baseCall(_ call: String) -> String {
+        let parts = call.trimmingCharacters(in: .whitespaces).uppercased().split(separator: "/").map(String.init)
+        return parts.max { $0.count < $1.count } ?? call.uppercased()
+    }
+
+    // The award letter on an SKCC number: "12345T" -> T, "12345Tx2" ->
+    // T, "12345" or "NONE" -> nil.
+    static func skccLetter(_ number: String) -> Character? {
+        let text = number.trimmingCharacters(in: .whitespaces).uppercased()
+        guard let first = text.first, first.isNumber,
+              let letter = text.first(where: { !$0.isNumber }), "CTS".contains(letter) else { return nil }
+        return letter
+    }
+
+    // The score in words: what Say Contest Score says, and (one item a
+    // line) what Contest Score… shows, in the order SKCC's forms ask.
+    func scoreLines(_ score: Score) -> [String] {
+        func count(_ n: Int, _ one: String, _ many: String) -> String { "\(n) \(n == 1 ? one : many)" }
+        var lines = [count(score.contacts, "contact", "contacts")
+                     + (score.dupes > 0 ? " (\(count(score.dupes, "dupe", "dupes")) not counted)" : "")]
+        if points != 1 { lines.append("\(score.points) contact points") }
+        if !multipliers.isEmpty { lines.append(count(score.multipliers, "multiplier", "multipliers")) }
+        let names: [Character: (String, String)] = ["C": ("Centurion", "Centurions"), "T": ("Tribune", "Tribunes"),
+                                                    "S": ("Senator", "Senators")]
+        for letter in "CTS" where skccBonus[letter] != nil {
+            let n = score.members[letter] ?? 0
+            lines.append(count(n, names[letter]!.0, names[letter]!.1) + ", \(n * (skccBonus[letter] ?? 0)) points")
+        }
+        for station in bonusStations {
+            let times = score.bonusStations[station.call] ?? 0
+            let what = station.perBand ? count(times, "band", "bands") : times > 0 ? "worked" : "not worked"
+            lines.append("\(station.call): \(what), \(times * station.points) points")
+        }
+        if gridBonus > 0 { lines.append(count(score.grids, "grid", "grids") + ", \(score.gridPoints) points") }
+        if let nameBonus {
+            lines.append("\(nameBonus.ending) stations: \(score.named), \(score.namedPoints) points")
+        }
+        if hasScoring { lines.append("Score \(score.total)") }
+        return lines
     }
 
     // MARK: Dupes
@@ -278,6 +500,130 @@ struct Contest: Equatable {
 
     """
 
+    // SKCC's regular events (rules read 22 November 2026 at
+    // skccgroup.com/operating_activities). They're straight key events (a
+    // straight key, bug or sideswiper), so the files have no CW messages:
+    // sent by the keyer, they'd break SKCC's key rule. SKCC takes your
+    // totals in a web form, not a log, so each has its scoring.
+    static let skccExchange = "rst sent, rst, spc, name, skcc"
+    static let skccFooter = """
+    # Exchange: RST (a real one), state or province (or the country's SPC
+    # code outside the US and Canada), name and SKCC number with its C, T
+    # or S. Non-members send NONE. Put yours in Exchange sent on the
+    # profile, such as: PA SAM 12345T. Each station once per band.
+    # File > Contests > Contest Score… gives the totals SKCC's form asks for.
+    """
+
+    static let skcc: [(file: String, text: String)] = [
+        ("SKCC Sprint.txt", """
+        # SKCC Sprint (SKS): the fourth Wednesday of each month, 0000 to
+        # 0200 UTC (Tuesday evening in the US). 160 to 6 metres, no WARC
+        # bands, no spotting. Score: contacts times SPCs, plus C 5, T 10,
+        # S 15 (once each), plus the month's special station, 25 per band.
+        # Change its call below each month (NX1K was November 2026's).
+        # Submit your score on SKCC's site by the Sunday after.
+        # Rules: https://www.skccgroup.com/operating_activities/weekday_sprint/
+        \(skccFooter)
+        name: SKCC Sprint
+        id: SKCC-SKS
+        exchange: \(skccExchange)
+        dupes: band
+        multipliers: spc
+        skcc bonus: C 5, T 10, S 15
+        bonus station: NX1K 25 per band
+
+        """),
+        ("SKCC Sprint Europe.txt", """
+        # SKCC Sprint Europe (SKSE): the first Thursday of each month, two
+        # hours: 2000 to 2200 UTC November to March, 1900 to 2100 UTC April
+        # to October. 160 to 6 metres, no WARC bands. Score: contacts
+        # times SPCs, plus C 5, T 10, S 15 (once each). Submit by 2359 UTC
+        # the Thursday after.
+        # Rules: https://www.skccgroup.com/operating_activities/skse/
+        \(skccFooter)
+        name: SKCC Sprint Europe
+        id: SKCC-SKSE
+        exchange: \(skccExchange)
+        dupes: band
+        multipliers: spc
+        skcc bonus: C 5, T 10, S 15
+
+        """),
+        ("SKCC Asia Sprint.txt", """
+        # SKCC Asia Sprint (SKSA): the second Friday of each month, 2200 to
+        # 2359 UTC. Non-WARC bands 160 to 6 metres. Score: contacts times
+        # SPCs, plus C 5, T 10, S 15 (once each), plus 30 for each station
+        # whose name ends /BD (their birthday month). Submit within 72
+        # hours, by the Sunday after.
+        # Rules: https://www.skccgroup.com/operating_activities/sksa/
+        \(skccFooter)
+        name: SKCC Asia Sprint
+        id: SKCC-SKSA
+        exchange: \(skccExchange)
+        dupes: band
+        multipliers: spc
+        skcc bonus: C 5, T 10, S 15
+        name bonus: /BD 30
+
+        """),
+        ("SKCC Weekend Sprintathon.txt", """
+        # SKCC Weekend Sprintathon (WES): the second weekend of each month,
+        # 1200 UTC Saturday to 2359 UTC Sunday. 160 to 6 metres, no WARC
+        # bands. Score: contacts times SPCs, plus C 5, T 10, S 15 (once
+        # each), plus KS1KCC 25 per band. Each month has a theme bonus as
+        # well, which you add up yourself (see the month's page). Submit by
+        # 2359 UTC the Sunday after.
+        # Rules: https://www.skccgroup.com/operating_activities/weekend_sprintathon/
+        \(skccFooter)
+        name: SKCC Weekend Sprintathon
+        id: SKCC-WES
+        exchange: \(skccExchange)
+        dupes: band
+        multipliers: spc
+        skcc bonus: C 5, T 10, S 15
+        bonus station: KS1KCC 25 per band
+
+        """),
+        ("SKCC QSO Party.txt", """
+        # SKCC QSO Party: the third weekend of June, 1200 UTC Saturday to
+        # 2359 UTC Sunday. 160 to 6 metres, no WARC bands. The exchange adds
+        # a 4-character grid. Score: contacts times SPCs, plus C 5, T 10,
+        # S 15 (once each), KS1KCC 25 per band, and 5 for each different
+        # grid. A theme bonus and the 100-point photo bonus are added
+        # outside Solid Copy. Submit by 2359 UTC the Sunday after.
+        # Rules: https://www.skccgroup.com/operating_activities/QSO_Party/
+        \(skccFooter)
+        name: SKCC QSO Party
+        id: SKCC-QSO-PARTY
+        exchange: rst sent, rst, spc, name, grid, skcc
+        dupes: band
+        multipliers: spc
+        skcc bonus: C 5, T 10, S 15
+        bonus station: KS1KCC 25 per band
+        grid bonus: 5
+
+        """),
+        ("SKCC Slow Speed Saunter.txt", """
+        # SKCC Slow Speed Saunter: the first day of each month, 0000 to
+        # 2359 UTC, at 12 words a minute or slower. Not a contest: you
+        # report how many contacts you made, within 72 hours. 160 to 6
+        # metres, WARC bands too.
+        # Rules: https://www.skccgroup.com/operating_activities/slowspeed/
+        \(skccFooter)
+        name: SKCC Slow Speed Saunter
+        id: SKCC-SAUNTER
+        exchange: \(skccExchange)
+        dupes: band
+
+        """),
+    ]
+
+    // Every file Solid Copy has, Field Day first. One that's new in this
+    // version is added to an existing Contests folder once (ContestList).
+    static var startingFiles: [(file: String, text: String)] {
+        [("ARRL Field Day.txt", fieldDayFile)] + skcc
+    }
+
     static let readme = """
     Contest files for Solid Copy
 
@@ -293,8 +639,21 @@ struct Contest: Equatable {
     messages: CQ NA {MYCALL} | {CALL} {MYNAME} {MYSTATE} | TU {MYCALL}
     submit: none                  or: dupe sheet
 
-    Exchange words: exchange, name, state, province, county, rst,
-    zone, itu zone, grid, park, summit, skcc, fists, cwops, licw,
+    Scoring (all optional; File > Contests > Contest Score… and Speech >
+    Say Contest Score add it up):
+
+    points: 1                     each contact that isn't a dupe
+    multipliers: spc              a field whose different values multiply
+    skcc bonus: C 5, T 10, S 15   once per station, by their SKCC letter
+    bonus station: KS1KCC 25 per band   (or: 25 once); commas for more
+    grid bonus: 5                 each different 4-character grid
+    name bonus: /BD 30            each station whose name ends /BD
+
+    Score is points times multipliers (just points without a
+    multipliers line), plus the bonuses.
+
+    Exchange words: exchange, name, state, province, spc, county, rst,
+    rst sent, zone, itu zone, grid, park, summit, skcc, fists, cwops, licw,
     ten-ten, member, number, class and section; or any field's ADIF name
     (srx_string, cnty, and so on).
 
@@ -326,11 +685,7 @@ enum ContestList {
 
     static func load(from folder: URL) -> Loaded {
         let files = FileManager.default
-        if !files.fileExists(atPath: folder.path) {
-            try? files.createDirectory(at: folder, withIntermediateDirectories: true)
-            try? Data(Contest.fieldDayFile.utf8).write(to: folder.appendingPathComponent("ARRL Field Day.txt"))
-            try? Data(Contest.readme.utf8).write(to: folder.appendingPathComponent("README.txt"))
-        }
+        addStartingFiles(to: folder)
         let known = Set(LogField.all.map(\.adif))
         var loaded = Loaded(contests: [], problems: [])
         let names = ((try? files.contentsOfDirectory(atPath: folder.path)) ?? [])
@@ -354,6 +709,32 @@ enum ContestList {
             }
         }
         return loaded
+    }
+
+    // Solid Copy's own contest files, each written once: all of them in
+    // a new folder, and in an existing one only those it hasn't had yet
+    // (the SKCC files, new in 1.6), so a file you deleted or changed is
+    // left alone. ".written" in the folder lists the files given so far;
+    // a folder from before 1.6 has none, and had only Field Day's.
+    static let writtenList = ".written"
+    private static func addStartingFiles(to folder: URL) {
+        let files = FileManager.default
+        let isNew = !files.fileExists(atPath: folder.path)
+        if isNew { try? files.createDirectory(at: folder, withIntermediateDirectories: true) }
+        let listURL = folder.appendingPathComponent(writtenList)
+        var written: Set<String> = isNew ? [] : ["ARRL Field Day.txt"]
+        if let data = try? Data(contentsOf: listURL), data.count < 64_000, let text = String(data: data, encoding: .utf8) {
+            written = Set(text.components(separatedBy: .newlines).filter { !$0.isEmpty })
+        }
+        let new = Contest.startingFiles.filter { !written.contains($0.file) }
+        guard !new.isEmpty else { return }
+        for file in new where !files.fileExists(atPath: folder.appendingPathComponent(file.file).path) {
+            try? Data(file.text.utf8).write(to: folder.appendingPathComponent(file.file))
+        }
+        // The README is Solid Copy's: it's brought up to date with the files.
+        try? Data(Contest.readme.utf8).write(to: folder.appendingPathComponent("README.txt"))
+        written.formUnion(new.map(\.file))
+        try? Data((written.sorted().joined(separator: "\n") + "\n").utf8).write(to: listURL)
     }
 
     // The contests in Solid Copy's own folder.

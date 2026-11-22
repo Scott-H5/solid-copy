@@ -122,6 +122,34 @@ extension AppDelegate {
         NSWorkspace.shared.activateFileViewerSelecting([folder.appendingPathComponent("README.txt")])
     }
 
+    // File > Contests > Contest Score… (shown, with Copy) and Speech > Say
+    // Contest Score (Option-Command-C, said): the open contest log added
+    // up by its contest file's scoring lines (Contest.score), the totals
+    // SKCC's score forms ask for (v1.6 item 2).
+    @objc func showContestScore(_ sender: Any?) {
+        guard let (contest, lines) = contestScore() else { return }
+        showMessage("\(contest.name): score", details: lines.joined(separator: "\n"))
+    }
+
+    @objc func sayContestScore(_ sender: Any?) {
+        guard let (contest, lines) = contestScore() else { return }
+        Speaker.announce("\(contest.name): " + lines.joined(separator: ". ") + ".")
+    }
+
+    // The open log's contest and its score in lines, or nil (and why, said).
+    private func contestScore() -> (Contest, [String])? {
+        guard let logbook else { return nil }
+        guard let id = logbook.info.contest, !id.isEmpty else {
+            Speaker.announce("This isn't a contest log. Start one with File > New Log > New Contest Log….")
+            return nil
+        }
+        guard let contest = ContestList.named(id) else {
+            Speaker.announce("No contest file has id \(id). File > Contests > Show Contest Files.")
+            return nil
+        }
+        return (contest, contest.scoreLines(contest.score(logbook.contacts)))
+    }
+
     // File > Save Profile as Contest…: the profile in use written as a
     // contest file in the Contests folder, so a contest set up by hand can
     // be kept, shared, or used for File > New Contest Log….
