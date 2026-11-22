@@ -333,4 +333,30 @@ MainActor.assumeIsolated {
           "logged with the spot's summit: \(chasedLog?["sota_ref"] ?? "nothing")")
     check(list.numberOfRows == 1 && ((list.view(atColumn: 0, row: 0, makeIfNecessary: true) as? NSTableCellView)?
             .textField?.stringValue.contains("worked today") ?? false), "the SOTA spot now says worked today")
+
+    // The Spots window's Refresh pace (RefreshPacer.swift).
+    func run(for seconds: Double) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
+    var shows = 0
+    let pacer = RefreshPacer(interval: nil) { shows += 1 }
+    pacer.changed(); pacer.changed()
+    check(shows == 2, "Live: each change is shown at once")
+    shows = 0
+    pacer.interval = 0.3
+    pacer.changed(); pacer.changed(); pacer.changed()
+    check(shows == 0, "every so often: changes wait")
+    run(for: 0.5)
+    check(shows == 1, "and are shown together at the next tick (\(shows))")
+    run(for: 0.7)
+    check(shows == 1, "nothing new: nothing shown again")
+    pacer.changed()
+    pacer.showNow()
+    check(shows == 2, "your own change (a filter) is shown at once")
+    run(for: 0.5)
+    check(shows == 2, "and isn't shown twice at the tick")
+    pacer.changed()
+    pacer.interval = nil
+    check(shows == 3, "back to Live: what was waiting is shown at once")
+    check(RefreshPacer.choices.map(\.title) == ["Live", "Every 15 seconds", "Every 30 seconds", "Every 45 seconds", "Every minute"],
+          "the choices: Live, 15, 30, 45 seconds, a minute")
+    pacer.stop()
 }

@@ -12,14 +12,17 @@
 //                you only add the reports and press Return to log
 //   Escape       back to the logging window (Spots stays open)
 //   Tab          to the filters: Source, Band (all, the radio's current
-//                band, or any one band), Mode
+//                band, or any one band), Mode, Refresh (Live, or every
+//                15, 30 or 45 seconds or minute: RefreshPacer.swift)
 //                (all, CW, phone, data), Hide Worked Today, DX: Needed Only
 //                and DX: Heard Near Me, then back
 //
 // Its own window, so Command-backtick moves between it, the logging
 // window and Settings. The list is fetched once a minute while the window
-// is open (SpotList, in Spots.swift); a new list never moves focus or
-// speaks, and the spot you're on stays selected.
+// is open (SpotList, in Spots.swift), and cluster spots stream in as
+// they're posted; the Refresh pop-up sets how often new ones are shown.
+// A new list never moves focus or speaks, and the spot you're on stays
+// selected.
 
 import AppKit
 
@@ -41,6 +44,9 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
     private var needed: [String: String] = [:]
     private let bandMenu = NSPopUpButton()
     private let modeMenu = NSPopUpButton()
+    private let refreshMenu = NSPopUpButton()
+    // Shows new spots at the Refresh pop-up's pace (made in init).
+    private var pacer: RefreshPacer!
     private let hideWorkedBox = NSButton(checkboxWithTitle: "Hide spots worked today", target: nil, action: nil)
     // The spots shown, after the filters, and which of them you've worked.
     private var shown: [Spot] = []
@@ -78,8 +84,13 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
         window.initialFirstResponder = table
         if !window.setFrameUsingName("SpotsWindow") { window.center() }
 
+        let saved = UserDefaults.standard.integer(forKey: "spots.refresh")
+        let choice = RefreshPacer.choices.indices.contains(saved) ? saved : 0
+        pacer = RefreshPacer(interval: RefreshPacer.choices[choice].seconds) { [weak self] in self?.reload() }
+        refreshMenu.selectItem(at: choice)
+        // New spots: at the Refresh pop-up's pace.
         NotificationCenter.default.addObserver(forName: SpotList.didChange, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reload() }
+            MainActor.assumeIsolated { self?.pacer.changed() }
         }
         // "Current band" follows the radio: reload when its band changes.
         NotificationCenter.default.addObserver(forName: RadioMonitor.didChange, object: nil, queue: .main) { [weak self] _ in
@@ -88,8 +99,8 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
                 self.reload()
             }
         }
-        // A contact logged: it may now be worked today.
-        logbook.observe { [weak self] in self?.reload() }
+        // A contact logged: it may now be worked today (shown at the same pace).
+        logbook.observe { [weak self] in self?.pacer.changed() }
         // For the needed sound as DX spots come in (Spots.swift).
         SpotList.shared.log = { [weak self] in self?.logbook.contacts ?? [] }
     }
@@ -107,6 +118,7 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
     func windowWillClose(_ notification: Notification) {
         // Nobody's looking: stop fetching.
         SpotList.shared.stop()
+        pacer.stop()
     }
 
     // MARK: - Building
@@ -122,6 +134,10 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
         bandMenu.setAccessibilityLabel("Band")
         modeMenu.addItems(withTitles: Self.modes)
         modeMenu.setAccessibilityLabel("Mode")
+        refreshMenu.addItems(withTitles: RefreshPacer.choices.map(\.title))
+        refreshMenu.setAccessibilityLabel("Refresh")
+        refreshMenu.target = self
+        refreshMenu.action = #selector(refreshChanged(_:))
         let defaults = UserDefaults.standard
         // Remembered by name ("all", "current", "20m").
         switch defaults.string(forKey: "spots.bandName") ?? "all" {
@@ -138,7 +154,7 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
             control.action = #selector(filterChanged(_:))
         }
         let filters = NSStackView(views: [FieldLabel("Source"), sourceMenu, FieldLabel("Band"), bandMenu,
-                                          FieldLabel("Mode"), modeMenu])
+                                          FieldLabel("Mode"), modeMenu, FieldLabel("Refresh"), refreshMenu])
         filters.spacing = 8
         let boxes = NSStackView(views: [hideWorkedBox, neededBox, nearBox])
         boxes.spacing = 16
@@ -162,7 +178,7 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
         scroll.borderType = .bezelBorder
 
         // Tab: the table, then the filters, then back to the table.
-        let order: [NSView] = [table, sourceMenu, bandMenu, modeMenu, hideWorkedBox, neededBox, nearBox]
+        let order: [NSView] = [table, sourceMenu, bandMenu, modeMenu, refreshMenu, hideWorkedBox, neededBox, nearBox]
         for (index, view) in order.enumerated() { view.nextKeyView = order[(index + 1) % order.count] }
 
         let stack = NSStackView(views: [heading, status, filters, boxes, scroll])
@@ -173,6 +189,15 @@ final class SpotsWindowController: NSWindowController, NSWindowDelegate, NSTable
         scroll.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
         scroll.setContentHuggingPriority(.defaultLow, for: .vertical)
         return stack
+    }
+
+    // Refresh: how often new spots are shown. Said, and remembered.
+    @objc private func refreshChanged(_ sender: Any?) {
+        let index = max(0, refreshMenu.indexOfSelectedItem)
+        UserDefaults.standard.set(index, forKey: "spots.refresh")
+        pacer.interval = RefreshPacer.choices[index].seconds
+        Speaker.announce(index == 0 ? "New spots are shown as they arrive."
+                                    : "New spots are shown \(RefreshPacer.choices[index].title.lowercased()).")
     }
 
     @objc private func filterChanged(_ sender: Any?) {

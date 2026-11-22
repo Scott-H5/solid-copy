@@ -191,14 +191,17 @@ Pennsylvania, 3 minutes ago, worked today") and, once you turn it on in
 **Settings > Spots**, a DX cluster ("VP8XYZ, 14.025 CW, Falkland Islands,
 needed: new country, 2 minutes ago. CQ CQ up 2, spotted by K1ABC"). It
 updates while the window is open (POTA each minute, the cluster every
-10 seconds at most); a new list never moves you or talks.
+10 seconds at most); a new list never moves you or talks. If it changes
+too fast to follow, the **Refresh** pop-up shows new spots every 15, 30
+or 45 seconds or every minute instead of **Live**; a filter you change
+still shows at once.
 
 | Key | What it does |
 | --- | --- |
 | Up, Down | Move between spots |
 | Return | Use the spot: tunes the radio to it (frequency and mode), puts its call and park in the logging form, and goes there. Add the reports and press Return to log |
 | Escape | Back to the logging window (Spots stays open) |
-| Tab | To the filters: Source (POTA, DX cluster), Band (all bands, your radio's current band, or any one band), Mode (CW, phone, data), Hide spots worked today, DX: needed only, and DX: heard near me |
+| Tab | To the filters: Source (POTA, DX cluster), Band (all bands, your radio's current band, or any one band), Mode (CW, phone, data), Refresh (Live, or every 15, 30 or 45 seconds or minute), Hide spots worked today, DX: needed only, and DX: heard near me |
 
 "Worked today" follows POTA's rule: that park, on that band and mode,
 this UTC day. Command-backtick moves between Spots, the logging window
