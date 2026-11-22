@@ -1,10 +1,14 @@
 // BandConditions.swift
 //
-// Speech > Say Band Conditions (Option-Command-B; v1.6 item 3): how the
-// bands are, said in one go: "Band conditions, daytime here: 80 to 40
-// meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor. Tonight, 17
-// to 15 poor. Solar flux 99, A index 6, K index 0, geomagnetic field
-// inactive, noise S0 to S1. From HAMQSL.com, N0NBH, updated 1814 UTC."
+// Speech > Band Conditions… (Option-Command-B; v1.6 item 3): how the
+// bands are, in a window you read line by line and close with OK
+// (Scott, 22 November 2026: a spoken answer can't be reviewed):
+//   Now, daytime here: 80 to 40 meters good, 30 to 20 good, 17 to 15
+//     fair, 12 to 10 poor.
+//   Tonight: 17 to 15 poor.
+//   Solar flux 99, A index 6, K index 0.
+//   Geomagnetic field inactive, noise S0 to S1.
+//   From HAMQSL.com, N0NBH, updated 1814 UTC.
 //
 // Where it comes from: N0NBH's solar data at hamqsl.com, the same figures
 // many ham sites and clocks show. It's an XML feed (solarxml.php) of
@@ -135,38 +139,42 @@ struct BandConditions: Equatable {
             .joined(separator: ", ")
     }
 
-    // Everything, for where you are now (day or night).
-    func spoken(isDay: Bool, age: TimeInterval? = nil) -> String {
-        var parts: [String] = []
+    // Everything, for where you are now (day or night), a line each, for
+    // the Band Conditions window (where VoiceOver can go line by line).
+    func lines(isDay: Bool, age: TimeInterval? = nil) -> [String] {
+        var lines: [String] = []
         let now = bands.enumerated().map { index, band in
             "\(Self.spokenBand(band.name, first: index == 0)) \((isDay ? band.day : band.night).lowercased())"
         }
-        if !now.isEmpty { parts.append("Band conditions, \(isDay ? "daytime" : "night") here: " + now.joined(separator: ", ")) }
-        // The other half of the day, only where it's different.
-        let changes = bands.filter { $0.day != $0.night && !$0.day.isEmpty && !$0.night.isEmpty }.map { band in
-            "\(Self.spokenBand(band.name, first: false)) \((isDay ? band.night : band.day).lowercased())"
-        }
         if !now.isEmpty {
-            parts.append(changes.isEmpty ? "The same \(isDay ? "tonight" : "by day")"
-                         : "\(isDay ? "Tonight" : "By day"), " + changes.joined(separator: ", "))
+            lines.append("Now, \(isDay ? "daytime" : "night") here: " + now.joined(separator: ", ") + ".")
+            // The other half of the day, only where it's different.
+            let changes = bands.filter { $0.day != $0.night && !$0.day.isEmpty && !$0.night.isEmpty }.map { band in
+                "\(Self.spokenBand(band.name, first: false)) \((isDay ? band.night : band.day).lowercased())"
+            }
+            let later = isDay ? "Tonight" : "By day"
+            lines.append(changes.isEmpty ? "\(later): the same." : "\(later): " + changes.joined(separator: ", ") + ".")
         }
-        let figures = [("Solar flux", solarFlux), ("A index", aIndex), ("K index", kIndex),
-                       ("geomagnetic field", geomagneticField.lowercased()),
-                       ("noise", noise.replacingOccurrences(of: "-", with: " to "))]
-            .filter { !$0.1.isEmpty && $0.1.lowercased() != "no report" }.map { "\($0.0) \($0.1)" }
-        if !figures.isEmpty { parts.append(figures.joined(separator: ", ")) }
+        func known(_ value: String) -> Bool { !value.isEmpty && value.lowercased() != "no report" }
+        let figures = [("Solar flux", solarFlux), ("A index", aIndex), ("K index", kIndex)]
+            .filter { known($0.1) }.map { "\($0.0) \($0.1)" }
+        if !figures.isEmpty { lines.append(figures.joined(separator: ", ") + ".") }
+        let field = [("Geomagnetic field", geomagneticField.lowercased()),
+                     ("noise", noise.replacingOccurrences(of: "-", with: " to "))]
+            .filter { known($0.1) }.map { "\($0.0) \($0.1)" }
+        if !field.isEmpty { lines.append(field.joined(separator: ", ") + ".") }
         // VHF only when something's open: "Band Closed" is the usual answer.
         let open = vhf.filter { !$0.state.isEmpty && $0.state.lowercased() != "band closed" }
             .map { "\(Self.spokenVHF($0.what)): \($0.state)" }
-        if !open.isEmpty { parts.append("VHF: " + open.joined(separator: "; ")) }
+        if !open.isEmpty { lines.append("VHF: " + open.joined(separator: "; ") + ".") }
         var source = "From HAMQSL.com, N0NBH"
         if let time = updated.split(separator: " ").dropFirst(3).first, time.count == 4 { source += ", updated \(time) UTC" }
         if let age, age > 60 * 60 {
             let minutes = Int(age / 60)
             source += minutes < 120 ? ", fetched \(minutes) minutes ago" : ", fetched \(minutes / 60) hours ago"
         }
-        parts.append(source)
-        return parts.joined(separator: ". ") + "."
+        lines.append(source + ".")
+        return lines
     }
 
     // MARK: Day or night
@@ -189,7 +197,7 @@ struct BandConditions: Equatable {
     }
 }
 
-// Fetching, at most once an hour (N0NBH's request), and saying.
+// Fetching, at most once an hour (N0NBH's request), and showing.
 @MainActor
 final class BandConditionsSource {
     static let shared = BandConditionsSource()
@@ -207,15 +215,19 @@ final class BandConditionsSource {
         }
         return data
     }
+    // Shows the window: a title, and the lines (AppDelegate's Band
+    // Conditions window; the checks listen in). `say` is for "getting".
+    var show: (_ title: String, _ lines: [String]) -> Void = { _, _ in }
     var say: (String) -> Void = { Speaker.announce($0) }
 
-    // Says the conditions: the ones it has if they're under an hour old,
-    // otherwise fetched first.
-    func sayConditions() {
+    // Shows the conditions: the ones it has if they're under an hour old,
+    // otherwise fetched first (said as "Getting band conditions").
+    func showConditions() {
         if let latest, Date().timeIntervalSince(latest.fetched) < Self.keepSeconds {
-            return say(latest.conditions.spoken(isDay: Self.isDayHere()))
+            return show("Band Conditions", latest.conditions.lines(isDay: Self.isDayHere()))
         }
-        guard !fetching else { return say("Getting band conditions.") }
+        say("Getting band conditions.")
+        guard !fetching else { return }
         fetching = true
         Task {
             defer { fetching = false }
@@ -224,16 +236,16 @@ final class BandConditionsSource {
                     throw DatabaseError(message: "What hamqsl.com sent isn't the solar data.")
                 }
                 latest = (conditions, Date())
-                say(conditions.spoken(isDay: Self.isDayHere()))
+                show("Band Conditions", conditions.lines(isDay: Self.isDayHere()))
             } catch {
-                let problem = "Couldn't get band conditions. \(error.localizedDescription)"
-                Activity.shared.record("Band conditions", "N0NBH", ok: false, latest: problem)
+                let problem = error.localizedDescription
+                Activity.shared.record("Band conditions", "N0NBH", ok: false, latest: "Couldn't get them. \(problem)")
+                var lines = [problem]
                 if let latest {
-                    say(problem + " The last ones: " + latest.conditions.spoken(
-                        isDay: Self.isDayHere(), age: Date().timeIntervalSince(latest.fetched)))
-                } else {
-                    say(problem)
+                    lines += ["The last ones:"] + latest.conditions.lines(
+                        isDay: Self.isDayHere(), age: Date().timeIntervalSince(latest.fetched))
                 }
+                show("Couldn't Get Band Conditions", lines)
             }
         }
     }

@@ -136,9 +136,12 @@ extension AppDelegate {
         Speaker.announce("\(contest.name): " + lines.joined(separator: ". ") + ".")
     }
 
-    // Speech > Say Band Conditions (Option-Command-B).
-    @objc func sayBandConditions(_ sender: Any?) {
-        BandConditionsSource.shared.sayConditions()
+    // Speech > Band Conditions… (Option-Command-B): a window, a line
+    // each, closed with OK; Copy puts the text on the clipboard.
+    @objc func showBandConditions(_ sender: Any?) {
+        let source = BandConditionsSource.shared
+        source.show = { [weak self] title, lines in self?.showMessage(title, details: lines.joined(separator: "\n")) }
+        source.showConditions()
     }
 
     // The open log's contest and its score in lines, or nil (and why, said).

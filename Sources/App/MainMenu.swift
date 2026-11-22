@@ -295,8 +295,8 @@ enum MainMenu {
         score.target = appDelegate
         // Band conditions from N0NBH (BandConditions.swift); B for bands.
         // (Control-Command-B is the radio's noise blanker.)
-        let conditions = menu.addItem(withTitle: "Say Band Conditions",
-                                      action: #selector(AppDelegate.sayBandConditions(_:)), keyEquivalent: "b")
+        let conditions = menu.addItem(withTitle: "Band Conditions…",
+                                      action: #selector(AppDelegate.showBandConditions(_:)), keyEquivalent: "b")
         conditions.keyEquivalentModifierMask = [.command, .option]
         conditions.target = appDelegate
         // Radio Status (Command-R) is in the Radio menu, beside the radio.

@@ -21,14 +21,14 @@ J-38 Picture") for anyone without a card picture of their own.
 
 ## Band conditions from HAMQSL.com (fetched, not shipped)
 
-Speech > Say Band Conditions reads N0NBH's (Paul L Herrman's) solar data
+Speech > Band Conditions… reads N0NBH's (Paul L Herrman's) solar data
 feed, https://www.hamqsl.com/solarxml.php, when you ask: solar flux, A
 and K indexes, geomagnetic field, noise, and his estimate of each band
 by day and night. Nothing of his ships inside Solid Copy.
 
 - His page (https://www.hamqsl.com/solar.html, read 22 November 2026)
   offers the feed for others' use and asks for credit: "Credit to
-  HAMQSL.com would be appreciated." Every answer Solid Copy speaks ends
+  HAMQSL.com would be appreciated." Every Band Conditions window ends
   "From HAMQSL.com, N0NBH".
 - It asks for no more than hourly updates, "the update period for the
   flux parameters", so Solid Copy fetches it at most once an hour.

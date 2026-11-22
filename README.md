@@ -285,7 +285,7 @@ back what you turned down, whenever you want it:
 | Option-Command-N | Say the name and place for the call in the form (looks it up if it hasn't been) |
 | Option-Command-L | Say the last contact logged |
 | Option-Command-C | Say the contest log's score (see Contests) |
-| Option-Command-B | Say the band conditions (below) |
+| Option-Command-B | Show the band conditions (below) |
 | Command-R (Radio menu) | Say what the radio is doing |
 
 Most sounds are ones every Mac has: Glass for logged, Pop for a lookup
@@ -315,11 +315,18 @@ typed without a band fills the band in by itself.
 
 ### Band conditions
 
-**Speech > Say Band Conditions** (Option-Command-B) says how the bands
-are, from N0NBH's solar data at HAMQSL.com: "Band conditions, daytime
-here: 80 to 40 meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor.
-Tonight, 17 to 15 poor. Solar flux 99, A index 6, K index 0, geomagnetic
-field inactive, noise S0 to S1. From HAMQSL.com, N0NBH, updated 1814 UTC."
+**Speech > Band Conditions…** (Option-Command-B) opens a window with how
+the bands are, from N0NBH's solar data at HAMQSL.com, a line each, so you
+can read it with VoiceOver at your own pace; OK (Return) closes it, and
+Copy puts it on the clipboard:
+
+```
+Now, daytime here: 80 to 40 meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor.
+Tonight: 17 to 15 poor.
+Solar flux 99, A index 6, K index 0.
+Geomagnetic field inactive, noise S0 to S1.
+From HAMQSL.com, N0NBH, updated 1814 UTC.
+```
 
 - Day or night is by the sun at the grid in your profile (or 6 am to 6
   pm by the Mac's clock without one), and the other half of the day is
@@ -327,8 +334,9 @@ field inactive, noise S0 to S1. From HAMQSL.com, N0NBH, updated 1814 UTC."
 - VHF openings (E skip, aurora) are said only when N0NBH reports one.
 - N0NBH updates the figures about once an hour and asks that they're
   fetched no more often, so Solid Copy fetches them at most hourly, and
-  only when you ask. Without the internet you hear the last ones, with
-  how old they are; a failure is in Window > Activity.
+  only when you ask ("Getting band conditions" while it does). If it
+  can't, the window says why and shows the last ones, with how old they
+  are; a failure is in Window > Activity.
 
 ## The radio
 

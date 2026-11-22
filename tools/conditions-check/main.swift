@@ -31,14 +31,15 @@ let sample = """
           && conditions.geomagneticField == "INACTIVE" && conditions.noise == "S0-S1", "the figures, trimmed")
     check(conditions.bands.map(\.name) == ["80m-40m", "30m-20m", "17m-15m", "12m-10m"]
           && conditions.bands[2].day == "Fair" && conditions.bands[2].night == "Poor", "each band pair, day and night, in order")
-    let day = conditions.spoken(isDay: true)
-    check(day == "Band conditions, daytime here: 80 to 40 meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor. "
-          + "Tonight, 17 to 15 poor. Solar flux 99, A index 6, K index 0, geomagnetic field inactive, noise S0 to S1. "
-          + "VHF: E skip, North America: 50MHz ES. From HAMQSL.com, N0NBH, updated 1814 UTC.", "said by day: \(day)")
-    let night = conditions.spoken(isDay: false, age: 90 * 60)
-    check(night.hasPrefix("Band conditions, night here: 80 to 40 meters good, 30 to 20 good, 17 to 15 poor")
-          && night.contains("By day, 17 to 15 fair.") && night.hasSuffix("fetched 90 minutes ago."),
-          "said at night, with the day's difference, and how old: \(night)")
+    let day = conditions.lines(isDay: true)
+    check(day == ["Now, daytime here: 80 to 40 meters good, 30 to 20 good, 17 to 15 fair, 12 to 10 poor.",
+                  "Tonight: 17 to 15 poor.", "Solar flux 99, A index 6, K index 0.",
+                  "Geomagnetic field inactive, noise S0 to S1.", "VHF: E skip, North America: 50MHz ES.",
+                  "From HAMQSL.com, N0NBH, updated 1814 UTC."], "by day, a line each: \(day)")
+    let night = conditions.lines(isDay: false, age: 90 * 60)
+    check(night.first == "Now, night here: 80 to 40 meters good, 30 to 20 good, 17 to 15 poor, 12 to 10 poor."
+          && night[1] == "By day: 17 to 15 fair." && night.last?.hasSuffix("fetched 90 minutes ago.") == true,
+          "at night, with the day's difference, and how old: \(night)")
 
     check(BandConditions.parse(Data("<html><body>Not found</body></html>".utf8)) == nil, "a page that isn't N0NBH's isn't used")
     check(BandConditions.parse(Data("not xml at all".utf8)) == nil, "nor is something that isn't XML")
@@ -55,15 +56,20 @@ let sample = """
 
     // Fetching: once, then kept an hour (N0NBH asks for no more).
     let source = BandConditionsSource.shared
-    var fetches = 0, said: [String] = []
-    source.fetch = { fetches += 1; return Data(sample.utf8) }
+    var fetches = 0, shown: [(String, [String])] = [], said: [String] = []
+    source.fetch = {
+        fetches += 1
+        return Data(sample.utf8)
+    }
+    source.show = { shown.append(($0, $1)) }
     source.say = { said.append($0) }
-    func settle() async { for _ in 0..<50 where said.isEmpty { try? await Task.sleep(nanoseconds: 20_000_000) } }
-    source.sayConditions(); await settle()
-    check(fetches == 1 && said.first?.hasPrefix("Band conditions") == true, "fetched and said")
-    said = []
-    source.sayConditions()
-    check(fetches == 1 && said.count == 1, "asked again soon: said without fetching")
+    func settle() async { for _ in 0..<50 where shown.isEmpty { try? await Task.sleep(nanoseconds: 20_000_000) } }
+    source.showConditions(); await settle()
+    check(fetches == 1 && said == ["Getting band conditions."] && shown.first?.0 == "Band Conditions"
+          && shown.first?.1.first?.hasPrefix("Now,") == true, "fetched (said as getting), then shown in the window")
+    shown = []; said = []
+    source.showConditions()
+    check(fetches == 1 && shown.count == 1 && said.isEmpty, "asked again within the hour: shown without fetching")
 
     if CommandLine.arguments.contains("--live") {
         source.fetch = {
@@ -72,7 +78,7 @@ let sample = """
             return try await URLSession.shared.data(for: request).0
         }
         let live = BandConditions.parse(try! await source.fetch())
-        check(live != nil && !(live?.bands.isEmpty ?? true), "live: N0NBH's data reads (\(live?.spoken(isDay: true) ?? "nothing"))")
+        check(live != nil && !(live?.bands.isEmpty ?? true), "live: N0NBH's data reads (\(live?.lines(isDay: true).joined(separator: " ") ?? "nothing"))")
     }
     print("All band conditions checks passed.")
 }
