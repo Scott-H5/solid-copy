@@ -318,6 +318,10 @@ enum MainMenu {
         let decodes = menu.addItem(withTitle: "WSJT-X Decodes", action: #selector(AppDelegate.showDecodes(_:)),
                                    keyEquivalent: "4")
         decodes.target = appDelegate
+        // Command-5: DXCC, WAS, WAZ and WPX, worked and confirmed
+        // (AwardsWindowController.swift).
+        let awards = menu.addItem(withTitle: "Awards", action: #selector(AppDelegate.showAwards(_:)), keyEquivalent: "5")
+        awards.target = appDelegate
         let next = menu.addItem(withTitle: "Next Window",
                                 action: #selector(AppDelegate.nextWindow(_:)), keyEquivalent: "`")
         let previous = menu.addItem(withTitle: "Previous Window",

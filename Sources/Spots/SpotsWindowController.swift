@@ -12,9 +12,9 @@
 //                you only add the reports and press Return to log
 //   Escape       back to the logging window (Spots stays open)
 //   Tab          to the filters: Source, Band (all, the radio's current
-//                band, or any one band), Mode, Refresh (Live, or every
-//                15, 30 or 45 seconds or minute: RefreshPacer.swift)
-//                (all, CW, phone, data), Hide Worked Today, DX: Needed Only
+//                band, or any one band), Mode (all, CW, phone, data),
+//                Refresh (Live, or every 15, 30 or 45 seconds or minute:
+//                RefreshPacer.swift), Hide Worked Today, DX: Needed Only
 //                and DX: Heard Near Me, then back
 //
 // Its own window, so Command-backtick moves between it, the logging

@@ -1,0 +1,281 @@
+// AwardsWindowController.swift
+//
+// Window > Awards (Command-5): how far the log is towards DXCC, WAS, WAZ
+// and WPX (Awards.swift), one line each, so VoiceOver reads an award in
+// one stop:
+//
+//   "WAS: 38 states worked, 31 confirmed, 19 more confirmed for the award."
+//
+// Below that, the chosen award's list, one line per country, state, zone
+// or prefix:
+//
+//   "Utah: not worked"
+//   "Texas: worked, not confirmed, 2 contacts"
+//   "Ohio: confirmed by LoTW, 5 contacts"
+//
+//   Up, Down   move between awards, or through the list
+//   Return     from an award, to its list
+//   Escape     back to the logging window (this window stays open)
+//   Tab        the awards, Band, Mode, Show (still needed, worked but not
+//              confirmed, not worked, confirmed, or all), the list, then
+//              back
+//
+// It counts again whenever the log changes (a contact logged, a LoTW sync),
+// and the line you're on stays selected. The choices are remembered.
+
+import AppKit
+
+@MainActor
+final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
+    var onEscape: (() -> Void)?
+
+    // What the list shows of the chosen award.
+    enum Show: String, CaseIterable {
+        case needed, workedOnly, notWorked, confirmed, all
+
+        var title: String {
+            switch self {
+            case .needed: "Still needed"
+            case .workedOnly: "Worked, not confirmed"
+            case .notWorked: "Not worked"
+            case .confirmed: "Confirmed"
+            case .all: "All"
+            }
+        }
+
+        func includes(_ item: AwardItem) -> Bool {
+            switch self {
+            case .needed: !item.isConfirmed
+            case .workedOnly: item.isWorked && !item.isConfirmed
+            case .notWorked: !item.isWorked
+            case .confirmed: item.isConfirmed
+            case .all: true
+            }
+        }
+    }
+
+    private static let bands = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m", "6m", "2m", "70cm"]
+
+    private let logbook: Logbook
+    private let awardsTable = SpotsTableView()
+    private let itemsTable = SpotsTableView()
+    private let status = NSTextField(wrappingLabelWithString: "")
+    private let bandMenu = NSPopUpButton()
+    private let modeMenu = NSPopUpButton()
+    private let showMenu = NSPopUpButton()
+
+    private var progress: [AwardProgress] = []
+    private var shownItems: [AwardItem] = []
+
+    init(logbook: Logbook) {
+        self.logbook = logbook
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 560),
+                              styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+        window.title = "Awards"
+        window.contentMinSize = NSSize(width: 480, height: 360)
+        window.isReleasedWhenClosed = false
+        window.setFrameAutosaveName("AwardsWindow")
+        super.init(window: window)
+        window.delegate = self
+        window.contentView = build()
+        window.initialFirstResponder = awardsTable
+        if !window.setFrameUsingName("AwardsWindow") { window.center() }
+        // A contact logged, edited or confirmed: count again.
+        logbook.observe { [weak self] in
+            guard self?.window?.isVisible == true else { return }
+            self?.reload()
+        }
+    }
+
+    required init?(coder: NSCoder) { fatalError("Not used") }
+
+    func show() {
+        reload()
+        showWindow(nil)
+        window?.makeKeyAndOrderFront(nil)
+        window?.makeFirstResponder(awardsTable)
+        // DXCC needs cty.dat's list of countries; fetched if it isn't here.
+        Countries.shared.fetchIfNeeded { [weak self] in self?.reload() }
+    }
+
+    private func build() -> NSView {
+        let heading = NSTextField(labelWithString: "Awards")
+        heading.font = .boldSystemFont(ofSize: NSFont.systemFontSize + 1)
+        // Instructions are a note you can read again (contract rule 40),
+        // linked to the awards list (VO-Command-J).
+        let note = NSTextField(wrappingLabelWithString:
+            "Counts contacts confirmed by LoTW or a paper card, as ARRL and CQ do. Choose an award, then "
+            + "Tab to choose a band, a mode and what its list shows. Return goes to the list.")
+        note.preferredMaxLayoutWidth = 660
+        note.isSelectable = true
+        status.preferredMaxLayoutWidth = 660
+        status.isSelectable = true
+
+        let defaults = UserDefaults.standard
+        bandMenu.addItems(withTitles: ["All bands"] + Self.bands.map(Bands.spoken))
+        bandMenu.setAccessibilityLabel("Band")
+        bandMenu.selectItem(at: (Self.bands.firstIndex(of: defaults.string(forKey: "awards.band") ?? "") ?? -1) + 1)
+        modeMenu.addItems(withTitles: AwardMode.allCases.map(\.title))
+        modeMenu.setAccessibilityLabel("Mode")
+        modeMenu.selectItem(at: AwardMode.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.mode") } ?? 0)
+        showMenu.addItems(withTitles: Show.allCases.map(\.title))
+        showMenu.setAccessibilityLabel("Show")
+        showMenu.selectItem(at: Show.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.show") } ?? 0)
+        for menu in [bandMenu, modeMenu, showMenu] {
+            menu.target = self
+            menu.action = #selector(filterChanged(_:))
+        }
+        let filters = NSStackView(views: [bandMenu, modeMenu, showMenu])
+        filters.spacing = 16
+
+        let awardsScroll = Self.scroll(for: awardsTable, label: "Awards", id: "award")
+        awardsTable.dataSource = self
+        awardsTable.delegate = self
+        awardsTable.onEnter = { [weak self] in
+            guard let self else { return }
+            self.window?.makeFirstResponder(self.itemsTable)
+            if self.itemsTable.selectedRow < 0, !self.shownItems.isEmpty {
+                self.itemsTable.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+            }
+        }
+        awardsTable.onEscape = { [weak self] in self?.onEscape?() }
+        awardsTable.setAccessibilityLinkedUIElements([note])
+        let row = Award.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.award") } ?? 0
+        awardsScroll.heightAnchor.constraint(equalToConstant: 96).isActive = true
+
+        let itemsScroll = Self.scroll(for: itemsTable, label: "List", id: "item")
+        itemsTable.dataSource = self
+        itemsTable.delegate = self
+        itemsTable.onEscape = { [weak self] in self?.onEscape?() }
+
+        let order: [NSView] = [awardsTable, bandMenu, modeMenu, showMenu, itemsTable]
+        for (index, view) in order.enumerated() { view.nextKeyView = order[(index + 1) % order.count] }
+
+        let stack = NSStackView(views: [heading, note, awardsScroll, filters, status, itemsScroll])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 10
+        stack.edgeInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+        for scroll in [awardsScroll, itemsScroll] {
+            scroll.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
+        }
+        itemsScroll.setContentHuggingPriority(.defaultLow, for: .vertical)
+        // The award last chosen, selected once the rows exist.
+        awardsTable.reloadData()
+        awardsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        return stack
+    }
+
+    private static func scroll(for table: NSTableView, label: String, id: String) -> NSScrollView {
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
+        column.resizingMask = .autoresizingMask
+        table.addTableColumn(column)
+        table.headerView = nil
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        table.setAccessibilityLabel(label)
+        let scroll = NSScrollView()
+        scroll.documentView = table
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        return scroll
+    }
+
+    private var chosenAward: Award {
+        Award.allCases.indices.contains(awardsTable.selectedRow) ? Award.allCases[awardsTable.selectedRow] : .dxcc
+    }
+    private var chosenBand: String? {
+        bandMenu.indexOfSelectedItem > 0 ? Self.bands[bandMenu.indexOfSelectedItem - 1] : nil
+    }
+    private var chosenMode: AwardMode { AwardMode.allCases[max(0, modeMenu.indexOfSelectedItem)] }
+    private var chosenShow: Show { Show.allCases[max(0, showMenu.indexOfSelectedItem)] }
+
+    @objc private func filterChanged(_ sender: Any?) {
+        let defaults = UserDefaults.standard
+        defaults.set(chosenBand ?? "", forKey: "awards.band")
+        defaults.set(chosenMode.rawValue, forKey: "awards.mode")
+        defaults.set(chosenShow.rawValue, forKey: "awards.show")
+        reload()
+        // The new count of the chosen award, and what the list now shows.
+        let award = progress.first { $0.award == chosenAward }?.line ?? ""
+        Speaker.announce(award + " " + status.stringValue)
+    }
+
+    // Counts every award again, keeping the lines you're on.
+    private func reload() {
+        let table = Countries.shared
+        // One country look-up per call, not one per award.
+        var cache: [String: Country?] = [:]
+        let country: (String) -> Country? = { call in
+            if let found = cache[call] { return found }
+            let found = table.country(of: call)
+            cache[call] = found
+            return found
+        }
+        let all = table.all
+        progress = Award.allCases.map {
+            Awards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode,
+                            country: country, allCountries: all)
+        }
+        let awardRow = max(0, awardsTable.selectedRow)
+        awardsTable.reloadData()
+        awardsTable.selectRowIndexes(IndexSet(integer: awardRow), byExtendingSelection: false)
+        reloadItems()
+    }
+
+    private func reloadItems() {
+        let selectedKey = shownItems.indices.contains(itemsTable.selectedRow) ? shownItems[itemsTable.selectedRow].key : nil
+        let award = chosenAward
+        let items = progress.first { $0.award == award }?.items ?? []
+        shownItems = items.filter(chosenShow.includes)
+        itemsTable.reloadData()
+        if let selectedKey, let row = shownItems.firstIndex(where: { $0.key == selectedKey }) {
+            itemsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        }
+        UserDefaults.standard.set(award.rawValue, forKey: "awards.award")
+        let band = chosenBand.map { "on " + Bands.spoken($0) } ?? "on all bands"
+        let count = shownItems.count == 1 ? "1 line" : "\(shownItems.count) lines"
+        var text = "\(award.title) \(band), \(chosenMode.title.lowercased()). \(chosenShow.title): \(count)."
+        if award == .dxcc, Countries.shared.all.isEmpty {
+            text += " The country list (cty.dat) isn't here yet, so DXCC can't be counted. It's fetched from "
+                + "country-files.com when Solid Copy is online."
+        }
+        status.stringValue = text
+    }
+
+    func tableViewSelectionDidChange(_ notification: Notification) {
+        // A different award: its list.
+        if notification.object as? NSTableView === awardsTable { reloadItems() }
+    }
+
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        tableView === awardsTable ? Award.allCases.count : shownItems.count
+    }
+
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let text: String
+        if tableView === awardsTable {
+            text = progress.indices.contains(row) ? progress[row].line : Award.allCases[row].title
+        } else {
+            guard shownItems.indices.contains(row) else { return nil }
+            text = shownItems[row].line
+        }
+        let id = NSUserInterfaceItemIdentifier("awardCell")
+        let cell = tableView.makeView(withIdentifier: id, owner: self) as? NSTableCellView ?? {
+            let cell = NSTableCellView()
+            cell.identifier = id
+            let label = NSTextField(labelWithString: "")
+            label.lineBreakMode = .byTruncatingTail
+            label.translatesAutoresizingMaskIntoConstraints = false
+            cell.addSubview(label)
+            cell.textField = label
+            NSLayoutConstraint.activate([
+                label.leadingAnchor.constraint(equalTo: cell.leadingAnchor, constant: 4),
+                label.trailingAnchor.constraint(equalTo: cell.trailingAnchor, constant: -4),
+                label.centerYAnchor.constraint(equalTo: cell.centerYAnchor),
+            ])
+            return cell
+        }()
+        cell.textField?.stringValue = text
+        return cell
+    }
+}

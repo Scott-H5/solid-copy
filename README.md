@@ -22,6 +22,8 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   messages through a WinKeyer
 - tracks QSLs and parks, shows spots, and makes an electronic QSL card
   you can send by email
+- tracks DXCC, WAS, WAZ and WPX: what's worked, confirmed and still
+  needed, on each band and mode
 - works FT8 and other digital modes with WSJT-X: its decodes in a list
   VoiceOver reads, Return to answer a station, and contacts WSJT-X logs
   arriving in your log
@@ -568,6 +570,38 @@ When you leave Callsign:
   country is said on its own when the lookup gives no place, and it goes
   in the contact's Country when the lookup doesn't fill it.
 
+## Awards
+
+**Window > Awards** (Command-5) shows how far your log is towards four
+awards, one line each:
+
+- **DXCC** (ARRL): countries. 100 confirmed earns it.
+- **WAS** (ARRL): the 50 US states. DC counts as Maryland, so it isn't
+  listed.
+- **WAZ** (CQ): the 40 CQ zones.
+- **WPX** (CQ): different callsign prefixes. 400 earns it for mixed
+  modes, 300 for one mode.
+
+For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
+the award." Only contacts confirmed by LoTW or a paper card count as
+confirmed, as ARRL and CQ count them; eQSL and QRZ Logbook confirmations
+don't.
+
+Return goes from an award to its list, one line per country, state,
+zone or prefix: "Utah: not worked", "Texas: worked, not confirmed, 2
+contacts", "Ohio: confirmed by LoTW, 5 contacts". Tab moves to Band (all
+bands, or one), Mode (mixed, CW, phone or digital) and Show (still
+needed, worked but not confirmed, not worked, confirmed, or all), then
+to the list. Escape goes back to the logging window. The counts change
+as you log, and your choices are remembered.
+
+Where each contact counts comes from, best first: what LoTW sent with
+its confirmation (see LoTW, below), then the state, CQ zone and WPX
+prefix in the contact (from a lookup or typed), then the call itself.
+A call's zone is only worked out from its country when the whole
+country is one zone, so a US contact with no CQ zone isn't counted for
+WAZ until it has one.
+
 ## Callsign lookups
 
 Open **Solid Copy > Settings…** (Command-comma), enter your QRZ.com
@@ -1043,6 +1077,7 @@ of them touch your Solid Copy log.
 - `tools/check-rigctl.sh`: sharing the radio with other programs, with
   hamlib's rigctl as the other program (needs `brew install hamlib`)
 - `tools/check-parks.sh`: parks
+- `tools/check-awards.sh`: counting DXCC, WAS, WAZ and WPX
 - `tools/check-spots.sh`: spots
 - `tools/check-cards.sh`: scanned and electronic QSL cards
 - `tools/check-lotw.sh`: LoTW

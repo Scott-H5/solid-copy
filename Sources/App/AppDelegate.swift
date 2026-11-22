@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsWindow: SettingsWindowController?
     var spotsWindow: SpotsWindowController?
     var decodesWindow: DecodesWindowController?
+    // Window > Awards (Command-5), made the first time (AwardsWindowController.swift).
+    var awardsWindow: AwardsWindowController?
     // Window > Activity (Command-2), made the first time (ActivityWindowController.swift).
     var activityWindow: ActivityWindowController?
     // Window > Log (Command-3), made the first time (LogBrowserWindowController.swift).
@@ -153,6 +155,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             spotsWindow = nil
             decodesWindow?.close()
             decodesWindow = nil
+            awardsWindow?.close()
+            awardsWindow = nil
             updateTitle()
             return
         }
@@ -657,6 +661,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Window > WSJT-X Decodes (Command-4): made the first time, and again
     // for another log (it says "worked before" against the log open).
+    @objc func showAwards(_ sender: Any?) {
+        guard let logbook else { return }
+        if awardsWindow == nil {
+            let awards = AwardsWindowController(logbook: logbook)
+            awards.onEscape = { [weak self] in self?.showLoggingWindow(nil) }
+            awardsWindow = awards
+        }
+        awardsWindow?.show()
+    }
+
     @objc func showDecodes(_ sender: Any?) {
         guard let logbook else { return }
         if decodesWindow == nil {

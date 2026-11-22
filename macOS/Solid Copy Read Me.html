@@ -36,6 +36,8 @@ new one, band or mode</li>
 messages through a WinKeyer</li>
 <li>tracks QSLs and parks, shows spots, and makes an electronic QSL card
 you can send by email</li>
+<li>tracks DXCC, WAS, WAZ and WPX: what's worked, confirmed and still
+needed, on each band and mode</li>
 <li>works FT8 and other digital modes with WSJT-X: its decodes in a list
 VoiceOver reads, Return to answer a station, and contacts WSJT-X logs
 arriving in your log</li>
@@ -800,6 +802,38 @@ If you need it, you hear it with the lookup: "needed: new country",
 country is said on its own when the lookup gives no place, and it goes
 in the contact's Country when the lookup doesn't fill it.</li>
 </ul>
+<h2 id="awards">Awards</h2>
+<p><strong>Window &gt; Awards</strong> (Command-5) shows how far your log is towards four
+awards, one line each:</p>
+<ul>
+<li>
+<strong>DXCC</strong> (ARRL): countries. 100 confirmed earns it.</li>
+<li>
+<strong>WAS</strong> (ARRL): the 50 US states. DC counts as Maryland, so it isn't
+listed.</li>
+<li>
+<strong>WAZ</strong> (CQ): the 40 CQ zones.</li>
+<li>
+<strong>WPX</strong> (CQ): different callsign prefixes. 400 earns it for mixed
+modes, 300 for one mode.</li>
+</ul>
+<p>For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
+the award." Only contacts confirmed by LoTW or a paper card count as
+confirmed, as ARRL and CQ count them; eQSL and QRZ Logbook confirmations
+don't.</p>
+<p>Return goes from an award to its list, one line per country, state,
+zone or prefix: "Utah: not worked", "Texas: worked, not confirmed, 2
+contacts", "Ohio: confirmed by LoTW, 5 contacts". Tab moves to Band (all
+bands, or one), Mode (mixed, CW, phone or digital) and Show (still
+needed, worked but not confirmed, not worked, confirmed, or all), then
+to the list. Escape goes back to the logging window. The counts change
+as you log, and your choices are remembered.</p>
+<p>Where each contact counts comes from, best first: what LoTW sent with
+its confirmation (see LoTW, below), then the state, CQ zone and WPX
+prefix in the contact (from a lookup or typed), then the call itself.
+A call's zone is only worked out from its country when the whole
+country is one zone, so a US contact with no CQ zone isn't counted for
+WAZ until it has one.</p>
 <h2 id="callsign-lookups">Callsign lookups</h2>
 <p>Open <strong>Solid Copy &gt; Settings…</strong> (Command-comma), enter your QRZ.com
 username and password, and press <strong>Save and Test</strong>. The password is kept
@@ -1269,6 +1303,8 @@ callook.info)</li>
 hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</li>
 <li>
 <code>tools/check-parks.sh</code>: parks</li>
+<li>
+<code>tools/check-awards.sh</code>: counting DXCC, WAS, WAZ and WPX</li>
 <li>
 <code>tools/check-spots.sh</code>: spots</li>
 <li>

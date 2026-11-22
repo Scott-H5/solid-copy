@@ -56,6 +56,13 @@ each file does and why, and has recipes for common changes.
     `ExportFormat` and they appear in the Export dialog's Format menu.
 - `Sources/App/ImportExport.swift`: the Import and Export dialogs and
   their summaries.
+- `Sources/Awards`: Window > Awards (DXCC, WAS, WAZ, WPX).
+  - `Awards.swift`: the counting, with no windows, so
+    `tools/check-awards.sh` can test it: what each contact counts for
+    (LoTW's details first, then the contact's fields, then the call),
+    and WPX's prefix rules.
+  - `AwardsWindowController.swift`: the window: the awards, Band, Mode
+    and Show, and the chosen award's list.
 - `Sources/Radio`: the radio, through the built-in driver or a rigctld
   you run (Hamlib NET rigctl).
   - `RadioMonitor.swift`: keeps connected and never gives up; says what

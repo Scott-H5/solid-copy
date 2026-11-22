@@ -29,6 +29,12 @@ struct Country: Equatable, Hashable {
     var name: String
     var prefix: String
     var continent: String
+    // Its CQ zone (cty.dat's second field), for the WAZ award.
+    var cqZone: Int = 0
+    // True if some of its calls are in another zone (a "(4)" after a
+    // prefix or call in cty.dat: the United States spans zones 3 to 5).
+    // Then a call's zone can't be told from its country alone.
+    var spansZones = false
 }
 
 @MainActor
@@ -59,6 +65,10 @@ final class Countries {
     }
 
     func country(of call: String) -> Country? { loaded?.country(of: call) }
+
+    // Every DXCC country, by name, for the awards' "needed" lists; empty
+    // until cty.dat has been fetched.
+    var all: [Country] { loaded?.all ?? [] }
 
     // Fetches cty.dat if there isn't one or it's over a month old, then
     // calls `done` (also when it couldn't: the old file, if any, is kept).
@@ -98,10 +108,14 @@ struct CountryTable {
     private var calls: [String: Country] = [:]
     private var longest = 0
     private(set) var count = 0
+    // Every DXCC country, in the file's order (not the WAE-only ones).
+    private(set) var all: [Country] = []
 
     init(_ text: String) {
         var current: Country?
         var skipping = false
+        // Countries with a call or prefix in another zone (Country.spansZones).
+        var spanning: Set<String> = []
         for rawLine in text.split(whereSeparator: \.isNewline) {
             let line = rawLine.trimmingCharacters(in: .whitespaces)
             guard !line.isEmpty else { continue }
@@ -112,14 +126,20 @@ struct CountryTable {
                     .map { $0.trimmingCharacters(in: .whitespaces) }
                 guard fields.count >= 8 else { current = nil; continue }
                 skipping = fields[7].hasPrefix("*")
-                current = Country(name: fields[0], prefix: fields[7], continent: fields[3])
-                if !skipping { count += 1 }
+                current = Country(name: fields[0], prefix: fields[7], continent: fields[3],
+                                  cqZone: Int(fields[1]) ?? 0)
+                if !skipping, let current { count += 1; all.append(current) }
                 continue
             }
             guard let country = current, !skipping else { continue }
             for item in line.split(whereSeparator: { $0 == "," || $0 == ";" }) {
                 // Drop the brackets: (CQ zone) [ITU zone] <lat/lon> {continent} ~offset~.
                 let entry = String(item.prefix { !"([<{~".contains($0) }).trimmingCharacters(in: .whitespaces)
+                // A zone of its own in round brackets: "=4U1WB(5)".
+                if let open = item.firstIndex(of: "("), let close = item[open...].firstIndex(of: ")"),
+                   let zone = Int(item[item.index(after: open)..<close]), zone != country.cqZone {
+                    spanning.insert(country.name)
+                }
                 guard !entry.isEmpty else { continue }
                 if entry.hasPrefix("=") {
                     calls[String(entry.dropFirst()).uppercased()] = country
@@ -129,6 +149,15 @@ struct CountryTable {
                 }
             }
         }
+        // Now that every line is read, mark the countries that span zones.
+        func marked(_ country: Country) -> Country {
+            var country = country
+            country.spansZones = spanning.contains(country.name)
+            return country
+        }
+        prefixes = prefixes.mapValues(marked)
+        calls = calls.mapValues(marked)
+        all = all.map(marked)
     }
 
     // The country of a call: an exact call first, then the longest prefix

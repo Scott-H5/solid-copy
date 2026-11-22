@@ -5,8 +5,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
-xcrun swiftc Sources/Activity/*.swift -swift-version 5 Sources/Lookup/LookupResult.swift Sources/Lookup/QRZClient.swift \
-  Sources/Lookup/CallookClient.swift Sources/Lookup/CallsignLookup.swift Sources/Model/*.swift \
-  Sources/Settings/Settings.swift Sources/Settings/Keychain.swift Sources/Radio/RadioSettings.swift Sources/Accessibility/Speaker.swift Sources/Accessibility/Tone.swift \
+xcrun swiftc Sources/Activity/*.swift -swift-version 5 Sources/Model/*.swift Sources/Accessibility/*.swift Sources/LogTable/*.swift \
+  Sources/EditContact/*.swift Sources/LogEntry/*.swift Sources/Keyer/*.swift Sources/Lookup/*.swift Sources/Settings/*.swift Sources/LoTW/*.swift Sources/Export/*.swift Sources/Import/*.swift \
+  Sources/Radio/*.swift Sources/Spots/*.swift \
   tools/lookup-check/main.swift -o "$WORK/check"
 "$WORK/check" "$@"
