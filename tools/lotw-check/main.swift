@@ -47,7 +47,7 @@ check(!LoTW.uploadResult(fromLog: "Final Status: LoTW Connection error (11)").up
 // real output; it must not count as "already uploaded".
 let noCertificate = """
 TQSL Version 2.8.7 [v2.8.7-1-g94933a5c]
-There are no valid callsign certificates for callsign N3BYY in entity UNITED STATES OF AMERICA.
+There are no valid callsign certificates for callsign N0CALL in entity UNITED STATES OF AMERICA.
 Signing aborted.
 No QSOs to upload
 Final Status: No QSOs to upload(8)
@@ -57,9 +57,9 @@ if case .failed(let why) = LoTW.uploadResult(fromLog: noCertificate) {
 } else { check(false, "no certificate must not count as uploaded") }
 check(!LoTW.uploadResult(fromLog: "Final Status: No QSOs to upload(8)").uploaded,
       "code 8 without duplicates: nothing was sent")
-// Skipped contacts (Scott's first real sync: a swapped grid).
+// Skipped contacts (the author's first real sync: a swapped grid).
 let mismatch = """
-Signing using Callsign N3BYY, DXCC Entity UNITED STATES OF AMERICA
+Signing using Callsign N0CALL, DXCC Entity UNITED STATES OF AMERICA
 
 Station Location does not match QSO details
 The Station Location 'Gridsquare' has value 'FM19JK' while QSO has 'FM19KJ' on line 4
@@ -87,9 +87,9 @@ if case .failed(let why) = LoTW.uploadResult(fromLog: mismatch) {
     check(why.contains("2 contacts couldn't be signed: KB3CFK on 22 March 1998; AF4CM on 7 April 1998.")
           && why.contains("FM19JK"), "nothing signed, which ones, and why: \(why)")
 } else { check(false, "skipped everything must not count as uploaded") }
-// Scott's first real upload: repeats in his own log, and one without a band.
+// The author's first real upload: repeats in the author's own log, and one without a band.
 let real = """
-Signing using Callsign N3BYY, DXCC Entity UNITED STATES OF AMERICA
+Signing using Callsign N0CALL, DXCC Entity UNITED STATES OF AMERICA
 Previously Signed QSO detected on line 1044
 CALL: VE3OXQ
 QSO_DATE: 19990222
@@ -126,8 +126,8 @@ check(LoTW.uploadResult(fromLog: "Previously Signed QSO detected on line 4\nCALL
 check(LoTW.UploadResult.someAlreadySent.uploaded && !LoTW.UploadResult.failed("x").uploaded, "what counts as uploaded")
 
 // The report address.
-let url = LoTW.reportRequest(username: "n3byy", password: "a+b&c d", since: "")!.absoluteString
-check(url.hasPrefix("https://lotw.arrl.org/lotwuser/lotwreport.adi?login=n3byy&password=a%2Bb%26c%20d&qso_query=1")
+let url = LoTW.reportRequest(username: "n0call", password: "a+b&c d", since: "")!.absoluteString
+check(url.hasPrefix("https://lotw.arrl.org/lotwuser/lotwreport.adi?login=n0call&password=a%2Bb%26c%20d&qso_query=1")
       && url.contains("qso_qslsince=1900-01-01"), "the password is kept whole; first time from the beginning")
 
 // LoTW's report.

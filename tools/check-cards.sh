@@ -1,6 +1,6 @@
 #!/bin/bash
 # Checks scanned QSL cards (QSLCards.swift) with cards and a log of its own,
-# then, if they're there, against Scott's real card folder and SQL log file,
+# then, if they're there, against the author's real card folder and SQL log file,
 # both only read: the cards are copied into a throwaway folder.
 #   bash tools/check-cards.sh [card folder] [log file.sql]
 # With no log file, it uses SOLID_COPY_SQL_LOG from tools/checks.local

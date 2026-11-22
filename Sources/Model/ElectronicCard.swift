@@ -6,15 +6,15 @@
 // Send QSL Card (LogTableViewController) makes one and hands it to Mail.
 //
 // What's on it, top to bottom, which is also the order it's read in:
-//   N3BYY                                  your call, large
-//   Scott / Anytown, PA / SKCC 12345       your lines (Settings > QSL Card)
+//   N0CALL                                 your call, large
+//   Sam / Anytown, PA / SKCC 12345         your lines (Settings > QSL Card)
 //   Grid square: FN20.                     your fields you chose (my_...)
 //   To Bob, W1AW                           their name, if chosen, and call
 //   Date: 17 November 2026.  Time: 14:32 UTC.  Band: 40m.  ...
 //                                          the contact's fields you chose,
 //                                          in your order, one paragraph
 //   Thanks for the contact.                its QSL message, or your usual one
-//   73, N3BYY
+//   73, N0CALL
 //   Picture: a brass straight key.         what the picture shows, if set
 //
 // Why one column, and the contact as one paragraph: VoiceOver reads a

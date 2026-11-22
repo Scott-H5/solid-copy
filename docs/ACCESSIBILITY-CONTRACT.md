@@ -328,7 +328,7 @@ it's scheduled for.
     (where to find a key, which nickname, a date's form) is in a note
     beside it, never only in the field's VoiceOver label or grey
     placeholder: those are spoken once, can't be read word by word and
-    can't be copied (Scott, 17 November 2026, eQSL QTH Nickname). A
+    can't be copied (the author, 17 November 2026, eQSL QTH Nickname). A
     field's label is its name, short; a placeholder is at most an
     example ("2020-01-01"). Notes are selectable, so they can be copied,
     and a field is linked to its note (VO-Command-J). *Done for Settings
@@ -337,7 +337,7 @@ it's scheduled for.
 41. **A message can be copied.** Every message sheet (showMessage) has
     Copy after OK, which puts the title and message on the clipboard,
     says "Copied." and closes: an alert's text is heard but can't be
-    selected (Scott, 17 November 2026, a Club Log refusal). A message
+    selected (the author, 17 November 2026, a Club Log refusal). A message
     that is only spoken (an automatic upload, the log's shortcut menu)
     can be shown again with QSL > Show Last Upload Message.
 

@@ -5,7 +5,7 @@
 // a file in the Contests folder (File > Show Contest Files). Solid Copy
 // reads them each time it needs them. Field Day's file is written there
 // the first time, as a working example; a README there explains the
-// format. (Scott, 17 November 2026.)
+// format. (the author, 17 November 2026.)
 //
 // A file, one setting per line, "#" starts a comment:
 //   name: ARRL Field Day           required: what menus say
@@ -392,7 +392,7 @@ struct Contest: Equatable {
             case .band: return qso["band"].caseInsensitiveCompare(band) == .orderedSame
             case .bandAndMode:
                 // An unknown mode is never a dupe: a wrong warning is worse
-                // than none (Scott's TS-590SG in a data mode, 17 November
+                // than none (the author's TS-590SG in a data mode, 17 November
                 // 2026, warned of a CW contact).
                 return !group.isEmpty && qso["band"].caseInsensitiveCompare(band) == .orderedSame
                     && Self.modeGroup(qso["mode"]) == group

@@ -110,7 +110,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
         // with hamlib's mW2power: for the KX3 that assumes 10 watts at most
         // when the radio's is 15, so 5 watts became 7.5, and anything over
         // 10 was an error that made rigctld drop the connection (found
-        // with Scott's KX3's radio log, 15 November 2026).
+        // with the author's KX3's radio log, 15 November 2026).
         if command.hasPrefix("POWER "), let watts = Double(command.dropFirst(6)) {
             guard let hertz = try values("+f").first.flatMap(Double.init), let mode = try values("+m").first else {
                 throw Failure.rejected
@@ -131,7 +131,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     //
     // hamlib's AGC command for these never reaches the radio, and its AGC
     // reading is only what it was last told to set (found 15 November
-    // 2026, asking Scott's TS-590SG directly). So AGC uses Kenwood's own
+    // 2026, asking the author's TS-590SG directly). So AGC uses Kenwood's own
     // GC command, sent with "W" like the Elecraft ones below:
     //   GC0;   off
     //   GC1;   slow
@@ -162,7 +162,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // ("NR0;"). A change must be followed by a question, or the KX3
     // ignores it (found with Radio > Record Radio Log, 15 November 2026),
     // so "W PA1;ID; ;" sends PA1; then ID; and reads the answer to ID.
-    // From Elecraft's KX3 Programmer's Reference, tried on Scott's KX3:
+    // From Elecraft's KX3 Programmer's Reference, tried on the author's KX3:
     //   PA0; PA1;    preamp off, on
     //   NB0; NB1;    noise blanker off, on (read back as "NB00;", "NB10;":
     //                the first digit on or off)

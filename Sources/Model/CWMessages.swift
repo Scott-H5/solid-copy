@@ -2,7 +2,7 @@
 //
 // The eight CW messages F1 to F8 send (through the WinKeyer), and the
 // fill-ins they can use. Edited in Settings > CW. (Not for SKCC events:
-// their rules require a mechanical key, so no keyer messages; Scott, 17
+// their rules require a mechanical key, so no keyer messages; the author, 17
 // November 2026.)
 //
 // Fill-ins, in braces, any case:

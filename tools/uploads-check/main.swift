@@ -39,12 +39,12 @@ check(UploadService.lotw.isUploaded({ var q = new; q["lotw_qsl_rcvd"] = "Y"; ret
       "LoTW: a confirmed contact counts as uploaded")
 
 var full = QSO(call: "VE6BBP", timeOn: at("20251217", "153000"))
-full["band"] = "20m"; full["mode"] = "CW"; full["station_callsign"] = "N3BYY"
+full["band"] = "20m"; full["mode"] = "CW"; full["station_callsign"] = "N0CALL"
 full["notes"] = "private"; full["app_solidcopy_card_text"] = "card words"; full["name"] = "Bob & Al"
 let record = LogExport.adifRecord(full)
 check(record.hasPrefix("<CALL:6>VE6BBP ") && record.hasSuffix("<EOR>") && !record.contains("<EOH>"),
       "one ADIF record, no header")
-check(record.contains("<BAND:3>20m") && record.contains("<STATION_CALLSIGN:5>N3BYY"), "with its band and station")
+check(record.contains("<BAND:3>20m") && record.contains("<STATION_CALLSIGN:6>N0CALL"), "with its band and station")
 check(!record.contains("NOTES") && !record.contains("APP_SOLIDCOPY"), "without Notes or Solid Copy's own fields")
 check(OneByOneUpload.formEncoded("<A:2>x& =+é") == "%3CA%3A2%3Ex%26%20%3D%2B%C3%A9", "form encoding: nothing left to break it")
 let body = String(decoding: QRZLogbook.insertBody(key: "AB-12", qso: full), as: UTF8.self)
@@ -197,11 +197,11 @@ if case .stop(_, true) = clubLog(503, "<html>") {} else { check(false, "Club Log
 if case .stop = clubLog(200, "<html>not json</html>") {} else { check(false, "Club Log: a web page isn't taken for success") }
 
 var mine = full; mine["station_callsign"] = ""
-let clubRequest = try! ClubLogUpload.request(for: mine, token: "cl_TEST", myCall: "n3byy")
+let clubRequest = try! ClubLogUpload.request(for: mine, token: "cl_TEST", myCall: "n0call")
 let clubBody = try! JSONSerialization.jsonObject(with: clubRequest.httpBody!) as! [String: String]
 check(clubRequest.url == ClubLogUpload.endpoint && clubRequest.httpMethod == "POST"
       && clubRequest.value(forHTTPHeaderField: "Authorization") == "Bearer cl_TEST"
-      && clubBody["call"] == "N3BYY" && clubBody["adif"] == LogExport.adifRecord(mine),
+      && clubBody["call"] == "N0CALL" && clubBody["adif"] == LogExport.adifRecord(mine),
       "Club Log: POST, the token as Bearer, your call (the profile's when the contact has none), one record")
 do { _ = try ClubLogUpload.request(for: mine, token: "cl_TEST", myCall: ""); check(false, "no callsign: not sent") }
 catch let notSent as NotSent { check(notSent.reason.contains("no station callsign"), "Club Log: no callsign at all: not sent, said why") }
@@ -241,11 +241,11 @@ if case .stop = EQSLUpload.answer("<html>Login page</html>") {} else { check(fal
 let eqslFile = EQSLUpload.file(for: full, nickname: "Home")
 check(eqslFile.contains("<EOH>") && eqslFile.contains("<APP_EQSL_QTH_NICKNAME:4>Home <EOR>")
       && !eqslFile.contains("NOTES"), "eQSL: a header, the record, its QTH Nickname, no Notes")
-let eqslRequest = EQSLUpload.request(for: full, user: "N3BYY", password: "p&ss", nickname: "")
+let eqslRequest = EQSLUpload.request(for: full, user: "N0CALL", password: "p&ss", nickname: "")
 let eqslBody = String(decoding: eqslRequest.httpBody!, as: UTF8.self)
 check(eqslRequest.url == EQSLUpload.endpoint && eqslRequest.httpMethod == "POST"
       && eqslRequest.value(forHTTPHeaderField: "Content-Type")?.hasPrefix("multipart/form-data; boundary=") == true
-      && eqslBody.contains("name=\"EQSL_USER\"\r\n\r\nN3BYY\r\n") && eqslBody.contains("name=\"EQSL_PSWD\"\r\n\r\np&ss\r\n")
+      && eqslBody.contains("name=\"EQSL_USER\"\r\n\r\nN0CALL\r\n") && eqslBody.contains("name=\"EQSL_PSWD\"\r\n\r\np&ss\r\n")
       && eqslBody.contains("name=\"Filename\"; filename=\"solidcopy.adi\"") && !eqslBody.contains("APP_EQSL_QTH_NICKNAME"),
       "eQSL: a file upload with the login and an .adi file")
 
@@ -254,8 +254,8 @@ check(eqslRequest.url == EQSLUpload.endpoint && eqslRequest.httpMethod == "POST"
 ClubLogUpload.pauseNow = 0
 EQSLUpload.pauseNow = 0
 ClubLogUpload.token = { "cl_TEST" }
-ClubLogUpload.myCall = { "N3BYY" }
-EQSLUpload.login = { ("N3BYY", "secret", "") }
+ClubLogUpload.myCall = { "N0CALL" }
+EQSLUpload.login = { ("N0CALL", "secret", "") }
 var statuses: [Int] = []
 let realSend = OneByOneUpload.send
 OneByOneUpload.send = { request in
@@ -278,8 +278,8 @@ check(requests.count == 1 && !report.tryAgain && report.text.contains("2 contact
 // The refusal names the callsign sent (the pretend profile's here), and
 // Club Log's words under "error" aren't lost.
 check(report.text.contains("\(ClubLogUpload.myCall()) isn't on the account"), "Club Log: 403 names the callsign: \(report.text)")
-if case .stop(let why, false) = ClubLogUpload.answer(status: 403, data: Data(#"{"error":"Callsign not owned"}"#.utf8), call: "N3BYY"),
-   why.contains("N3BYY isn't on the account"), why.contains("Club Log said: Callsign not owned.") {} else {
+if case .stop(let why, false) = ClubLogUpload.answer(status: 403, data: Data(#"{"error":"Callsign not owned"}"#.utf8), call: "N0CALL"),
+   why.contains("N0CALL isn't on the account"), why.contains("Club Log said: Callsign not owned.") {} else {
     check(false, "Club Log: 403 with an error key")
 }
 requests = []
@@ -289,7 +289,7 @@ report = await EQSLUpload.upload([now("K1CCC")], logbook: logbook)
 check(requests.count == 1 && now("K1CCC")["eqsl_qsl_sent"] == "Y" && now("K1CCC")["eqsl_qslsdate"] == QSL.today()
       && report.ok, "eQSL upload: \(report.text)")
 check(UploadService.eqsl.toUpload(logbook.contacts, from: "").allSatisfy { $0.call != "K1CCC" }, "eQSL: a sent contact isn't sent again")
-EQSLUpload.login = { ("N3BYY", "", "") }
+EQSLUpload.login = { ("N0CALL", "", "") }
 report = await EQSLUpload.upload([now("K1AAA")], logbook: logbook)
 check(report.text.contains("username and password in Settings > Uploads"), "eQSL: no login: says where")
 ClubLogUpload.token = { "" }

@@ -12,7 +12,7 @@
 // Why draw the text instead of using an ordinary text label? An ordinary
 // label (NSTextField) hands VoiceOver an inner "cell" object, and that
 // cell stays visible to VoiceOver even when the label itself says it
-// shouldn't be. (Scott heard the labels with the first version of this
+// shouldn't be. (The author heard the labels with the first version of this
 // file.) A plain view that draws its own text has nothing inside it for
 // VoiceOver to find.
 

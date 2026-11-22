@@ -78,7 +78,7 @@ MainActor.assumeIsolated {
     QRZLogbookUpload.key = { "TEST-KEY" }
     let semaphore = DispatchSemaphore(value: 0)
     ClubLogUpload.token = { "cl_TEST" }
-    EQSLUpload.login = { ("N3BYY", "secret", "") }
+    EQSLUpload.login = { ("N0CALL", "secret", "") }
     var qrz = UploadReport(text: "", ok: true), lotw = UploadReport(text: "", ok: true), sync = ""
     var clubLog = qrz, eqsl = qrz, qrzSync = ""
     Task { @MainActor in

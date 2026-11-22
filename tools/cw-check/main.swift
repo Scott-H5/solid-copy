@@ -13,10 +13,10 @@ import AppKit
 
 func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !ok { exit(1) } }
 
-let values = ["MYCALL": "N3BYY", "MYNAME": "Scott", "MYSTATE": "MD", "NR": "42",
+let values = ["MYCALL": "N0CALL", "MYNAME": "Sam", "MYSTATE": "MD", "NR": "42",
               "CALL": "K5AX", "NAME": "Tom", "STATE": "TX", "SKCC": "26050T", "RST": "599"]
-check(CWMessages.expand(CWMessages.defaults[0], values: values) == "CQ CQ N3BYY N3BYY K", "F1: CQ with your call")
-check(CWMessages.expand(CWMessages.defaults[1], values: values) == "K5AX 599 Scott MD",
+check(CWMessages.expand(CWMessages.defaults[0], values: values) == "CQ CQ N0CALL N0CALL K", "F1: CQ with your call")
+check(CWMessages.expand(CWMessages.defaults[1], values: values) == "K5AX 599 Sam MD",
       "F2: their call, RST, your name and state")
 check(CWMessages.expand("{CALL} 5NN {nr}", values: values) == "K5AX 5NN 42", "{NR}: your serial number")
 check(CWMessages.expand("TU {name} {Call}", values: values) == "TU Tom K5AX", "fill-ins in any case")
@@ -26,12 +26,12 @@ check(CWMessages.expand("{NOPE} AGN?", values: values) == "AGN?", "an unknown fi
 check(CWMessages.expand("{CALL", values: values) == "{CALL", "an unclosed brace is kept as typed")
 check(CWMessages.defaults.count == CWMessages.count, "eight starting messages")
 check(CWMessages.fieldDay.count == CWMessages.count, "eight Field Day messages")
-let fdValues = ["MYCALL": "N3BYY", "CALL": "W1AW", "SENT": "1D MDC"]
-check(CWMessages.expand(CWMessages.fieldDay[0], values: fdValues) == "CQ FD N3BYY N3BYY FD", "Field Day CQ")
+let fdValues = ["MYCALL": "N0CALL", "CALL": "W1AW", "SENT": "1D MDC"]
+check(CWMessages.expand(CWMessages.fieldDay[0], values: fdValues) == "CQ FD N0CALL N0CALL FD", "Field Day CQ")
 check(CWMessages.expand(CWMessages.fieldDay[1], values: fdValues) == "W1AW 1D MDC",
       "Field Day exchange: their call, then your class and section from {SENT}")
 
-check(WinKeyer.sendable("cq de n3byy/qrp, k") == "CQ DE N3BYY/QRP, K", "upper case, / and , kept")
+check(WinKeyer.sendable("cq de n0call/qrp, k") == "CQ DE N0CALL/QRP, K", "upper case, / and , kept")
 check(WinKeyer.sendable("Tom's  rig: 100w!") == "TOMS RIG 100W", "characters CW can't carry are left out")
 check(WinKeyer.sendable("  ") == "", "only spaces: nothing to send")
 check(WinKeyer.clamp(2) == 5 && WinKeyer.clamp(150) == 99 && WinKeyer.clamp(25) == 25, "speeds kept to 5 to 99")
@@ -104,8 +104,8 @@ check(perBand.dupe(of: "W1AW", band: "20m", mode: "SSB", in: worked) != nil
 
 // MARK: Dupe sheet
 let sheet = Contest.dupeSheet(worked + [qso("W1AW", "20m", "CW"), qso("AA1A", "80m", "CW")],
-                              contestName: "ARRL Field Day", myCall: "N3BYY")
-check(sheet.hasPrefix("ARRL Field Day dupe sheet, N3BYY\n5 contacts\n"), "headed with the contest and your call")
+                              contestName: "ARRL Field Day", myCall: "N0CALL")
+check(sheet.hasPrefix("ARRL Field Day dupe sheet, N0CALL\n5 contacts\n"), "headed with the contest and your call")
 let blocks = sheet.components(separatedBy: "\n\n").dropFirst().map { $0.components(separatedBy: "\n").first ?? "" }
 check(blocks == ["80m CW (1)", "40m Phone (1)", "20m CW (1)", "20m Digital (1)"],
       "by band, longest first, then CW, phone, digital; repeats counted once: \(blocks)")

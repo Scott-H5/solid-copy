@@ -1,6 +1,6 @@
 // WinKeyer.swift
 //
-// Sends CW through a K1EL WinKeyer (Scott's is a WinKeyer Mini, WK3.1, at
+// Sends CW through a K1EL WinKeyer (the author's is a WinKeyer Mini, WK3.1, at
 // /dev/cu.usbserial-XXXX). The WinKeyer keys the radio itself, with its own
 // timing; Solid Copy hands it text.
 //

@@ -4,7 +4,7 @@
 // clipboard (copied with Command-C in a log) are a block of ADIF text, and
 // Command-V in a field would drop all of it into Callsign. Instead they're
 // added to the open log, as Command-V in the log does, and the field is
-// left as it was. Any other paste works as usual. (Scott, 17 November
+// left as it was. Any other paste works as usual. (the author, 17 November
 // 2026. First it said to go to the log with Command-I; but in an empty
 // log VoiceOver had nothing to land on, so focus seemed to stay or move
 // at random. Pasting from where you are avoids moving at all.)

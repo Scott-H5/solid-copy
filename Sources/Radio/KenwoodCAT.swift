@@ -15,7 +15,7 @@
 // 15 November 2026).
 //
 // Which command means what is written next to each one below. Commands
-// marked "radio-tested" were watched on Scott's TS-590SG or KX3 through
+// marked "radio-tested" were watched on the author's TS-590SG or KX3 through
 // rigctld's raw "W" command (see RigctldClient, 15 November 2026). The rest
 // are from Kenwood's and Elecraft's command references, or from memory of
 // them, and are NOT yet checked on a radio: see docs/PLAN.md Phase 3.

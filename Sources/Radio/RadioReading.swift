@@ -143,7 +143,7 @@ enum Bands {
     // A band as typed, in ADIF's terms, or nil if it isn't one. LoTW and
     // awards only know ADIF's names ("20m"), so "20", "20 M", "20 meters"
     // and a frequency in megahertz ("14.058") all become "20m". Empty
-    // stays empty. (Scott's VE6BBP, 16 November 2026: TQSL refused "20".)
+    // stays empty. (the author's VE6BBP, 16 November 2026: TQSL refused "20".)
     static func normalized(_ text: String) -> String? {
         var band = text.lowercased().filter { !$0.isWhitespace }
         guard !band.isEmpty else { return "" }

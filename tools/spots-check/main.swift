@@ -278,10 +278,10 @@ MainActor.assumeIsolated {
     }.first { $0.hasPrefix("VP8XYZ") } ?? ""
     check(vp8.contains("heard by 2"), "a station heard by two: \(vp8)")
 
-    // Heard near me (N3BYY, North America): a spot heard only in South
+    // Heard near me (N0CALL, North America): a spot heard only in South
     // America is left out; one heard in Canada too stays.
     var profile = Settings.currentProfile
-    profile.station["station_callsign"] = "N3BYY"
+    profile.station["station_callsign"] = "N0CALL"
     Settings.currentProfile = profile
     var far = DXCluster.spot(fromLine: "DX de VP8AA-#:   7010.0  K7XYZ        CW 9 dB 20 WPM CQ               1433Z", now: now)!
     far.time = now

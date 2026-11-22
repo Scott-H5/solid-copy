@@ -33,7 +33,7 @@
 //   - Upload contacts from, and Upload automatically.
 // Instructions are in each section's note, never only in a field's
 // VoiceOver label or grey placeholder: those are spoken once and can't be
-// read again word by word or copied (Scott, 17 November 2026, on the eQSL
+// read again word by word or copied (the author, 17 November 2026, on the eQSL
 // QTH Nickname). Each field is linked to its note (VO-Command-J jumps
 // there), and the notes are selectable, so they can be copied.
 // A line at the top says whether TQSL is installed. Everything is saved on

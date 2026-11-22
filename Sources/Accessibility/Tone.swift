@@ -12,10 +12,10 @@
 //   knock, marimba, doorbell, glide: other choices, in Settings > Speech
 // Up for "good", down for "bad", like a question and its answer.
 //
-// Why these and not plain beeps: Scott works CW, and a plain tone near
+// Why these and not plain beeps: The author works CW, and a plain tone near
 // 500 to 900 Hz sounds like sidetone or a signal. The dupe and needed
 // sounds are a buzz (odd harmonics, low) and bells (high, ringing), which
-// nothing on the air sounds like. Levels were set by Scott's ear, 17
+// nothing on the air sounds like. Levels were set by the author's ear, 17
 // November 2026: the first ones (0.35 of full scale) were too loud, so
 // buzz and bell were cut to about a third of that.
 //
@@ -58,7 +58,7 @@ enum Tone: String, CaseIterable {
         case .knock: (.knock, [Note(hertz: 180, ms: 140), Note(hertz: 180, ms: 140)], 0.2)
         case .marimba:
             (.marimba, [Note(hertz: 392, ms: 130, gap: 0), Note(hertz: 330, ms: 130, gap: 0), Note(hertz: 262, ms: 220)], 0.12)
-        // Two notes like the dupe's buzz, but high and ringing (Scott,
+        // Two notes like the dupe's buzz, but high and ringing (the author,
         // 17 November 2026: the first, four notes, was too long).
         case .bell: (.bell, [Note(hertz: 1568, ms: 110, gap: 40), Note(hertz: 2093, ms: 150)], 0.105)
         case .doorbell: (.bell, [Note(hertz: 1319, ms: 260, gap: 0), Note(hertz: 1047, ms: 400)], 0.105)

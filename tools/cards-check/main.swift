@@ -11,7 +11,7 @@
 //   - your electronic card (ElectronicCard.swift): what it says, in what
 //     order, that the PDF's text reads back whole and in that order,
 //     the picture, a card too full for its size, and the Card sent mark;
-//   - with Scott's card folder and SQL log file (both only read): how
+//   - with the author's card folder and SQL log file (both only read): how
 //     many attach, which don't, and why.
 //
 // Run it with:  bash tools/check-cards.sh
@@ -96,25 +96,25 @@ MainActor.assumeIsolated {
     }
     let design = ElectronicCard.Design(fields: ["my_gridsquare", "name", "qso_date", "time_on", "band", "freq",
                                                 "mode", "rst_sent", "rst_rcvd", "tx_pwr", "skcc", "qslmsg"],
-                                       details: ["Scott", "", "SKCC 12345, FISTS 6789"],
+                                       details: ["Sam", "", "SKCC 12345, FISTS 6789"],
                                        message: "Thanks for the contact.", pictureDescription: "a brass straight key",
                                        hasPicture: false)
-    let lines = ElectronicCard.lines(for: contact, design: design, myCall: "N3BYY")
-    let expected = ["N3BYY", "Scott", "SKCC 12345, FISTS 6789", "Grid square: FN20.", "To Hiram, W1AW/P",
+    let lines = ElectronicCard.lines(for: contact, design: design, myCall: "N0CALL")
+    let expected = ["N0CALL", "Sam", "SKCC 12345, FISTS 6789", "Grid square: FN20.", "To Hiram, W1AW/P",
                     "Date: 14 November 2026.  Time: 14:32 UTC.  Band: 40m.  Frequency: 7.030 MHz.  Mode: CW.  "
                     + "Your signal: 599.  My power: 5 W.  Your SKCC number: 1.",
-                    "Thanks for the contact.", "73, N3BYY"]
+                    "Thanks for the contact.", "73, N0CALL"]
     lines.map(\.text).filter { !expected.contains($0) }.forEach { print("       got: " + $0) }
     check(lines.map(\.text) == expected,
           "card: your call and lines, your fields, To with their name, the contact in order, the message, 73")
     check(!lines.contains { $0.text.contains("My signal") }, "card: an empty field (no report received) is left out")
     var ownMessage = contact
     ownMessage["qslmsg"] = "See you on 30m"
-    check(ElectronicCard.lines(for: ownMessage, design: design, myCall: "N3BYY").contains { $0.text == "See you on 30m" },
+    check(ElectronicCard.lines(for: ownMessage, design: design, myCall: "N0CALL").contains { $0.text == "See you on 30m" },
           "card: the contact's own QSL message wins over the usual one")
     var noName = design
     noName.fields.removeAll { $0 == "name" || $0 == "qslmsg" }
-    let plain = ElectronicCard.lines(for: contact, design: noName, myCall: "N3BYY").map(\.text)
+    let plain = ElectronicCard.lines(for: contact, design: noName, myCall: "N0CALL").map(\.text)
     check(plain.contains("To W1AW/P") && !plain.contains("Thanks for the contact."),
           "card: name and message off leave them out")
     check(ElectronicCard.fileName(for: contact) == "W1AW-P 2026-11-14 1432.pdf", "card: file name, with no slash")
@@ -142,7 +142,7 @@ MainActor.assumeIsolated {
         }
         return true
     }
-    let pdf = ElectronicCard.pdf(lines, picture: nil, pictureDescription: "", title: "QSL card", author: "N3BYY")
+    let pdf = ElectronicCard.pdf(lines, picture: nil, pictureDescription: "", title: "QSL card", author: "N0CALL")
     let read = pdfText(pdf)
     check(read?.size == ElectronicCard.cardSize, "card: one page, 5.5 by 3.5 inches")
     check(read.map { inOrder($0.text, expected) } == true, "card: the PDF's text reads back whole, in order")
@@ -165,9 +165,9 @@ MainActor.assumeIsolated {
     check((try? ElectronicCard.preparedPicture(from: notPicture)) == nil, "card: a file that isn't a picture is refused")
     var withPicture = design
     withPicture.hasPicture = true
-    let pictureLines = ElectronicCard.lines(for: contact, design: withPicture, myCall: "N3BYY")
+    let pictureLines = ElectronicCard.lines(for: contact, design: withPicture, myCall: "N0CALL")
     let picturePDF = ElectronicCard.pdf(pictureLines, picture: picture, pictureDescription: "a brass straight key",
-                                        title: "QSL card", author: "N3BYY")
+                                        title: "QSL card", author: "N0CALL")
     check(pictureLines.last?.text == "Picture: a brass straight key."
           && pdfText(picturePDF).map { inOrder($0.text, pictureLines.map(\.text)) } == true,
           "card: with a picture, the text still reads whole, ending with what the picture shows")
@@ -185,7 +185,7 @@ MainActor.assumeIsolated {
     var full = design
     full.details = [String(repeating: "A long line about my station. ", count: 8), "Anytown", "SKCC 12345"]
     contact["qslmsg"] = String(repeating: "Thanks for a fine contact. ", count: 60)
-    let fullLines = ElectronicCard.lines(for: contact, design: full, myCall: "N3BYY")
+    let fullLines = ElectronicCard.lines(for: contact, design: full, myCall: "N0CALL")
     let fullRead = pdfText(ElectronicCard.pdf(fullLines, picture: nil, pictureDescription: "", title: "", author: ""))
     check((fullRead?.size.height ?? 0) > ElectronicCard.cardSize.height
           && fullRead.map { inOrder($0.text, fullLines.map(\.text)) } == true,
@@ -202,7 +202,7 @@ MainActor.assumeIsolated {
     requested["qsl_sent"] = "R"
     check(ElectronicCard.markedSent(requested, today: "20261117")["qsl_sent"] == "Y", "card: a request becomes sent")
 
-    // Scott's own cards and log, if they're here.
+    // The author's own cards and log, if they're here.
     guard fm.fileExists(atPath: realCards.path), fm.fileExists(atPath: realLog.path) else {
         return print("     (No card folder or SQL log file here: the real-cards checks were skipped.)")
     }
@@ -222,8 +222,8 @@ MainActor.assumeIsolated {
         if !after["app_solidcopy_card_text"].isEmpty { withText += 1 }
     }
     print("     \(newly) newly counted received; \(withText) with text")
-    check(real.cards.count == 91 && real.unmatched.count == 6, "91 of Scott's cards attach; 6 are left for him")
+    check(real.cards.count == 91 && real.unmatched.count == 6, "91 of the author's cards attach; 6 are left to sort by hand")
     check(newly == 34, "34 contacts newly counted as card received")
     let after = realFiles.map { (try? $0.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate }
-    check(stamps == after, "Scott's card folder wasn't changed")
+    check(stamps == after, "the author's card folder wasn't changed")
 }
