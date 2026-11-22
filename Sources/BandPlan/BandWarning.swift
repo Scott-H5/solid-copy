@@ -38,6 +38,11 @@ final class BandWarning {
     }
     private var lastWarned: String?
     private var pending: Task<Void, Never>?
+    // The kind the pending warning is waiting on. The radio is read
+    // several times a second, and each reading lands here: the wait must
+    // not start again for the same trouble, or it never ends (found
+    // 22 November 2026: no warning at 14.356 with a real radio).
+    private var pendingKind: String?
     // How it's said; the checks listen in.
     var say: (String) -> Void = { text in
         Speaker.Cue.warning.play()
@@ -98,15 +103,19 @@ final class BandWarning {
         guard let kind = problem()?.kind else {
             pending?.cancel()
             pending = nil
+            pendingKind = nil
             lastWarned = nil
             return
         }
-        // The same trouble as last said: quiet.
-        guard kind != lastWarned else { return }
+        // The same trouble as last said, or already waiting to be: quiet.
+        guard kind != lastWarned, kind != pendingKind else { return }
         pending?.cancel()
+        pendingKind = kind
         pending = Task { [weak self] in
             try? await Task.sleep(nanoseconds: UInt64((self?.settle ?? 1.5) * 1_000_000_000))
-            guard let self, !Task.isCancelled, let now = self.problem(), now.kind == kind else { return }
+            guard let self, !Task.isCancelled else { return }
+            self.pendingKind = nil
+            guard let now = self.problem(), now.kind == kind else { return }
             self.lastWarned = kind
             self.say(now.text)
             Activity.shared.record("Radio", "Band plan", ok: false, latest: now.text)

@@ -84,7 +84,10 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     warning.radioChanged(); await wait()
     check(said.isEmpty, "FT8 on 14.074 in a data mode: quiet")
     reading = RadioReading(hertz: hz(14.352), mode: "USB")
-    warning.radioChanged(); await wait()
+    // A real radio is read several times a second: each reading lands
+    // here, and the wait mustn't start again each time.
+    // Readings for 0.4 s, longer than the 0.1 s wait, and none after.
+    for _ in 0..<10 { warning.radioChanged(); try? await Task.sleep(nanoseconds: 40_000_000) }
     check(said == ["Outside your Extra privileges: 14.352 MHz. Nearest: 14.225 to 14.350."], "past the edge: said once (\(said))")
     reading.hertz = hz(14.355)
     warning.radioChanged(); await wait()
