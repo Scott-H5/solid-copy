@@ -65,6 +65,12 @@ each file does and why, and has recipes for common changes.
     hunted.
   - `AwardsWindowController.swift`: the window: the awards, Band, Mode
     and Show, and the chosen award's list.
+- `Sources/Rotor`: turning the antenna through a rotctld you run.
+  - `RotctldClient.swift`: the conversation with rotctld (where it
+    points, turn, stop), and headings worked out (long path, how far
+    apart, in words).
+  - `RotorControl.swift`: the Radio menu's rotor commands: a turn is
+    watched until it arrives, stalls or takes too long, and said.
 - `Sources/Radio`: the radio, through the built-in driver or a rigctld
   you run (Hamlib NET rigctl).
   - `RadioMonitor.swift`: keeps connected and never gives up; says what
@@ -72,6 +78,9 @@ each file does and why, and has recipes for common changes.
   - `RadioLink.swift`: the interface both ways of reaching a radio
     share, and the failures they report (not answering, port gone,
     port in use, refused).
+  - `HamlibSocket.swift`: one conversation with rigctld or rotctld:
+    connecting, sending a line, reading the reply to its "RPRT", each
+    with a time limit. Shared by the radio and the rotor.
   - `RigctldClient.swift`: the conversation with a rigctld you run, with
     a time limit on every wait. The comments show what rigctld's replies
     look like.

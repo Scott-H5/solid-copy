@@ -48,8 +48,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
         }
     }
     let dialect: Dialect
-    private var socket: Int32 = -1
-    private var buffer: [UInt8] = []
+    private let link: HamlibSocket
     // Status questions this radio can't answer (see status()).
     private var unsupported: Set<String> = []
     // The radio's most power, in watts, on each band: hamlib asks the
@@ -57,29 +56,21 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // and knows it for the rest (100 W for the TS-590SG). Asked once a band.
     private var maxWattsByBand: [String: Double] = [:]
 
-    // How long to wait for rigctld. It waits for the radio itself, with
-    // retries, before it answers, so this is generous.
-    private static let replySeconds = 8
-    private static let connectMilliseconds: Int32 = 2_000
-
     init(host: String, port: UInt16, dialect: Dialect = .standard) {
         self.host = host
         self.port = port
         self.dialect = dialect
+        // rigctld waits for the radio itself, with retries, before it
+        // answers, so the wait is generous.
+        link = HamlibSocket(host: host, port: port, replySeconds: 8)
     }
 
-    deinit { disconnect() }
-
-    func disconnect() {
-        if socket >= 0 { Darwin.close(socket) }
-        socket = -1
-        buffer.removeAll()
-    }
+    func disconnect() { link.disconnect() }
 
     // Reads frequency, mode and power. Power is optional: some radios
     // can't report it, and that's not a failure.
     func reading() throws -> RadioReading {
-        if socket < 0 { try connect() }
+        if !link.isOpen { try link.connect() }
         guard let hertz = try values("+f").first.flatMap(Double.init), hertz > 0 else {
             throw Failure.notAnswering
         }
@@ -106,7 +97,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // "M CW 500" (mode and filter width), "L KEYSPD 22" (keyer speed).
     // Throws if the radio doesn't take it.
     func set(_ command: String) throws {
-        if socket < 0 { try connect() }
+        if !link.isOpen { try link.connect() }
         // "W 100": a filter width for the mode in use. rigctld has no width-only
         // command, so the mode is read and sent with it (as "M").
         if command.hasPrefix("W "), let width = Int(command.dropFirst(2)) {
@@ -230,7 +221,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // about in CW, as it's a CW setting and the KX3 doesn't answer the
     // question in other modes (hamlib then retries for 6 seconds).
     func status(mode: String) throws -> RadioStatus {
-        if socket < 0 { try connect() }
+        if !link.isOpen { try link.connect() }
         var status = RadioStatus()
         func ask(_ command: String) throws -> [String]? {
             guard !unsupported.contains(command) else { return nil }
@@ -299,7 +290,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // The S-meter: decibels above S9 (hamlib's STRENGTH; -54 is S0, 0 is
     // S9, and each S unit is 6 dB). Asked only when you ask.
     func strength() throws -> Int {
-        if socket < 0 { try connect() }
+        if !link.isOpen { try link.connect() }
         guard let value = try values("+l STRENGTH").first.flatMap(Int.init) else { throw Failure.rejected }
         return value
     }
@@ -307,129 +298,7 @@ final class RigctldClient: RadioLink, @unchecked Sendable {
     // Sends one command and returns the values in its reply, in order:
     // "Frequency: 7025241" gives "7025241"; a bare "0.05" gives "0.05".
     // A reply of "RPRT" with an error number means the radio didn't do it.
-    // rigctld closes a connection after some hamlib errors (an "RPRT 10"
-    // from a value out of range, say) while carrying on itself, so if an
-    // open connection turns out to be closed, it's opened again and the
-    // command sent once more, rather than the radio seeming to vanish.
-    private func values(_ command: String) throws -> [String] {
-        let wasOpen = socket >= 0
-        do {
-            return try valuesOnce(command)
-        } catch Failure.notRunning where wasOpen {
-            disconnect()
-            try connect()
-            return try valuesOnce(command)
-        }
-    }
-
-    private func valuesOnce(_ command: String) throws -> [String] {
-        try send(command + "\n")
-        var lines: [String] = []
-        // A raw reply ("W") ends in a 0 byte, with RPRT straight after it
-        // on the same line ("Reply: NR0;\0RPRT 0"), so 0 bytes split lines
-        // too.
-        var pending: [String] = []
-        while true {
-            if pending.isEmpty {
-                pending = try readLine().split(separator: "\u{0}", omittingEmptySubsequences: false).map(String.init)
-            }
-            let line = pending.removeFirst()
-            if line.hasPrefix("RPRT") {
-                // hamlib's error numbers: -5 is a time-out and -6 an
-                // input/output error (the radio didn't answer); anything
-                // else means it answered "no".
-                guard line == "RPRT 0" else {
-                    throw ["RPRT -5", "RPRT -6"].contains(line) ? Failure.notAnswering : Failure.rejected
-                }
-                // The first line repeats the command ("get_freq:").
-                return Array(lines.dropFirst())
-            }
-            lines.append(line.range(of: ": ").map { String(line[$0.upperBound...]) } ?? line)
-            // A real reply is a few lines. Anything longer isn't rigctld.
-            if lines.count > 20 { disconnect(); throw Failure.notAnswering }
-        }
-    }
-
-    // MARK: - The connection
-
-    private func connect() throws {
-        var hints = addrinfo()
-        hints.ai_family = AF_UNSPEC
-        hints.ai_socktype = SOCK_STREAM
-        var list: UnsafeMutablePointer<addrinfo>?
-        guard getaddrinfo(host, String(port), &hints, &list) == 0 else { throw Failure.notRunning }
-        defer { freeaddrinfo(list) }
-        var next = list
-        while let address = next?.pointee {
-            next = address.ai_next
-            let candidate = Darwin.socket(address.ai_family, address.ai_socktype, address.ai_protocol)
-            guard candidate >= 0 else { continue }
-            if Self.connect(candidate, address) {
-                socket = candidate
-                return
-            }
-            Darwin.close(candidate)
-        }
-        throw Failure.notRunning
-    }
-
-    // Connects with a time limit. (A plain connect to a far-off address
-    // that doesn't answer can wait over a minute.) Then sets the time
-    // limits for sending and receiving.
-    private static func connect(_ socket: Int32, _ address: addrinfo) -> Bool {
-        let flags = fcntl(socket, F_GETFL)
-        _ = fcntl(socket, F_SETFL, flags | O_NONBLOCK)
-        if Darwin.connect(socket, address.ai_addr, address.ai_addrlen) != 0 {
-            guard errno == EINPROGRESS else { return false }
-            var waiting = pollfd(fd: socket, events: Int16(POLLOUT), revents: 0)
-            var problem: Int32 = 0
-            var size = socklen_t(MemoryLayout<Int32>.size)
-            guard poll(&waiting, 1, connectMilliseconds) == 1,
-                  getsockopt(socket, SOL_SOCKET, SO_ERROR, &problem, &size) == 0, problem == 0 else { return false }
-        }
-        _ = fcntl(socket, F_SETFL, flags)
-        var limit = timeval(tv_sec: replySeconds, tv_usec: 0)
-        let limitSize = socklen_t(MemoryLayout<timeval>.size)
-        setsockopt(socket, SOL_SOCKET, SO_RCVTIMEO, &limit, limitSize)
-        setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO, &limit, limitSize)
-        // If rigctld goes away mid-send, report an error rather than
-        // ending Solid Copy (which is what a "broken pipe" does by default).
-        var on: Int32 = 1
-        setsockopt(socket, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
-        return true
-    }
-
-    private func send(_ text: String) throws {
-        let bytes = Array(text.utf8)
-        var sent = 0
-        while sent < bytes.count {
-            let count = bytes[sent...].withUnsafeBytes { Darwin.send(socket, $0.baseAddress, $0.count, 0) }
-            guard count > 0 else { disconnect(); throw Failure.notRunning }
-            sent += count
-        }
-    }
-
-    // One line of the reply, without its line ending. Running out of time
-    // means the radio didn't answer; the connection closing means rigctld
-    // stopped. Either way the connection is dropped, so a late reply
-    // can't be mistaken for the answer to the next command.
-    private func readLine() throws -> String {
-        while true {
-            if let end = buffer.firstIndex(of: 10) {
-                let line = String(decoding: buffer[..<end], as: UTF8.self)
-                buffer.removeSubrange(...end)
-                return line.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            guard buffer.count < 4_096 else { disconnect(); throw Failure.notAnswering }
-            var chunk = [UInt8](repeating: 0, count: 1_024)
-            let count = chunk.withUnsafeMutableBytes { recv(socket, $0.baseAddress, $0.count, 0) }
-            if count > 0 {
-                buffer += chunk[..<count]
-            } else {
-                let timedOut = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)
-                disconnect()
-                throw timedOut ? Failure.notAnswering : Failure.notRunning
-            }
-        }
-    }
+    // The conversation itself (HamlibSocket.swift), shared with the
+    // rotor's rotctld (RotctldClient.swift).
+    private func values(_ command: String) throws -> [String] { try link.values(command) }
 }

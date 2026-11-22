@@ -394,6 +394,18 @@ enum Settings {
     // Settings > Radio, "Share the radio with other programs": Solid
     // Copy answers Hamlib NET rigctl at 127.0.0.1 port 4532 (RigctlServer)
     // while the built-in driver is in use. Off until turned on.
+    // Settings > Radio, Rotor (RotorControl.swift): whether to use a rotor
+    // through a rotctld you run, and its address ("host:port"; empty is
+    // this Mac at rotctld's usual port, 127.0.0.1:4533).
+    static var rotorEnabled: Bool {
+        get { defaults.bool(forKey: "rotor.enabled") }
+        set { defaults.set(newValue, forKey: "rotor.enabled") }
+    }
+    static var rotorAddress: String {
+        get { defaults.string(forKey: "rotor.address") ?? "" }
+        set { defaults.set(newValue.trimmingCharacters(in: .whitespaces), forKey: "rotor.address") }
+    }
+
     static var shareRadio: Bool {
         get { defaults.bool(forKey: "radio.share") }
         set {

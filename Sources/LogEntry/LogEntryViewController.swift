@@ -380,6 +380,11 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
             }
         }
         Self.addDistance(to: &qso)
+        // Where the antenna pointed (ADIF's ANT_AZ), if a rotor is set up
+        // and its heading was read in the last 2 minutes (RotorControl).
+        if qso["ant_az"].isEmpty, RotorControl.shared.isOn, let heading = RotorControl.shared.recentHeading {
+            qso["ant_az"] = String(Int(heading.rounded()) % 360)
+        }
         // Its country from cty.dat, if the lookup didn't give one.
         if qso["country"].isEmpty, let country = Countries.shared.country(of: call) { qso["country"] = country.name }
         // The band in ADIF's terms: "20" (or "20 meters", or "14.058"
@@ -1556,6 +1561,17 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     static func addDistance(to qso: inout QSO) {
         guard qso["distance"].isEmpty, let path = GreatCircle.path(for: qso) else { return }
         qso["distance"] = String(Int(path.km.rounded()))
+    }
+
+    // The call in the form and the bearing to it, for Turn Rotor to
+    // Station: from the profile's grid to what its lookup found. Nil if
+    // there's no call, no lookup for it yet, or no position to aim at.
+    func stationBearing() -> (call: String, bearing: Double)? {
+        let call = Callsign.normalized(callsignField.stringValue)
+        let myGrid = Settings.currentProfile.station["my_gridsquare"] ?? ""
+        guard !call.isEmpty, let result = lookupResult, result.call == CallsignLookup.lookupCall(for: call),
+              let path = GreatCircle.path(myGrid: myGrid, fields: result.fields) else { return nil }
+        return (call, path.bearing)
     }
 
     // How far and which way, for the lookup line and speech, from the

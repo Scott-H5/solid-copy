@@ -14,7 +14,7 @@ LOG="${2:-${SOLID_COPY_SQL_LOG:-/dev/null/no-log}}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 xcrun swiftc Sources/Activity/*.swift -swift-version 5 Sources/Model/*.swift Sources/Import/*.swift Sources/Accessibility/*.swift \
-  Sources/LogTable/*.swift Sources/EditContact/*.swift Sources/Settings/*.swift Sources/LoTW/*.swift Sources/Export/*.swift Sources/Keyer/*.swift Sources/Radio/*.swift \
+  Sources/LogTable/*.swift Sources/EditContact/*.swift Sources/Settings/*.swift Sources/Rotor/*.swift Sources/LoTW/*.swift Sources/Export/*.swift Sources/Keyer/*.swift Sources/Radio/*.swift \
   Sources/Spots/*.swift Sources/Lookup/*.swift tools/cards-check/main.swift -o "$WORK/check"
 mkdir "$WORK/data"
 "$WORK/check" "$WORK/data" "$CARDS" "$LOG"

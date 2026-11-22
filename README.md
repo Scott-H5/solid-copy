@@ -455,6 +455,44 @@ network server **127.0.0.1** and port **4532**. That's all.
   radio through Solid Copy") and when it goes. Window > Activity lists
   those, and when sharing starts and stops.
 
+### The rotor
+
+Solid Copy can turn your antenna through hamlib's **rotctld**, which you
+run for your rotor as you would rigctld for a radio. Turn on **Use a
+rotor through rotctld** in Settings > Radio; leave the address empty for
+this Mac at rotctld's usual port, 127.0.0.1:4533. Start rotctld with
+your rotor's model number and its port, for example:
+
+```bash
+rotctld -m <your model> -r /dev/cu.usbserial-XXXX
+```
+
+`rotctld -l` lists the models. To try it with no rotor, hamlib's
+pretend rotor is model 1:
+
+```bash
+rotctld -m 1
+```
+
+The commands are in the Radio menu, all Control-Shift-Command and a
+letter:
+
+| Command | Keys | What it does |
+|---|---|---|
+| Turn Rotor to Station | Control-Shift-Command-T | Points at the call in the logging form, from your grid (Settings > Profiles) to where its lookup puts it |
+| Turn Rotor Long Path | Control-Shift-Command-L | The other way round the world |
+| Turn Rotor To… | Control-Shift-Command-E | A heading you type, 0 to 360 degrees |
+| Rotor Heading | Control-Shift-Command-H | Says where it's pointing |
+| Stop Rotor | Control-Shift-Command-S | Stops it at once |
+
+A turn is said as it starts ("Turning from 120 to 285 degrees, west")
+and when it's over: "Rotor at 285 degrees, west", or, if the rotor
+stops short or stalls, where it stopped. Each turn is listed in Window >
+Activity too. The rotor only turns when you choose one of these
+commands; nothing turns it by itself. A contact you log while a rotor is
+set up gets the antenna's heading in Antenna azimuth (ADIF's ANT_AZ),
+if you haven't filled that in.
+
 ### WSJT-X decodes
 
 **Window > WSJT-X Decodes** (Command-4) shows what WSJT-X is decoding,
@@ -1129,6 +1167,7 @@ of them touch your Solid Copy log.
   hamlib's rigctl as the other program (needs `brew install hamlib`)
 - `tools/check-parks.sh`: parks
 - `tools/check-awards.sh`: counting DXCC, WAS, WAZ and WPX
+- `tools/check-rotor.sh`: rotor control, against a pretend rotctld (`--live` adds hamlib's dummy rotor)
 - `tools/check-spots.sh`: spots
 - `tools/check-cards.sh`: scanned and electronic QSL cards
 - `tools/check-lotw.sh`: LoTW

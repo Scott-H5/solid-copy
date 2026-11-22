@@ -47,6 +47,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
     private let shareBox = NSButton(checkboxWithTitle: "Share the radio with other programs", target: nil, action: nil)
     private let transmitBox = NSButton(checkboxWithTitle: "Let them transmit", target: nil, action: nil)
+    // The rotor (RotorControl.swift): through a rotctld you run.
+    private let rotorBox = NSButton(checkboxWithTitle: "Use a rotor through rotctld", target: nil, action: nil)
+    private let rotorAddress = NSTextField(string: "")
     private var details: NSStackView!
     private var grid: NSGridView!
 
@@ -134,20 +137,41 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         transmitNote.isSelectable = true
         transmitBox.setAccessibilityLinkedUIElements([transmitNote])
 
+        rotorBox.target = self
+        rotorBox.action = #selector(toggleRotor(_:))
+        let rotorNote = NSTextField(wrappingLabelWithString:
+            "Turns the antenna from the Radio menu: Turn Rotor to Station (Control-Shift-Command-T), Long "
+            + "Path (L), Turn Rotor To a heading (E), Rotor Heading (H) and Stop Rotor (S). Run hamlib's "
+            + "rotctld for your rotor first, for example: rotctld -m 1 for a pretend rotor to try it, or "
+            + "rotctld -m <your model> -r <its port>. The address is where rotctld listens: empty means "
+            + "this Mac, 127.0.0.1 port 4533. The rotor only turns when you choose one of those commands.")
+        rotorNote.preferredMaxLayoutWidth = 520
+        rotorNote.isSelectable = true
+        rotorBox.setAccessibilityLinkedUIElements([rotorNote])
+        rotorAddress.placeholderString = "127.0.0.1:4533"
+        rotorAddress.setAccessibilityLabel("Rotor's rotctld address")
+        rotorAddress.setAccessibilityLinkedUIElements([rotorNote])
+        rotorAddress.target = self
+        rotorAddress.action = #selector(rotorAddressChanged(_:))
+        rotorAddress.cell?.sendsActionOnEndEditing = true
+        rotorAddress.widthAnchor.constraint(equalToConstant: 200).isActive = true
+        let rotorRow = NSStackView(views: [FieldLabel("rotctld address"), rotorAddress])
+
         let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote, transmitBox,
-                                        transmitNote])
+                                        transmitNote, rotorBox, rotorRow, rotorNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
         stack.setCustomSpacing(24, after: buttons)
         stack.setCustomSpacing(20, after: details)
         stack.setCustomSpacing(20, after: note)
+        stack.setCustomSpacing(20, after: transmitNote)
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         view = stack
 
         // Tab order, top to bottom (the pop-ups and buttons only when
         // Keyboard navigation is on in System Settings).
-        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox]
+        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox, rotorBox, rotorAddress]
         for (index, item) in order.enumerated() {
             item.nextKeyView = order[(index + 1) % order.count]
         }
@@ -178,6 +202,25 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             : "Programs sharing the radio can't transmit.")
     }
 
+    @objc private func toggleRotor(_ sender: NSButton) {
+        Settings.rotorEnabled = sender.state == .on
+        rotorAddress.isEnabled = sender.state == .on
+        RotorControl.shared.settingsChanged()
+        let address = RotctldClient.address(Settings.rotorAddress)
+        Speaker.announce(sender.state == .on ? "Rotor on, through rotctld at \(address.host) port \(address.port)."
+                                             : "Rotor off.")
+    }
+
+    // Return or leaving the field: the new address is used from the next
+    // rotor command.
+    @objc private func rotorAddressChanged(_ sender: NSTextField) {
+        guard sender.stringValue.trimmingCharacters(in: .whitespaces) != Settings.rotorAddress else { return }
+        Settings.rotorAddress = sender.stringValue
+        RotorControl.shared.settingsChanged()
+        let address = RotctldClient.address(Settings.rotorAddress)
+        Speaker.announce("The rotor's rotctld is at \(address.host) port \(address.port).")
+    }
+
     @objc private func toggleSharing(_ sender: NSButton) {
         Settings.shareRadio = sender.state == .on
         transmitBox.isEnabled = sender.state == .on
@@ -193,6 +236,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         shareBox.state = Settings.shareRadio ? .on : .off
         transmitBox.state = Settings.shareRadioTransmit ? .on : .off
         transmitBox.isEnabled = Settings.shareRadio
+        rotorBox.state = Settings.rotorEnabled ? .on : .off
+        rotorAddress.stringValue = Settings.rotorAddress
+        rotorAddress.isEnabled = Settings.rotorEnabled
         let radios = Settings.radios
         let radio = Settings.currentRadio
         shownID = radio?.id

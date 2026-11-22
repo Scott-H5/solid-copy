@@ -702,6 +702,61 @@ how long it lasted.</li>
 radio through Solid Copy") and when it goes. Window &gt; Activity lists
 those, and when sharing starts and stops.</li>
 </ul>
+<h3 id="the-rotor">The rotor</h3>
+<p>Solid Copy can turn your antenna through hamlib's <strong>rotctld</strong>, which you
+run for your rotor as you would rigctld for a radio. Turn on <strong>Use a
+rotor through rotctld</strong> in Settings &gt; Radio; leave the address empty for
+this Mac at rotctld's usual port, 127.0.0.1:4533. Start rotctld with
+your rotor's model number and its port, for example:</p>
+<div class="highlight highlight-source-shell"><pre>rotctld -m <span class="pl-k">&lt;</span>your model<span class="pl-k">&gt;</span> -r /dev/cu.usbserial-XXXX</pre></div>
+<p><code>rotctld -l</code> lists the models. To try it with no rotor, hamlib's
+pretend rotor is model 1:</p>
+<div class="highlight highlight-source-shell"><pre>rotctld -m 1</pre></div>
+<p>The commands are in the Radio menu, all Control-Shift-Command and a
+letter:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Keys</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Turn Rotor to Station</td>
+<td>Control-Shift-Command-T</td>
+<td>Points at the call in the logging form, from your grid (Settings &gt; Profiles) to where its lookup puts it</td>
+</tr>
+<tr>
+<td>Turn Rotor Long Path</td>
+<td>Control-Shift-Command-L</td>
+<td>The other way round the world</td>
+</tr>
+<tr>
+<td>Turn Rotor To…</td>
+<td>Control-Shift-Command-E</td>
+<td>A heading you type, 0 to 360 degrees</td>
+</tr>
+<tr>
+<td>Rotor Heading</td>
+<td>Control-Shift-Command-H</td>
+<td>Says where it's pointing</td>
+</tr>
+<tr>
+<td>Stop Rotor</td>
+<td>Control-Shift-Command-S</td>
+<td>Stops it at once</td>
+</tr>
+</tbody>
+</table>
+<p>A turn is said as it starts ("Turning from 120 to 285 degrees, west")
+and when it's over: "Rotor at 285 degrees, west", or, if the rotor
+stops short or stalls, where it stopped. Each turn is listed in Window &gt;
+Activity too. The rotor only turns when you choose one of these
+commands; nothing turns it by itself. A contact you log while a rotor is
+set up gets the antenna's heading in Antenna azimuth (ADIF's ANT_AZ),
+if you haven't filled that in.</p>
 <h3 id="wsjt-x-decodes">WSJT-X decodes</h3>
 <p><strong>Window &gt; WSJT-X Decodes</strong> (Command-4) shows what WSJT-X is decoding,
 newest first, one line each, so VoiceOver reads a whole decode at once:</p>
@@ -1355,6 +1410,8 @@ hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</l
 <code>tools/check-parks.sh</code>: parks</li>
 <li>
 <code>tools/check-awards.sh</code>: counting DXCC, WAS, WAZ and WPX</li>
+<li>
+<code>tools/check-rotor.sh</code>: rotor control, against a pretend rotctld (<code>--live</code> adds hamlib's dummy rotor)</li>
 <li>
 <code>tools/check-spots.sh</code>: spots</li>
 <li>

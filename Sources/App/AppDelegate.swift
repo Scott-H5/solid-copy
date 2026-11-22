@@ -337,6 +337,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         strength.target = self
         let reconnect = radioMenu.addItem(withTitle: "Reconnect Radio", action: #selector(reconnectRadio(_:)),
                                           keyEquivalent: "")
+        // The rotor (RotorControl.swift): Control-Shift-Command and a
+        // letter, a set of its own (Control-Command is the radio's;
+        // Control-Option-Command would be VoiceOver's own commands).
+        radioMenu.addItem(.separator())
+        for (title, action, key) in [
+            ("Turn Rotor to Station", #selector(turnRotorToStation(_:)), "t"),
+            ("Turn Rotor Long Path", #selector(turnRotorLongPath(_:)), "l"),
+            ("Turn Rotor To…", #selector(turnRotorTo(_:)), "e"),
+            ("Rotor Heading", #selector(sayRotorHeading(_:)), "h"),
+            ("Stop Rotor", #selector(stopRotor(_:)), "s"),
+        ] {
+            let item = radioMenu.addItem(withTitle: title, action: action, keyEquivalent: key)
+            item.keyEquivalentModifierMask = [.control, .shift, .command]
+            item.target = self
+        }
         radioMenu.addItem(.separator())
         let settings = radioMenu.addItem(withTitle: "Radio Settings…", action: #selector(editRadio(_:)),
                                          keyEquivalent: "")
@@ -661,6 +676,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Window > WSJT-X Decodes (Command-4): made the first time, and again
     // for another log (it says "worked before" against the log open).
+    // MARK: - Rotor (RotorControl.swift)
+
+    @objc func turnRotorToStation(_ sender: Any?) { turnRotor(longPath: false) }
+    @objc func turnRotorLongPath(_ sender: Any?) { turnRotor(longPath: true) }
+
+    private func turnRotor(longPath: Bool) {
+        guard let (call, bearing) = logEntry?.stationBearing() else {
+            NSSound.beep()
+            return Speaker.announce("There's no bearing yet. Type a call and let its lookup find where it is, "
+                                    + "with your grid in Settings > Profiles.")
+        }
+        let heading = longPath ? Rotor.longPath(bearing) : bearing
+        RotorControl.shared.turn(to: heading, toward: (longPath ? "long path to " : "to ") + call)
+    }
+
+    // Asks for a heading in a sheet with one field, then turns to it.
+    @objc func turnRotorTo(_ sender: Any?) {
+        guard RotorControl.shared.ready() else { return }
+        let alert = NSAlert()
+        alert.messageText = "Turn Rotor To"
+        alert.informativeText = "The heading, in degrees from north: 0 to 360 (90 is east, 180 south, 270 west)."
+        let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 120, height: 24))
+        field.setAccessibilityLabel("Heading in degrees")
+        alert.accessoryView = field
+        alert.addButton(withTitle: "Turn")
+        alert.addButton(withTitle: "Cancel")
+        alert.window.initialFirstResponder = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard let heading = Rotor.typed(field.stringValue) else {
+            NSSound.beep()
+            return Speaker.announce("\(field.stringValue) isn't a heading. Type degrees from 0 to 360.")
+        }
+        RotorControl.shared.turn(to: heading)
+    }
+
+    @objc func sayRotorHeading(_ sender: Any?) { RotorControl.shared.sayHeading() }
+    @objc func stopRotor(_ sender: Any?) { RotorControl.shared.stop() }
+
     @objc func showAwards(_ sender: Any?) {
         guard let logbook else { return }
         if awardsWindow == nil {
