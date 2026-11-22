@@ -401,6 +401,19 @@ enum Settings {
         get { defaults.bool(forKey: "rotor.enabled") }
         set { defaults.set(newValue, forKey: "rotor.enabled") }
     }
+    // Settings > Radio, WSJT-X (WSJTXAlerts.swift; v1.6 item 4): listen
+    // for WSJT-X all the time, not only with the decodes window open, so
+    // its contacts are logged whenever you make them; and, with the
+    // window closed, alert you to a call to you or a needed station.
+    static var wsjtxAlwaysListen: Bool {
+        get { defaults.bool(forKey: "wsjtx.alwaysListen") }
+        set { defaults.set(newValue, forKey: "wsjtx.alwaysListen") }
+    }
+    static var wsjtxAlerts: Bool {
+        get { defaults.object(forKey: "wsjtx.alerts") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "wsjtx.alerts") }
+    }
+
     static var rotorAddress: String {
         get { defaults.string(forKey: "rotor.address") ?? "" }
         set { defaults.set(newValue.trimmingCharacters(in: .whitespaces), forKey: "rotor.address") }

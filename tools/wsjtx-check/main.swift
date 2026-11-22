@@ -302,6 +302,50 @@ MainActor.assumeIsolated {
     refresh.selectItem(withTitle: "Live")
     _ = refresh.target?.perform(refresh.action, with: refresh)
     UserDefaults.standard.removeObject(forKey: "decodes.refresh")
+
+    // In the background (WSJTXAlerts.swift): with the window closed, a
+    // call to you and a needed station are alerts; one period is one alert.
+    let cty = """
+    United States:            05:  08:  NA:   37.53:    91.67:     5.0:  K:
+        K,N,W;
+    Falkland Islands:         13:  16:  SA:  -51.63:    58.72:     4.0:  VP8:
+        VP8;
+    """
+    let ctyFile = FileManager.default.temporaryDirectory.appendingPathComponent("wsjtx-cty-\(UUID().uuidString).dat")
+    defer { try? FileManager.default.removeItem(at: ctyFile) }
+    try! cty.write(to: ctyFile, atomically: true, encoding: .utf8)
+    Countries.shared.fileURL = ctyFile
+    let alerts = WSJTXAlerts.shared
+    var alerted: [String] = []
+    alerts.deliver = { alerted.append($0) }
+    var windowOpen = true
+    alerts.windowIsOpen = { windowOpen }
+    var usLog: [QSO] = []
+    for band in ["20m", "40m"] {
+        var q = QSO(call: "K9US", timeOn: Date()); q["band"] = band; q["mode"] = "FT8"; usLog.append(q)
+    }
+    alerts.log = { usLog }
+    Settings.wsjtxAlerts = true
+    listener.handle(.clear(id: "WSJT-X"))
+    alerts.listenerChanged()
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ VP8XYZ GD18", seconds: 53_000))!)
+    alerts.listenerChanged()
+    check(alerted.isEmpty, "the decodes window open: no background alert (it says its own)")
+    windowOpen = false
+    listener.handle(WSJTXMessage.parse(decodeMessage("N0CALL K1ABC FN42", seconds: 53_015))!)
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ VP8ABC GD18", seconds: 53_015, df: 900))!)
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ W2ABC FN20", seconds: 53_015, df: 1200))!)
+    alerts.listenerChanged()
+    check(alerted == ["K1ABC is calling you in WSJT-X: FN42. Needed: VP8ABC, Falkland Islands, new country, 20 meters."],
+          "window closed: a call to you and a needed station, in one alert; a worked country isn't (\(alerted))")
+    listener.handle(WSJTXMessage.parse(decodeMessage("CQ VP8ABC GD18", seconds: 53_030, df: 900))!)
+    alerts.listenerChanged()
+    check(alerted.count == 1, "the same needed station again within the hour: no alert")
+    Settings.wsjtxAlerts = false
+    listener.handle(WSJTXMessage.parse(decodeMessage("N0CALL K1ABC R-05", seconds: 53_045))!)
+    alerts.listenerChanged()
+    check(alerted.count == 1, "Alert me off: nothing")
+    UserDefaults.standard.removeObject(forKey: "wsjtx.alerts")
     Speaker.onAnnounce = nil
     print("All WSJT-X checks passed.")
 }

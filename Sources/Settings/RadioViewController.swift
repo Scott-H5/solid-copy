@@ -47,6 +47,10 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
     private let statusLabel = NSTextField(wrappingLabelWithString: "")
     private let shareBox = NSButton(checkboxWithTitle: "Share the radio with other programs", target: nil, action: nil)
     private let transmitBox = NSButton(checkboxWithTitle: "Let them transmit", target: nil, action: nil)
+    // WSJT-X in the background (WSJTXAlerts.swift).
+    private let wsjtxBox = NSButton(checkboxWithTitle: "Listen for WSJT-X all the time", target: nil, action: nil)
+    private let wsjtxAlertsBox = NSButton(checkboxWithTitle: "Alert me with the decodes window closed",
+                                          target: nil, action: nil)
     // The rotor (RotorControl.swift): through a rotctld you run.
     private let rotorBox = NSButton(checkboxWithTitle: "Use a rotor through rotctld", target: nil, action: nil)
     private let rotorAddress = NSTextField(string: "")
@@ -157,8 +161,31 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         rotorAddress.widthAnchor.constraint(equalToConstant: 200).isActive = true
         let rotorRow = NSStackView(views: [FieldLabel("rotctld address"), rotorAddress])
 
+        wsjtxBox.target = self
+        wsjtxBox.action = #selector(toggleWSJTX(_:))
+        let wsjtxNote = NSTextField(wrappingLabelWithString:
+            "With this on, Solid Copy listens for WSJT-X from the moment it opens, not only while Window > "
+            + "WSJT-X Decodes is open, so every contact you log in WSJT-X goes into the open log. Only "
+            + "contacts WSJT-X logs are added, never its decodes. WSJT-X sends to 127.0.0.1 port 2237 "
+            + "(its Settings > Reporting, UDP Server), and only one program can listen there.")
+        wsjtxNote.preferredMaxLayoutWidth = 520
+        wsjtxNote.isSelectable = true
+        wsjtxBox.setAccessibilityLinkedUIElements([wsjtxNote])
+        wsjtxAlertsBox.target = self
+        wsjtxAlertsBox.action = #selector(toggleWSJTXAlerts(_:))
+        let alertsNote = NSTextField(wrappingLabelWithString:
+            "While listening with the decodes window closed: a station calling you, and a needed one (a new "
+            + "country, or new on this band or in data modes), with the needed sound. With Solid Copy in "
+            + "front VoiceOver says it; with another app in front it's a notification, which VoiceOver "
+            + "reads (macOS asks once to allow them). Each needed station is told once per band an hour. "
+            + "Window > Activity lists them all.")
+        alertsNote.preferredMaxLayoutWidth = 520
+        alertsNote.isSelectable = true
+        wsjtxAlertsBox.setAccessibilityLinkedUIElements([alertsNote])
+
         let stack = NSStackView(views: [top, buttons, details, note, shareBox, shareNote, transmitBox,
-                                        transmitNote, rotorBox, rotorRow, rotorNote])
+                                        transmitNote, wsjtxBox, wsjtxNote, wsjtxAlertsBox, alertsNote,
+                                        rotorBox, rotorRow, rotorNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
@@ -166,12 +193,14 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         stack.setCustomSpacing(20, after: details)
         stack.setCustomSpacing(20, after: note)
         stack.setCustomSpacing(20, after: transmitNote)
+        stack.setCustomSpacing(20, after: alertsNote)
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         view = stack
 
         // Tab order, top to bottom (the pop-ups and buttons only when
         // Keyboard navigation is on in System Settings).
-        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox, rotorBox, rotorAddress]
+        let order = [radioMenu, newButton, deleteButton] + controls.map(\.1) + [shareBox, transmitBox, wsjtxBox, wsjtxAlertsBox,
+                                                                       rotorBox, rotorAddress]
         for (index, item) in order.enumerated() {
             item.nextKeyView = order[(index + 1) % order.count]
         }
@@ -213,6 +242,24 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     // Return or leaving the field: the new address is used from the next
     // rotor command.
+    @objc private func toggleWSJTX(_ sender: NSButton) {
+        Settings.wsjtxAlwaysListen = sender.state == .on
+        wsjtxAlertsBox.isEnabled = sender.state == .on
+        WSJTXAlerts.shared.apply()
+        let listener = WSJTXListener.shared
+        if sender.state == .on, let problem = listener.problem {
+            Speaker.announce("Can't listen for WSJT-X. \(problem)")
+        } else {
+            Speaker.announce(sender.state == .on ? "Listening for WSJT-X all the time."
+                             : "Listening for WSJT-X only with the decodes window open.")
+        }
+    }
+
+    @objc private func toggleWSJTXAlerts(_ sender: NSButton) {
+        Settings.wsjtxAlerts = sender.state == .on
+        WSJTXAlerts.shared.apply()
+    }
+
     @objc private func rotorAddressChanged(_ sender: NSTextField) {
         guard sender.stringValue.trimmingCharacters(in: .whitespaces) != Settings.rotorAddress else { return }
         Settings.rotorAddress = sender.stringValue
@@ -236,6 +283,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         shareBox.state = Settings.shareRadio ? .on : .off
         transmitBox.state = Settings.shareRadioTransmit ? .on : .off
         transmitBox.isEnabled = Settings.shareRadio
+        wsjtxBox.state = Settings.wsjtxAlwaysListen ? .on : .off
+        wsjtxAlertsBox.state = Settings.wsjtxAlerts ? .on : .off
+        wsjtxAlertsBox.isEnabled = Settings.wsjtxAlwaysListen
         rotorBox.state = Settings.rotorEnabled ? .on : .off
         rotorAddress.stringValue = Settings.rotorAddress
         rotorAddress.isEnabled = Settings.rotorEnabled

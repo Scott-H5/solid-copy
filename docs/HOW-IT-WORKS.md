@@ -451,6 +451,13 @@ then uploads and looks them up. `DecodeLine.swift` has its words, apart
 from the window, so
 `tools/check-wsjtx.sh` can test them. "Needed" is the Spots window's
 WorkedCountries, with the band from WSJT-X's dial frequency.
+`WSJTXAlerts.swift` is listening in the background: `apply` starts the
+listener at launch if Settings says all the time (and the decodes
+window then leaves it running when it closes), and `listenerChanged`
+looks at each new decode while the window is closed: a call to you, or
+a needed station (once per call and band an hour), made into one alert
+per batch, which `sayOrNotify` speaks with Solid Copy in front or posts
+as a notification otherwise.
 
 ## Spots
 

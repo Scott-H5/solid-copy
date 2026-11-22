@@ -26,7 +26,8 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   needed, on each band and mode), SKCC Centurion, Tribune and Senator,
   and POTA parks hunted
 - works FT8 and other digital modes with WSJT-X: its decodes in a list
-  VoiceOver reads, Return to answer a station, and contacts WSJT-X logs
+  VoiceOver reads, Return to answer a station, alerts for needed
+  stations in the background, and contacts WSJT-X logs
   arriving in your log
 - shares the radio with programs such as WSJT-X (Hamlib NET rigctl),
   with safeguards when they transmit
@@ -566,8 +567,8 @@ calling you is still said the moment it's decoded, and a filter you
 change, or WSJT-X clearing its decodes, shows at once. The choice is
 remembered.
 
-Solid Copy listens for WSJT-X while the window is open, at 127.0.0.1
-port 2237, which is what WSJT-X sends to unless you've changed it
+Solid Copy listens for WSJT-X while the window is open (or all the
+time: see below), at 127.0.0.1 port 2237, which is what WSJT-X sends to unless you've changed it
 (WSJT-X's Settings > Reporting, UDP Server). Only one program can listen
 there; if another has the port, the window says so.
 
@@ -606,9 +607,30 @@ your profile's rig, county and so on filling in what WSJT-X doesn't know,
 and the name and QTH from your callsign lookup. Solid Copy says "Logged
 KJ5IUY from WSJT-X", even with WSJT-X in front, and the contact uploads
 like any other (never from a test log). One already in the log isn't
-added again. This works while the WSJT-X Decodes window is open; WSJT-X
-keeps its own log too (wsjtx_log.adi), which File > Import… reads if a
-contact was missed.
+added again. This works while the WSJT-X Decodes window is open, or
+all the time with the setting below; WSJT-X keeps its own log too
+(wsjtx_log.adi), which File > Import… reads if a contact was missed.
+
+**Listening in the background.** Settings > Radio, **Listen for WSJT-X
+all the time**: Solid Copy listens from the moment it opens, so every
+contact you log in WSJT-X goes into the open log, with the decodes
+window closed. Only the contacts WSJT-X logs are added, never its
+decodes. With it, **Alert me with the decodes window closed** (on unless
+you turn it off) tells you, with the needed sound:
+
+- a station calling you: "K1ABC is calling you in WSJT-X: FN42";
+- a needed station: "Needed: VP8ABC, Falkland Islands, new country, 20
+  meters" (a new country, or one new on this band or in data modes, in
+  the open log). A decode carries a grid, not a state, so a needed state
+  can't be told from one. Each needed station is told once per band an
+  hour, and what one FT8 period brings comes together.
+
+With Solid Copy in front VoiceOver says it; with another app in front
+(WSJT-X, say) it's a Mac notification, which VoiceOver reads. macOS asks
+once to allow Solid Copy's notifications (System Settings >
+Notifications > Solid Copy changes it later). Window > Activity lists
+every alert. With the decodes window open, the window does the telling,
+as before.
 
 ## Choosing the form and the columns
 

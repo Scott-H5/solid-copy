@@ -84,6 +84,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startSharingRadio()
         // Contacts WSJT-X logs go into the log (WSJTXLogging.swift).
         WSJTXListener.shared.onLoggedADIF = { [weak self] adif in self?.loggedFromWSJTX(adif) }
+        // Listening all the time and background alerts, if chosen
+        // (WSJTXAlerts.swift; Settings > Radio, WSJT-X).
+        WSJTXAlerts.shared.windowIsOpen = { [weak self] in self?.decodesWindow?.window?.isVisible == true }
+        WSJTXAlerts.shared.log = { [weak self] in self?.logbook?.contacts ?? [] }
+        WSJTXAlerts.shared.apply()
         fillRadioMenu()
         // POTA's park list, if you have one and it's a month old.
         ParkList.shared.updateIfStale()

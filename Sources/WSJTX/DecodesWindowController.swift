@@ -94,8 +94,9 @@ final class DecodesWindowController: NSWindowController, NSWindowDelegate, NSTab
     }
 
     func windowWillClose(_ notification: Notification) {
-        // Nobody's looking: stop listening, so the port is free for others.
-        WSJTXListener.shared.stop()
+        // Nobody's looking: stop listening, so the port is free for others,
+        // unless Settings > Radio says to listen all the time.
+        if !WSJTXAlerts.shared.keepsListening { WSJTXListener.shared.stop() }
         pacer.stop()
     }
 

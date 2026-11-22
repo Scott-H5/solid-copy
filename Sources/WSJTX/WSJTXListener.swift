@@ -5,9 +5,9 @@
 // keeps what the decodes window shows: the latest decodes, newest first,
 // and what WSJT-X is doing (its Status).
 //
-// It listens only while the decodes window is open (Window > WSJT-X
-// Decodes), as the Spots window fetches only while open. Only this Mac
-// can send to it.
+// It listens while the decodes window is open (Window > WSJT-X
+// Decodes), or all the time if Settings > Radio says so
+// (WSJTXAlerts.swift). Only this Mac can send to it.
 //
 // Only one program can listen at port 2237. If another has it (a
 // program that shows WSJT-X's decodes on a map, say), Solid Copy says so,
