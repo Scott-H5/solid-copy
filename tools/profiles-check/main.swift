@@ -35,6 +35,37 @@ MainActor.assumeIsolated {
     let profiles = Settings.profiles
     check(profiles.map(\.name) == ["Home", "Portable"], "old settings become Home, and Portable is added")
     let home = profiles[0]
+
+    // Settings > Profiles follows the profile in use when Solid Copy
+    // changes it (opening a contest log brings back its profile), and the
+    // name field renames the profile the pop-up shows (23 November 2026:
+    // the page showed one profile's name with another in the pop-up).
+    do {
+        let page = ProfilesViewController()
+        let pageWindow = NSWindow(contentViewController: page); pageWindow.layoutIfNeeded()
+        func find<T: NSView>(_ type: T.Type, _ label: String) -> T? {
+            var found: T?
+            func walk(_ v: NSView) { if let t = v as? T, t.accessibilityLabel() == label { found = t }; v.subviews.forEach(walk) }
+            walk(page.view)
+            return found
+        }
+        guard let menu = find(NSPopUpButton.self, "Profile in use"), let name = find(NSTextField.self, "Profile name") else {
+            return check(false, "the Profiles page has its pop-up and name field")
+        }
+        Settings.useProfile(profiles[0].id)
+        page.refresh()
+        Settings.useProfile(profiles[1].id)   // as opening another log does
+        check(menu.titleOfSelectedItem == "Portable" && name.stringValue == "Portable",
+              "the profile changes by itself: the pop-up and name follow (\(menu.titleOfSelectedItem ?? "") / \(name.stringValue))")
+        name.stringValue = "Saunter"
+        page.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification, object: name))
+        check(Settings.profiles.map(\.name) == ["Home", "Saunter"] && menu.titleOfSelectedItem == "Saunter",
+              "renaming renames the profile shown, and the pop-up says so: \(Settings.profiles.map(\.name))")
+        var renamed = Settings.profiles
+        renamed[1].name = "Portable"
+        Settings.profiles = renamed
+        Settings.useProfile(profiles[0].id)
+    }
     check(home.station["station_callsign"] == "N0CALL" && home.station["my_gridsquare"] == "EM10",
           "Home keeps your callsign and grid")
     check(home.formFields.map(\.adif) == ["name", "rst_sent", "comment"] && home.formFields[1].startingValue == "",

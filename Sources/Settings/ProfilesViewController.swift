@@ -38,6 +38,9 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
 
     // The first control, for focus when the tab is chosen.
     var firstControl: NSView { profileMenu }
+    // The profile this page shows (in the pop-up and the name field).
+    private var shownID: UUID?
+    private var observer: NSObjectProtocol?
 
     override func loadView() {
         profileMenu.setAccessibilityLabel("Profile in use")
@@ -46,6 +49,19 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
 
         nameField.setAccessibilityLabel("Profile name")
         nameField.delegate = self
+        // Solid Copy changes the profile in use by itself too: opening a
+        // log brings back its profile (a contest log's, say). The page
+        // follows, so the pop-up and the name always show the same one
+        // (the author found them showing two, 23 November 2026).
+        observer = NotificationCenter.default.addObserver(forName: Settings.didChange, object: nil, queue: .main) {
+            [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let current = Settings.currentProfile
+                guard current.id != self.shownID || current.name != self.profileMenu.titleOfSelectedItem else { return }
+                self.refresh()
+            }
+        }
         nameField.widthAnchor.constraint(equalToConstant: 260).isActive = true
 
         // A pull-down menu: its first item is the button's title.
@@ -112,6 +128,7 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
             profileMenu.selectItem(at: index)
         }
         nameField.stringValue = current.name
+        shownID = current.id
         if let newButton = newMenuButton {
             newButton.removeAllItems()
             newButton.addItem(withTitle: "New Profile")
@@ -220,7 +237,8 @@ final class ProfilesViewController: NSViewController, NSTextFieldDelegate {
     // Saves a field as soon as you leave it.
     func controlTextDidEndEditing(_ notification: Notification) {
         guard let field = notification.object as? NSTextField else { return }
-        var profile = Settings.currentProfile
+        // The profile this page shows: the one the name and fields belong to.
+        var profile = Settings.profiles.first { $0.id == shownID } ?? Settings.currentProfile
         if field === nameField {
             let name = nameField.stringValue.trimmingCharacters(in: .whitespaces)
             guard !name.isEmpty, name != profile.name else {
