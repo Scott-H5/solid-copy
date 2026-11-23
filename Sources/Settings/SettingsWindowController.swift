@@ -57,7 +57,10 @@
 // Section 13, Band Plan: your license class, the band plan, and the
 // out-of-band warning (BandPlanSettingsViewController.swift).
 //
-// Keys: it opens in the QRZ username field. Tab moves through the text
+// Keys: it opens with focus in the sidebar, on the section last shown, so
+// you choose where to go (the author, 23 November 2026: opening inside a
+// section meant backing out of it first). Menu commands for one section
+// (Speech Settings…, Upload Settings…) still go straight into it. Tab moves through the text
 // fields (and the checkboxes and button too, if Keyboard navigation is on
 // in System Settings). Escape or Command-W closes it. Everything except
 // the QRZ login is saved as soon as you change it; the login is saved by
@@ -260,7 +263,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         super.init(window: window)
         window.delegate = self
         window.contentView = buildWindow()
-        window.initialFirstResponder = usernameField
+        window.initialFirstResponder = sidebar
         window.center()
         window.onEscape = { [weak self] in self?.window?.performClose(nil) }
         window.onTabNumber = { [weak self] number in self?.showTab(number: number) }
@@ -268,7 +271,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
 
     required init?(coder: NSCoder) { fatalError("Not used") }
 
-    // Shows the window with current settings, focus in the QRZ username.
+    // Shows the window with current settings, focus in the sidebar on the
+    // section last shown.
     func show() {
         lookupBox.state = Settings.lookupEnabled ? .on : .off
         callookBox.state = Settings.useCallook ? .on : .off
@@ -290,7 +294,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         }
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
-        showSection(current, focusInside: true)
+        showSection(current, focusInside: false)
+        window?.makeFirstResponder(sidebar)
     }
 
     // Goes to a section by its name in the sidebar ("CW"), for sections
