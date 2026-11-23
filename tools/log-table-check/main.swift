@@ -48,6 +48,13 @@ MainActor.assumeIsolated {
   let lastEdge = tv.rect(ofColumn: tv.tableColumns.count - 1).maxX
   check(lastEdge <= clip.bounds.width + 1 && tv.columnIndexes(in: clip.bounds).count == tv.tableColumns.count,
         "fitted: every column in a narrow window (last ends at \(Int(lastEdge)) of \(Int(clip.bounds.width)))")
+  // Resizing the window: the columns follow, wider and narrower.
+  for width in [1_000.0, 600.0, 800.0] {
+    w.setContentSize(NSSize(width: width, height: 400)); w.layoutIfNeeded(); w.display()
+    let edge = tv.rect(ofColumn: tv.tableColumns.count - 1).maxX
+    check(abs(edge - clip.bounds.width) <= 2, "the window at \(Int(width)): the columns still fill it exactly (\(Int(edge)) of \(Int(clip.bounds.width)))")
+  }
+  w.setContentSize(NSSize(width: 700, height: 400)); w.layoutIfNeeded(); w.display()
   Settings.logFitColumns = false
   w.layoutIfNeeded(); w.display()
   check(tv.rect(ofColumn: tv.tableColumns.count - 1).maxX > clip.bounds.width,
