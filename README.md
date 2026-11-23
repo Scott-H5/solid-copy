@@ -667,7 +667,7 @@ VoiceOver reads them in full. Turn it off to give each column its own
 width and scroll sideways. End dates and times read as the Date and Time
 columns do (2026-11-22, 1949), not as ADIF's raw numbers.
 
-In either list, Space
+In either list, Space (or VO-Space)
 shows or hides the selected item, which stays where it is, and
 Option-Command-Up and Down move it past the next item in use. QSL
 statuses and dates (cards, LoTW, eQSL, QRZ Logbook) aren't offered for

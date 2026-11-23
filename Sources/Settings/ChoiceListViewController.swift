@@ -255,6 +255,12 @@ final class ChoiceListViewController: NSViewController,
         // The Actions rotor (on the text cell, which is where VoiceOver
         // lands; see LogTableViewController.swift).
         let itemID = item.id
+        (cell.textField?.cell as? ActionTextCell)?.press = { [weak self] in
+            guard let self, let row = self.items.firstIndex(where: { $0.id == itemID }) else { return false }
+            self.tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+            self.toggleShown(nil)
+            return true
+        }
         (cell.textField?.cell as? ActionTextCell)?.actions = { [weak self] in
             guard let self, let row = self.items.firstIndex(where: { $0.id == itemID }) else { return [] }
             return self.actionTitles(for: self.items[row]).map { title, action in
@@ -300,8 +306,16 @@ final class ActionLabel: NSTextField {
 
 final class ActionTextCell: NSTextFieldCell {
     var actions: (() -> [NSAccessibilityCustomAction])?
+    // VO-Space on the row: Show or Hide, as Space does. Without this,
+    // VO-Space only worked when the keyboard was in the list too, so it
+    // toggled in one list and not the other (the author, 23 November 2026).
+    var press: (() -> Bool)?
 
     override func accessibilityCustomActions() -> [NSAccessibilityCustomAction]? {
         actions?()
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        press?() ?? super.accessibilityPerformPress()
     }
 }

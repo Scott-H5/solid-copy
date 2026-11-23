@@ -182,6 +182,14 @@ MainActor.assumeIsolated {
   choices.toggleShown(nil)
   check(used == ["state", "rst_sent"] && ctv.selectedRow == 0 && choices.selectedItem?.id == "name",
         "hiding an item leaves it where it is too")
+  // VO-Space (a press on the row) toggles it too, wherever the keyboard is.
+  ctv.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+  let gridRow = 2
+  let gridCell = (ctv.view(atColumn: 0, row: gridRow, makeIfNecessary: true) as? NSTableCellView)?.textField?.cell
+  check(gridCell?.accessibilityPerformPress() == true && used.contains("grid") && choices.selectedItem?.id == "grid",
+        "VO-Space on a row shows it, as Space does: \(used)")
+  _ = gridCell?.accessibilityPerformPress()
+  check(!used.contains("grid"), "and again hides it")
   check(LogField.named("name")!.canGoOnForm && !LogField.named("lotw_qsl_rcvd")!.canGoOnForm
         && !LogField.named("qslrdate")!.canGoOnForm && !LogField.named("app_solidcopy_qsl_card")!.canGoOnForm
         && LogField.named("qsl_via")!.canGoOnForm && !LogField.named("address")!.canGoOnForm,
