@@ -276,7 +276,8 @@ SOTA log (it has MY_SOTA_REF and SOTA_REF).
 
 Settings (Command-comma) is laid out like System Settings: a list of
 sections down the left (Lookup, Profiles, Logging Form, Log Columns,
-Radio, Speech, Spots, Uploads, Clubs, Backups, CW, QSL Card, Band Plan) and the chosen section on the right,
+Radio, Speech, Spots, Uploads, Clubs, Backups, CW, QSL Card, Band Plan,
+WSJT-X) and the chosen section on the right,
 scrolling if it's tall. It opens with focus in that list, on the section
 you were last in, so you choose where to go. Command-1 to Command-9 go
 straight to a section. In the list, Up and Down
@@ -632,7 +633,7 @@ added again. This works while the WSJT-X Decodes window is open, or
 all the time with the setting below; WSJT-X keeps its own log too
 (wsjtx_log.adi), which File > Import… reads if a contact was missed.
 
-**Listening in the background.** Settings > Radio, **Listen for WSJT-X
+**Listening in the background.** Settings > WSJT-X, **Listen for WSJT-X
 all the time**: Solid Copy listens from the moment it opens, so every
 contact you log in WSJT-X goes into the open log, with the decodes
 window closed. Only the contacts WSJT-X logs are added, never its

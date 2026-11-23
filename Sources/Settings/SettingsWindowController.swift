@@ -57,6 +57,9 @@
 // Section 13, Band Plan: your license class, the band plan, and the
 // out-of-band warning (BandPlanSettingsViewController.swift).
 //
+// Section 14, WSJT-X: listening all the time, and alerts with the decodes
+// window closed (WSJTXSettingsViewController.swift; once in Radio).
+//
 // Keys: it opens with focus in the sidebar, on the section last shown, so
 // you choose where to go (the author, 23 November 2026: opening inside a
 // section meant backing out of it first). Menu commands for one section
@@ -98,6 +101,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let cw = CWSettingsViewController()
     private let card = QSLCardSettingsViewController()
     private let bandPlan = BandPlanSettingsViewController()
+    private let wsjtx = WSJTXSettingsViewController()
 
     // The Logging Form tab's heading ("Logging form for the Home profile"),
     // and the Starting value field for the selected field.
@@ -284,6 +288,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         clubs.refresh()
         backups.refresh()
         bandPlan.refresh()
+        wsjtx.refresh()
         cw.refresh()
         card.refresh()
         reloadFormList()
@@ -349,6 +354,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         card.onEscape = { [weak self] in self?.window?.performClose(nil) }
         _ = bandPlan.view
         bandPlan.onEscape = { [weak self] in self?.window?.performClose(nil) }
+        _ = wsjtx.view
+        wsjtx.onEscape = { [weak self] in self?.window?.performClose(nil) }
         backups.onEscape = { [weak self] in self?.window?.performClose(nil) }
         clubs.onEscape = { [weak self] in self?.window?.performClose(nil) }
         // A club field named or renamed: the form and column lists show it.
@@ -384,6 +391,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
                     firstControl: { [unowned self] in card.firstControl }),
             Section(title: "Band Plan", view: { [unowned self] in bandPlan.view },
                     firstControl: { [unowned self] in bandPlan.firstControl }),
+            // Last, so Command-1 to 9 keep their sections.
+            Section(title: "WSJT-X", view: { [unowned self] in wsjtx.view },
+                    firstControl: { [unowned self] in wsjtx.firstControl }),
         ]
 
         // The sidebar: one column, no header, in the source-list style
@@ -559,11 +569,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         logKeyMenu.setAccessibilityLinkedUIElements([logKeyNote])
         let logKeyRow = NSStackView(views: [FieldLabel("Log a contact with"), logKeyMenu])
         logKeyRow.spacing = 8
-        let stack = NSStackView(views: [formHeading, list.view, startingRow, logKeyRow, logKeyNote])
+        // A heading of its own: this one is for every profile, unlike the
+        // rest of the page (the author, 23 November 2026).
+        let everyProfile = NSTextField(labelWithString: "For every profile")
+        everyProfile.font = .boldSystemFont(ofSize: NSFont.systemFontSize + 1)
+        everyProfile.setAccessibilityRole(.staticText)
+        let stack = NSStackView(views: [formHeading, list.view, startingRow, everyProfile, logKeyRow, logKeyNote])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
+        stack.setCustomSpacing(24, after: startingRow)
         formView = stack
         list.list.nextKeyView = startingValueField
         startingValueField.nextKeyView = logKeyMenu

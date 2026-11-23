@@ -6,7 +6,7 @@
 // and what WSJT-X is doing (its Status).
 //
 // It listens while the decodes window is open (Window > WSJT-X
-// Decodes), or all the time if Settings > Radio says so
+// Decodes), or all the time if Settings > WSJT-X says so
 // (WSJTXAlerts.swift). Only this Mac can send to it.
 //
 // Only one program can listen at port 2237. If another has it (a

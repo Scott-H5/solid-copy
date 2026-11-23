@@ -1,6 +1,6 @@
 // WSJTXAlerts.swift
 //
-// Listening for WSJT-X in the background (v1.6 item 4; Settings > Radio,
+// Listening for WSJT-X in the background (v1.6 item 4; Settings >
 // WSJT-X). With "Listen for WSJT-X all the time" on, Solid Copy listens
 // from launch, not only while the decodes window is open, so a contact
 // you make in WSJT-X is logged whenever you make it (WSJTXLogging.swift).

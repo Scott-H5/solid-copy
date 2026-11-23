@@ -65,7 +65,7 @@ final class AccessibilityAuditTests: XCTestCase {
             sleep(1)
             try audit(app, screen: name)
         }
-        // Settings > Band Plan (v1.6): past Command-9, so chosen in the
+        // Settings > Band Plan and WSJT-X: past Command-9, so chosen in the
         // sidebar list.
         let bandPlanRow = app.tables["Settings sections"].staticTexts["Band Plan"]
         if bandPlanRow.waitForExistence(timeout: 3) {
@@ -74,6 +74,14 @@ final class AccessibilityAuditTests: XCTestCase {
             try audit(app, screen: "Settings: Band Plan")
         } else {
             issues.append("Settings: Band Plan: its row in the sidebar wasn't found")
+        }
+        let wsjtxRow = app.tables["Settings sections"].staticTexts["WSJT-X"]
+        if wsjtxRow.waitForExistence(timeout: 3) {
+            wsjtxRow.click()
+            sleep(1)
+            try audit(app, screen: "Settings: WSJT-X")
+        } else {
+            issues.append("Settings: WSJT-X: its row in the sidebar wasn't found")
         }
         app.typeKey("w", modifierFlags: .command)
         sleep(1)
