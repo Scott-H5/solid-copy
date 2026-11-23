@@ -656,12 +656,12 @@ as before.
 **Settings > Logging Form** (Command-comma, then Command-3) lists every
 field you can put on the profile in use's form after Callsign; the
 Starting value field below it sets what the selected field starts as.
-**Settings > Log Columns** (Command-4) lists the log's columns. Below
-the list, **Say the column name with each value** (on to start): VoiceOver
-says a cell's value before its column heading, so moving along a row,
-each heading can sound as if it belongs to the next value. With this on,
-each cell is read as "RST sent, 599". End dates and times read as the
-Date and Time columns do (2026-11-22, 1949), not as ADIF's raw numbers.
+**Settings > Log Columns** (Command-4) lists the log's columns. In the
+log, VoiceOver says each cell with its own column's heading ("Country,
+United States"), however far along the row it is: the table gives
+VoiceOver its headings, so they stay right when the row scrolls
+sideways. End dates and times read as the Date and Time columns do
+(2026-11-22, 1949), not as ADIF's raw numbers.
 
 In either list, Space
 shows or hides the selected item, which stays where it is, and

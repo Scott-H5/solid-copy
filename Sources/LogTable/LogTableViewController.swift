@@ -1070,6 +1070,22 @@ final class LogTableViewController: NSViewController,
 
 // The table itself, with Return, Delete and Escape added.
 final class LogTableView: NSTableView {
+    // The column headings, for VoiceOver. AppKit puts them in the heading
+    // row but doesn't give them as the table's column headers (its
+    // AXColumnHeaderUIElements was empty, 23 November 2026), so VoiceOver
+    // guessed each cell's heading from where it was on screen, and once
+    // the row scrolled sideways it said the wrong one ("RST received,
+    // United States"). The heading row's own elements, in column order.
+    override func accessibilityColumnHeaderUIElements() -> [Any]? {
+        headerView?.accessibilityChildren() ?? super.accessibilityColumnHeaderUIElements()
+    }
+
+    // One column's heading element, for its cells (LogTextCell).
+    func headerElement(forColumn column: Int) -> Any? {
+        guard let headers = headerView?.accessibilityChildren(), headers.indices.contains(column) else { return nil }
+        return headers[column]
+    }
+
     var onDelete: (() -> Void)?
     var onEdit: (() -> Void)?
     var onEscape: (() -> Void)?
@@ -1191,21 +1207,18 @@ final class LogTextCell: NSTextFieldCell {
     // on, the column's name comes first: "RST sent, 599", "Comment,
     // blank". VoiceOver says a cell's value before its own heading, so
     // heard as a run, each heading seemed to belong to the next value.
-    // The name goes into the value VoiceOver reads, not into a label
-    // beside it, so a cell is read once ("RST sent, 599"), not twice.
-    private var heading: String? {
-        guard Settings.logCellHeadings, let id = owner?.identifier?.rawValue else { return nil }
-        return LogTableViewController.columnTitle(for: id)
-    }
-
     override func accessibilityLabel() -> String? {
-        if heading != nil { return nil }
-        return stringValue.isEmpty ? "blank" : super.accessibilityLabel()
+        stringValue.isEmpty ? "blank" : super.accessibilityLabel()
     }
 
-    override func accessibilityValue() -> Any? {
-        guard let heading else { return super.accessibilityValue() }
-        return "\(heading), \(stringValue.isEmpty ? "blank" : stringValue)"
+    // This cell's own column heading, so VoiceOver never has to guess it
+    // from the cell's place on screen (see LogTableView).
+    override func accessibilityColumnHeaderUIElements() -> [Any]? {
+        guard let owner, let table = owner.enclosingScrollView?.documentView as? LogTableView else {
+            return super.accessibilityColumnHeaderUIElements()
+        }
+        let column = table.column(for: owner)
+        return table.headerElement(forColumn: column).map { [$0] } ?? super.accessibilityColumnHeaderUIElements()
     }
 
 }

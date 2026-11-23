@@ -27,6 +27,32 @@ MainActor.assumeIsolated {
   let tv = (table.view as! NSScrollView).documentView as! NSTableView
   check(tv.numberOfRows == 3, "contacts already in the log show when it opens (rows: \(tv.numberOfRows))")
 
+  // VoiceOver gets the real column headings: the table's list of them,
+  // and each cell's own, so it never guesses from a cell's place on
+  // screen (which went wrong once a row scrolled sideways, 23 November
+  // 2026). Checked again after a column moves.
+  func headingTitle(_ element: Any?) -> String {
+    guard let element = element as? NSObject else { return "" }
+    for attribute in [NSAccessibility.Attribute.title, .description, .value] {
+      if let text = element.accessibilityAttributeValue(attribute) as? String, !text.isEmpty { return text }
+    }
+    return ""
+  }
+  func cellHeading(_ column: Int) -> String {
+    let view = tv.view(atColumn: column, row: 0, makeIfNecessary: true) as? NSTableCellView
+    return headingTitle(view?.textField?.cell?.accessibilityColumnHeaderUIElements()?.first)
+  }
+  func headingsRight() -> Bool {
+    let headers = tv.accessibilityColumnHeaderUIElements() ?? []
+    return headers.count == tv.tableColumns.count && tv.tableColumns.indices.allSatisfy { i in
+      headingTitle(headers[i]) == tv.tableColumns[i].title && cellHeading(i) == tv.tableColumns[i].title }
+  }
+  check(headingsRight(), "every cell's heading is its own column's: \((0..<tv.tableColumns.count).map(cellHeading))")
+  tv.moveColumn(tv.tableColumns.count - 1, toColumn: 1)
+  check(headingsRight(), "and still after a column moves: \((0..<tv.tableColumns.count).map(cellHeading))")
+  tv.moveColumn(1, toColumn: tv.tableColumns.count - 1)
+
+
   // Narrowing to one call.
   try! book.add(QSO(call: "K0ABC", timeOn: Date(timeIntervalSince1970: 1794666800)))
   check(table.showContacts(with: "K0ABC") == 2 && tv.numberOfRows == 2, "narrowed to K0ABC's 2 contacts")
@@ -173,23 +199,4 @@ MainActor.assumeIsolated {
         && QSL.display(field: "time_off", value: "194945") == "1949",
         "end date and time: 2026-11-22 and 1949 in the log, 22 November 2026 in the details")
 
-  // Each log cell gives VoiceOver its column's name first, so a value
-  // isn't heard as the previous heading's (Settings > Log Columns).
-  // What VoiceOver reads: the value, or the label for an empty cell.
-  func cellLabel(_ id: String, _ text: String) -> String? {
-    let view = LogCellView(identifier: NSUserInterfaceItemIdentifier(id))
-    view.textField?.stringValue = text
-    guard let cell = view.textField?.cell else { return nil }
-    if let label = cell.accessibilityLabel() { return label }
-    return cell.accessibilityValue() as? String
-  }
-  Settings.logCellHeadings = true
-  check(cellLabel("rst_sent", "599") == "RST sent, 599" && cellLabel("comment", "") == "Comment, blank"
-        && cellLabel("date", "2026-11-23") == "Date (UTC), 2026-11-23", "with column names: \(cellLabel("rst_sent", "599") ?? "nil")")
-  let named = LogCellView(identifier: NSUserInterfaceItemIdentifier("rst_rcvd"))
-  named.textField?.stringValue = "579"
-  check(named.textField?.cell?.accessibilityLabel() == nil, "the name is in the value, not a label too, so it's read once")
-  Settings.logCellHeadings = false
-  check(cellLabel("rst_sent", "599") == "599" && cellLabel("comment", "") == "blank", "without: the value alone, or blank")
-  UserDefaults.standard.removeObject(forKey: "log.cellHeadings")
 }

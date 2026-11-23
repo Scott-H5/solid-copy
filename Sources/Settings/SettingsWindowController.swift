@@ -101,9 +101,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let formHeading = NSTextField(labelWithString: "")
     // Logging Form, "Log a contact with" (Settings.logWithCommandReturnOnly).
     private let logKeyMenu = NSPopUpButton()
-    // Log Columns: "Say the column name with each value".
-    private let headingsBox = NSButton(checkboxWithTitle: "Say the column name with each value",
-                                       target: nil, action: nil)
     private let startingValueField = NSTextField(string: "")
     // The Logging Form section, rebuilt when the profile changes.
     private var formView = NSView()
@@ -635,38 +632,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func reloadColumnList() {
         let list = makeColumnList()
         columnList = list
-        // Whether each cell says its column's name first (Settings.logCellHeadings).
-        if headingsBox.action == nil {
-            headingsBox.target = self
-            headingsBox.action = #selector(headingsChanged(_:))
-        }
-        headingsBox.state = Settings.logCellHeadings ? .on : .off
-        headingsBox.removeFromSuperview()
-        let headingsNote = NSTextField(wrappingLabelWithString:
-            "VoiceOver says a cell's value before its column heading (\"599, RST sent\"), so as you move "
-            + "along a row each heading can sound as if it goes with the next value. With this on, each "
-            + "value is said after its column's name: \"RST sent, 599\". Left and Right Arrow in the log "
-            + "always say the name first.")
-        headingsNote.preferredMaxLayoutWidth = 520
-        headingsNote.isSelectable = true
-        headingsBox.setAccessibilityLinkedUIElements([headingsNote])
-        let stack = NSStackView(views: [list.view, headingsBox, headingsNote])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 12
-        columnsView = padded(stack)
-        list.list.nextKeyView = headingsBox
-        headingsBox.nextKeyView = list.list
+        columnsView = padded(list.view)
         if sections.indices.contains(current), sections[current].title == "Log Columns" {
             splice = nil
             showSection(current, focusInside: false)
         }
-    }
-
-    @objc private func headingsChanged(_ sender: NSButton) {
-        Settings.logCellHeadings = sender.state == .on
-        Speaker.announce(sender.state == .on ? "Log cells say their column's name first."
-                         : "Log cells say only their value.")
     }
 
     // Log Columns: Call (always first), Date, Time, and every field
