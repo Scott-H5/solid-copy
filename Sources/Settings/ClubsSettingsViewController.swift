@@ -58,10 +58,12 @@ final class ClubsSettingsViewController: NSViewController, NSTextFieldDelegate {
 
         let clubHeading = Self.heading("Your club fields")
         let clubNote = NSTextField(wrappingLabelWithString:
-            "Name up to \(LogField.clubSlots) fields of your own, such as NAQCC number or QCWA. A named field can "
-            + "go on the logging form and in the log's columns (Logging Form and Log Columns, in this window). "
-            + "Like SKCC, FISTS, LICW and CWops numbers, it's filled in from your last contact with the same "
-            + "call. Clearing a name hides the field; numbers already logged in it are kept.")
+            "Club fields hold the other station's number in a club Solid Copy doesn't already have: up to "
+            + "\(LogField.clubSlots) of them, such as NAQCC number or QCWA. SKCC, FISTS, LICW and CWops are built "
+            + "in, so they aren't needed here. Name the field for the club, not for your own membership: your own "
+            + "numbers go in Exchange sent (Settings > Logging Form) or on your QSL card (Settings > QSL Card). A "
+            + "named field can go on the logging form and in the log's columns, and it's filled in from your last "
+            + "contact with the same call. Clearing a name hides the field; numbers already logged in it are kept.")
         clubNote.preferredMaxLayoutWidth = 520
         var rows: [[NSView]] = []
         for (index, field) in nameFields.enumerated() {
@@ -220,6 +222,15 @@ final class ClubsSettingsViewController: NSViewController, NSTextFieldDelegate {
         }
         let slot = index + 1
         guard field.stringValue.trimmingCharacters(in: .whitespaces) != ClubNames.name(slot) else { return }
+        // A club Solid Copy has built in isn't made twice (the author named
+        // two fields "LICW #696" and "FISTS #5030", 23 November 2026, and
+        // the log offered both clubs twice).
+        if let builtIn = ClubNames.builtInField(for: field.stringValue) {
+            field.stringValue = ClubNames.name(slot)
+            Speaker.Cue.warning.play()
+            return Speaker.announce("Not used: that club is built in, as \(builtIn). A club field is for another "
+                                    + "club's numbers, such as NAQCC.")
+        }
         ClubNames.setName(field.stringValue, for: slot)
         field.stringValue = ClubNames.name(slot)
         // The form, the log's columns and Edit Contact use the new name.

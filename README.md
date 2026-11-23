@@ -856,8 +856,12 @@ contact keeps the distance in kilometres (ADIF's DISTANCE).
 ## Club numbers
 
 SKCC, FISTS, LICW and CWops numbers each have a field, and so do up to
-five clubs of your own (**Settings > Clubs**: name them, such as "NAQCC
+five other clubs you add (**Settings > Clubs**: name them, such as "NAQCC
 number"). Put the ones you use on the form in Settings > Logging Form.
+These fields hold the other station's number. A club field named for a
+club that's built in (SKCC, FISTS, LICW, CWops) isn't used, since it
+would put that club in the lists twice. Your own numbers go in Exchange
+sent (Settings > Logging Form) or on your QSL card (Settings > QSL Card).
 
 When you leave Callsign, empty club fields are filled in, and the
 numbers are said with the lookup ("..., SKCC 12345 Tribune, worked

@@ -234,6 +234,16 @@ enum ClubNames {
         return names.indices.contains(slot - 1) ? names[slot - 1] : ""
     }
 
+    // The built-in field a club name means, if it's one Solid Copy has
+    // already ("LICW #696" is LICW number), so a club field isn't made
+    // for it twice. Nil for any other club.
+    static func builtInField(for name: String) -> String? {
+        let words = Set(name.uppercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
+        let builtIn: [(word: String, field: String)] = [("SKCC", "skcc"), ("FISTS", "fists"),
+                                                         ("LICW", "app_solidcopy_licw"), ("CWOPS", "app_solidcopy_cwops")]
+        return builtIn.first { words.contains($0.word) }.flatMap { LogField.named($0.field)?.label }
+    }
+
     static func setName(_ name: String, for slot: Int) {
         guard (1...LogField.clubSlots).contains(slot) else { return }
         var names = UserDefaults.standard.stringArray(forKey: key) ?? []

@@ -150,5 +150,12 @@ check(listed["K1ABC"] == "678", "club list: quotes, spaces and extra columns are
 check(listed.count == 2 && listed["CALL"] == nil, "club list: the header and junk lines are skipped")
 check(ClubLists.parse("nothing here").isEmpty, "club list: text with no members gives none")
 
+// A club field named for a club Solid Copy has built in is refused.
+check(ClubNames.builtInField(for: "LICW #696") == "LICW number" && ClubNames.builtInField(for: "FISTS #5030") == "FISTS number"
+      && ClubNames.builtInField(for: "cwops") == "CWops number" && ClubNames.builtInField(for: "SKCC") == "SKCC number",
+      "built-in clubs are recognised, numbers and case aside")
+check(ClubNames.builtInField(for: "NAQCC number") == nil && ClubNames.builtInField(for: "QCWA") == nil
+      && ClubNames.builtInField(for: "Skccers fan club") == nil, "other clubs are club fields (whole words only)")
+
 print("All club checks passed.")
 }
