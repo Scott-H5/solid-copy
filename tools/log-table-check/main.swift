@@ -27,10 +27,7 @@ MainActor.assumeIsolated {
   let tv = (table.view as! NSScrollView).documentView as! NSTableView
   check(tv.numberOfRows == 3, "contacts already in the log show when it opens (rows: \(tv.numberOfRows))")
 
-  // VoiceOver gets the real column headings: the table's list of them,
-  // and each cell's own, so it never guesses from a cell's place on
-  // screen (which went wrong once a row scrolled sideways, 23 November
-  // 2026). Checked again after a column moves.
+  // VoiceOver gets the table's column headings (23 November 2026).
   func headingTitle(_ element: Any?) -> String {
     guard let element = element as? NSObject else { return "" }
     for attribute in [NSAccessibility.Attribute.title, .description, .value] {
@@ -38,19 +35,26 @@ MainActor.assumeIsolated {
     }
     return ""
   }
-  func cellHeading(_ column: Int) -> String {
-    let view = tv.view(atColumn: column, row: 0, makeIfNecessary: true) as? NSTableCellView
-    return headingTitle(view?.textField?.cell?.accessibilityColumnHeaderUIElements()?.first)
-  }
-  func headingsRight() -> Bool {
-    let headers = tv.accessibilityColumnHeaderUIElements() ?? []
-    return headers.count == tv.tableColumns.count && tv.tableColumns.indices.allSatisfy { i in
-      headingTitle(headers[i]) == tv.tableColumns[i].title && cellHeading(i) == tv.tableColumns[i].title }
-  }
-  check(headingsRight(), "every cell's heading is its own column's: \((0..<tv.tableColumns.count).map(cellHeading))")
-  tv.moveColumn(tv.tableColumns.count - 1, toColumn: 1)
-  check(headingsRight(), "and still after a column moves: \((0..<tv.tableColumns.count).map(cellHeading))")
-  tv.moveColumn(1, toColumn: tv.tableColumns.count - 1)
+  let headers = tv.accessibilityColumnHeaderUIElements() ?? []
+  check(headers.count == tv.tableColumns.count && tv.tableColumns.indices.allSatisfy { headingTitle(headers[$0]) == tv.tableColumns[$0].title },
+        "the table gives VoiceOver its column headings, in order")
+  // Fitting every column in the window (Settings > Log Columns, on to
+  // start): no sideways scrolling, so VoiceOver's heading, found by where
+  // a cell is on screen, is always the cell's own.
+  let clip = tv.enclosingScrollView!.contentView
+  w.setContentSize(NSSize(width: 700, height: 400)); w.layoutIfNeeded(); w.display()
+  Settings.logFitColumns = true
+  w.layoutIfNeeded(); w.display()
+  let lastEdge = tv.rect(ofColumn: tv.tableColumns.count - 1).maxX
+  check(lastEdge <= clip.bounds.width + 1 && tv.columnIndexes(in: clip.bounds).count == tv.tableColumns.count,
+        "fitted: every column in a narrow window (last ends at \(Int(lastEdge)) of \(Int(clip.bounds.width)))")
+  Settings.logFitColumns = false
+  w.layoutIfNeeded(); w.display()
+  check(tv.rect(ofColumn: tv.tableColumns.count - 1).maxX > clip.bounds.width,
+        "not fitted: the columns keep their widths, wider than the window")
+  UserDefaults.standard.removeObject(forKey: "log.fitColumns")
+  Settings.logFitColumns = true
+
 
 
   // Narrowing to one call.

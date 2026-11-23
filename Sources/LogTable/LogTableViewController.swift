@@ -175,6 +175,9 @@ final class LogTableViewController: NSViewController,
             let tableColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(column.id))
             tableColumn.title = column.title
             tableColumn.width = column.width
+            // Dragging an edge resizes it; fitting to the window may too.
+            tableColumn.resizingMask = [.userResizingMask, .autoresizingMask]
+            tableColumn.minWidth = 30
             tableView.addTableColumn(tableColumn)
         }
         tableView.reloadData()
@@ -229,9 +232,44 @@ final class LogTableViewController: NSViewController,
         Speaker.announce("\(title), now column \(target + 1) of \(count).")
     }
 
-    // Remember a column's new width after you drag its edge.
+    // Fitting every column in the window (Settings.logFitColumns): the
+    // columns share the width, and there's no sideways scrolling, so
+    // VoiceOver's heading for a cell is always the one above it. Off, the
+    // columns keep their own widths and the log scrolls sideways.
+    func applyFit() {
+        let fit = Settings.logFitColumns
+        tableView.enclosingScrollView?.hasHorizontalScroller = !fit
+        guard fit else {
+            tableView.columnAutoresizingStyle = .noColumnAutoresizing
+            arrangingColumns = true
+            for column in tableView.tableColumns {
+                column.width = Self.column(for: column.identifier.rawValue).width
+            }
+            arrangingColumns = false
+            return
+        }
+        tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
+        arrangingColumns = true
+        tableView.sizeToFit()
+        // The table's own width follows the columns, so there's nothing
+        // to scroll to beside them.
+        tableView.tile()
+        arrangingColumns = false
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        // The window's width is known now (and after it changes).
+        if Settings.logFitColumns, let clip = tableView.enclosingScrollView?.contentView,
+           tableView.frame.width > clip.bounds.width + 1 {
+            applyFit()
+        }
+    }
+
+    // Remember a column's new width after you drag its edge (not while
+    // the columns are fitted to the window: those widths aren't yours).
     func tableViewColumnDidResize(_ notification: Notification) {
-        guard !arrangingColumns, let column = notification.userInfo?["NSTableColumn"] as? NSTableColumn else { return }
+        guard !arrangingColumns, !Settings.logFitColumns, let column = notification.userInfo?["NSTableColumn"] as? NSTableColumn else { return }
         Settings.columnWidths[column.identifier.rawValue] = Double(column.width)
     }
 
@@ -273,6 +311,7 @@ final class LogTableViewController: NSViewController,
             MainActor.assumeIsolated {
                 guard let self, !self.arrangingColumns else { return }
                 self.rebuildColumns()
+                self.applyFit()
             }
         }
         tableView.dataSource = self
@@ -340,6 +379,7 @@ final class LogTableViewController: NSViewController,
         scrollView.borderType = .bezelBorder
         scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
         view = scrollView
+        applyFit()
 
         observeLogbook()
     }
@@ -1071,19 +1111,13 @@ final class LogTableViewController: NSViewController,
 // The table itself, with Return, Delete and Escape added.
 final class LogTableView: NSTableView {
     // The column headings, for VoiceOver. AppKit puts them in the heading
-    // row but doesn't give them as the table's column headers (its
-    // AXColumnHeaderUIElements was empty, 23 November 2026), so VoiceOver
-    // guessed each cell's heading from where it was on screen, and once
-    // the row scrolled sideways it said the wrong one ("RST received,
-    // United States"). The heading row's own elements, in column order.
+    // row but didn't give them as the table's column headers (its
+    // AXColumnHeaderUIElements was empty, 23 November 2026). VoiceOver
+    // still finds a cell's own heading by where it is on screen, which is
+    // why the log fits every column in the window (Settings.logFitColumns):
+    // when the row scrolled to show a cell, it said the wrong heading.
     override func accessibilityColumnHeaderUIElements() -> [Any]? {
         headerView?.accessibilityChildren() ?? super.accessibilityColumnHeaderUIElements()
-    }
-
-    // One column's heading element, for its cells (LogTextCell).
-    func headerElement(forColumn column: Int) -> Any? {
-        guard let headers = headerView?.accessibilityChildren(), headers.indices.contains(column) else { return nil }
-        return headers[column]
     }
 
     var onDelete: (() -> Void)?
@@ -1211,15 +1245,6 @@ final class LogTextCell: NSTextFieldCell {
         stringValue.isEmpty ? "blank" : super.accessibilityLabel()
     }
 
-    // This cell's own column heading, so VoiceOver never has to guess it
-    // from the cell's place on screen (see LogTableView).
-    override func accessibilityColumnHeaderUIElements() -> [Any]? {
-        guard let owner, let table = owner.enclosingScrollView?.documentView as? LogTableView else {
-            return super.accessibilityColumnHeaderUIElements()
-        }
-        let column = table.column(for: owner)
-        return table.headerElement(forColumn: column).map { [$0] } ?? super.accessibilityColumnHeaderUIElements()
-    }
 
 }
 

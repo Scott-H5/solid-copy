@@ -440,6 +440,19 @@ enum Settings {
         set { defaults.set(newValue, forKey: "radio.typedFrequencyMode") }
     }
 
+    // Settings > Log Columns: fit every column in the window, so the log
+    // never scrolls sideways. VoiceOver finds a cell's heading by where it
+    // is on screen, and when VO-Right scrolled the row to show a cell, it
+    // said the heading of the column that had been there (the author's
+    // transcripts, 23 November 2026). On to start.
+    static var logFitColumns: Bool {
+        get { defaults.object(forKey: "log.fitColumns") as? Bool ?? true }
+        set {
+            defaults.set(newValue, forKey: "log.fitColumns")
+            NotificationCenter.default.post(name: didChange, object: nil)
+        }
+    }
+
     static var wsjtxAlwaysListen: Bool {
         get { defaults.bool(forKey: "wsjtx.alwaysListen") }
         set { defaults.set(newValue, forKey: "wsjtx.alwaysListen") }

@@ -101,6 +101,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private let formHeading = NSTextField(labelWithString: "")
     // Logging Form, "Log a contact with" (Settings.logWithCommandReturnOnly).
     private let logKeyMenu = NSPopUpButton()
+    // Log Columns: "Fit every column in the window".
+    private let fitBox = NSButton(checkboxWithTitle: "Fit every column in the window (no sideways scrolling)",
+                                  target: nil, action: nil)
     private let startingValueField = NSTextField(string: "")
     // The Logging Form section, rebuilt when the profile changes.
     private var formView = NSView()
@@ -632,11 +635,38 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
     private func reloadColumnList() {
         let list = makeColumnList()
         columnList = list
-        columnsView = padded(list.view)
+        // Fit every column in the window (Settings.logFitColumns).
+        if fitBox.action == nil {
+            fitBox.target = self
+            fitBox.action = #selector(fitChanged(_:))
+        }
+        fitBox.state = Settings.logFitColumns ? .on : .off
+        fitBox.removeFromSuperview()
+        let fitNote = NSTextField(wrappingLabelWithString:
+            "With this on, the columns share the log's width and it never scrolls sideways, so as you move "
+            + "along a row VoiceOver says each cell with its own column's heading. (VoiceOver finds a heading "
+            + "by where the cell is on screen; when the row scrolled, it said the wrong one.) Long values are cut "
+            + "short on screen, but VoiceOver reads them in full. Off, each column keeps the width you give it.")
+        fitNote.preferredMaxLayoutWidth = 520
+        fitNote.isSelectable = true
+        fitBox.setAccessibilityLinkedUIElements([fitNote])
+        let stack = NSStackView(views: [list.view, fitBox, fitNote])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 12
+        columnsView = padded(stack)
+        list.list.nextKeyView = fitBox
+        fitBox.nextKeyView = list.list
         if sections.indices.contains(current), sections[current].title == "Log Columns" {
             splice = nil
             showSection(current, focusInside: false)
         }
+    }
+
+    @objc private func fitChanged(_ sender: NSButton) {
+        Settings.logFitColumns = sender.state == .on
+        Speaker.announce(sender.state == .on ? "Every column fits the log's width."
+                         : "Columns keep their own widths; the log scrolls sideways.")
     }
 
     // Log Columns: Call (always first), Date, Time, and every field
