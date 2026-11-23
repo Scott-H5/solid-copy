@@ -99,20 +99,29 @@ already never shows the sheet on its own.
 
 Then, to log a contact: type the callsign in the Callsign field and
 press Tab through the fields, then Command-Return to log it. The log
-keeps every contact as you go. Each contact gets a start time (when you
-finished typing the call: leaving Callsign, or picking a spot) and an
-end time (when you logged it), so you can see how long it lasted. A call
+keeps every contact as you go. (Settings > Logging Form, **Log a contact
+with**, can let plain Return log too; Command-Return only is the
+starting choice, so a stray Return never logs. Plain Return then says
+"Command-Return logs".)
+
+**Each contact is timed.** Entering the call starts the clock: when you
+leave Callsign with a call in it, or pick a spot, that's the contact's
+start time. Logging it stops the clock: Command-Return (or Return, if
+Settings > Logging Form lets Return log) is its end time. Both are kept
+with the contact (Date and Time are the start; End date and End time are
+the end), so you can see how long it lasted. Leaving Callsign again with
+the same call doesn't restart the clock; a different call does. A call
 left in the form for more than 2 hours starts when it's logged instead.
-(Settings > Logging Form, **Log a contact with**, can let plain Return
-log too; Command-Return only is the starting choice, so a stray Return
-never logs. Plain Return then says "Command-Return logs".)
+Typing a call and logging it without leaving Callsign gives the same
+start and end. Contacts from WSJT-X come with WSJT-X's own start and
+end.
 
 ## Using it
 
 | Key | What it does |
 | --- | --- |
 | Tab, Shift-Tab | Move between Callsign, Name, RST sent, RST received (and any other fields you add in Settings) |
-| Command-Return | Log the contact and go back to Callsign (plain Return too, if Settings > Logging Form says so) |
+| Command-Return | Log the contact (its end time) and go back to Callsign (plain Return too, if Settings > Logging Form says so) |
 | Escape or Command-K | Clear the form |
 | Command-L | Go to Callsign |
 | Command-I | Go to the newest contact in the log |
