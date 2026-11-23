@@ -316,6 +316,11 @@ an entry that's already in use: existing log files have run it already.
 
 ## What happens when you press Return
 
+(Command-Return, unless Settings > Logging Form says plain Return too.)
+The contact's start (TIME_ON) is `startedAt`, set when its call was done
+(`callsignDone`), and its end (TIME_OFF, QSO_DATE_OFF) is the moment it's
+logged; `startTime` falls back to now for another call or after 2 hours.
+
 1. You're typing in a field. macOS sends the field a command called
    `insertNewline`.
 2. The field passes the command to its delegate, the

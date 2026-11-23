@@ -90,10 +90,18 @@ enum QSL {
         "qsl_sent", "qsl_rcvd", "lotw_qsl_sent", "lotw_qsl_rcvd", "eqsl_qsl_sent", "eqsl_qsl_rcvd",
         "qrzcom_qso_upload_status", "qrzcom_qso_download_status", "clublog_qso_upload_status",
     ]
+    // Dates kept as ADIF's 20251217 (QSO_DATE_OFF too: the end date, a
+    // raw number in the log until 23 November 2026).
     private static let dateFields: Set<String> = [
         "qslsdate", "qslrdate", "lotw_qslsdate", "lotw_qslrdate", "eqsl_qslsdate", "eqsl_qslrdate",
-        "qrzcom_qso_upload_date", "qrzcom_qso_download_date", "clublog_qso_upload_date",
+        "qrzcom_qso_upload_date", "qrzcom_qso_download_date", "clublog_qso_upload_date", "qso_date_off",
     ]
+
+    // ADIF's TIME_OFF (194945 or 1949) as the Time column has it: "1949".
+    static func shortTime(_ adif: String) -> String {
+        guard adif.count == 4 || adif.count == 6, adif.allSatisfy(\.isNumber) else { return adif }
+        return String(adif.prefix(4))
+    }
 
     // A QSL field's value in words ("Y" is "Yes", "20251217" is
     // "17 December 2025"); any other field's value as it is. Something
@@ -112,6 +120,7 @@ enum QSL {
             let words = spokenDate(value)
             return words.isEmpty ? value : words
         }
+        if field == "time_off" { return shortTime(value) }
         return value
     }
 

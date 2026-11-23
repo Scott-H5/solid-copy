@@ -440,6 +440,15 @@ enum Settings {
         set { defaults.set(newValue, forKey: "radio.typedFrequencyMode") }
     }
 
+    // Settings > Log Columns: each log cell tells VoiceOver its column's
+    // name first ("RST sent, 599"). VoiceOver says a cell's value before
+    // its heading, so the heading seemed to go with the next value (the
+    // author, 23 November 2026). On to start.
+    static var logCellHeadings: Bool {
+        get { defaults.object(forKey: "log.cellHeadings") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "log.cellHeadings") }
+    }
+
     static var wsjtxAlwaysListen: Bool {
         get { defaults.bool(forKey: "wsjtx.alwaysListen") }
         set { defaults.set(newValue, forKey: "wsjtx.alwaysListen") }

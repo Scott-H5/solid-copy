@@ -164,4 +164,32 @@ MainActor.assumeIsolated {
         "typed QSL dates back to ADIF's form")
   check(QSL.adifDate(typed: "2025-02-30") == nil && QSL.adifDate(typed: "17 Dec 2025") == nil
         && QSL.adifDate(typed: "2025-12-1") == nil, "not real days are refused")
+
+  // The end date and time read as the Date and Time columns do, not as
+  // ADIF's raw numbers (23 November 2026).
+  check(QSL.isDateField("qso_date_off") && QSL.readableDate("20261122") == "2026-11-22"
+        && QSL.shortTime("194945") == "1949" && QSL.shortTime("1949") == "1949" && QSL.shortTime("") == ""
+        && QSL.display(field: "qso_date_off", value: "20261122") == "22 November 2026"
+        && QSL.display(field: "time_off", value: "194945") == "1949",
+        "end date and time: 2026-11-22 and 1949 in the log, 22 November 2026 in the details")
+
+  // Each log cell gives VoiceOver its column's name first, so a value
+  // isn't heard as the previous heading's (Settings > Log Columns).
+  // What VoiceOver reads: the value, or the label for an empty cell.
+  func cellLabel(_ id: String, _ text: String) -> String? {
+    let view = LogCellView(identifier: NSUserInterfaceItemIdentifier(id))
+    view.textField?.stringValue = text
+    guard let cell = view.textField?.cell else { return nil }
+    if let label = cell.accessibilityLabel() { return label }
+    return cell.accessibilityValue() as? String
+  }
+  Settings.logCellHeadings = true
+  check(cellLabel("rst_sent", "599") == "RST sent, 599" && cellLabel("comment", "") == "Comment, blank"
+        && cellLabel("date", "2026-11-23") == "Date (UTC), 2026-11-23", "with column names: \(cellLabel("rst_sent", "599") ?? "nil")")
+  let named = LogCellView(identifier: NSUserInterfaceItemIdentifier("rst_rcvd"))
+  named.textField?.stringValue = "579"
+  check(named.textField?.cell?.accessibilityLabel() == nil, "the name is in the value, not a label too, so it's read once")
+  Settings.logCellHeadings = false
+  check(cellLabel("rst_sent", "599") == "599" && cellLabel("comment", "") == "blank", "without: the value alone, or blank")
+  UserDefaults.standard.removeObject(forKey: "log.cellHeadings")
 }

@@ -365,6 +365,24 @@ MainActor.assumeIsolated {
     check(logbook.contacts.last?.call == "W9NOT" && logbook.contacts.last?["pota_ref"] == "",
           "changing the call takes the spotted park back out")
 
+    // Start and end times: the start is when the call was done, the end
+    // when it's logged (23 November 2026).
+    let started = Date()
+    leaveCallsign("W7TIME")
+    RunLoop.main.run(until: Date().addingTimeInterval(1.2))
+    leaveCallsign("W7TIME")   // leaving again doesn't restart it
+    form.logContact(nil); form.logContact(nil)
+    if let timed = logbook.contacts.last, timed.call == "W7TIME" {
+        let end = QSO.date(adifDate: timed["qso_date_off"], adifTime: timed["time_off"])
+        check(abs(timed.timeOn.timeIntervalSince(started)) < 1 && end.map { $0.timeIntervalSince(timed.timeOn) > 0 } == true,
+              "logged with its start (the call done) and its end (logging): \(timed["time_off"])")
+    } else { check(false, "W7TIME was logged") }
+    let moment = Date()
+    check(LogEntryViewController.startTime(("K1A", moment.addingTimeInterval(-600)), call: "K1A", now: moment) == moment.addingTimeInterval(-600)
+          && LogEntryViewController.startTime(("K1A", moment.addingTimeInterval(-600)), call: "K2B", now: moment) == moment
+          && LogEntryViewController.startTime(("K1A", moment.addingTimeInterval(-3 * 3600)), call: "K1A", now: moment) == moment,
+          "the start: this call's, within 2 hours; otherwise now")
+
     // The Spots window's Refresh pace (RefreshPacer.swift).
     func run(for seconds: Double) { RunLoop.main.run(until: Date().addingTimeInterval(seconds)) }
     var shows = 0

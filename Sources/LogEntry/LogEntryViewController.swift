@@ -134,6 +134,11 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     // The park filled in because the call is spotted at one on POTA
     // (fillParkFromSpots), so changing the call can take it back out.
     private var spottedPark: (call: String, reference: String)?
+    // When the contact started: the moment its call was done (leaving
+    // Callsign, or a spot filling it), as MacLoggerDX does. Logging it
+    // makes that the start (TIME_ON) and the moment of logging the end
+    // (TIME_OFF), so a contact has both (the author, 23 November 2026).
+    private var startedAt: (call: String, at: Date)?
     // Club numbers for the call in Callsign (ClubNumbers.swift): from
     // SKCC's list and your log, worked out when you leave Callsign. Put
     // in empty form fields then, and logged in fields not on the form.
@@ -361,10 +366,17 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
 
         // The form as typed, for Undo to put back.
         let typed = formState()
-        var qso = QSO(call: call, timeOn: Date())
+        let now = Date()
+        var qso = QSO(call: call, timeOn: Self.startTime(startedAt, call: call, now: now))
         // Every field on the form, by its ADIF name.
         for choice in formChoices {
             qso[choice.adif] = field(for: choice.adif).stringValue
+        }
+        // The end, now, unless End date or time were typed on the form.
+        if qso["qso_date_off"].isEmpty, qso["time_off"].isEmpty {
+            let stamp = QSO.adifTimestamp.string(from: now).split(separator: " ")
+            qso["qso_date_off"] = String(stamp[0])
+            qso["time_off"] = String(stamp[1])
         }
         // Your station, from the profile in use (callsign, grid, park, ...).
         for (field, value) in Settings.currentProfile.station where !value.isEmpty {
@@ -687,6 +699,16 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
 
     // MARK: - Helpers
 
+    // A contact's start: when its call was done, if that's this call and
+    // within the last 2 hours (a call left in the form overnight isn't a
+    // contact's start); otherwise now.
+    static let longestContact: TimeInterval = 2 * 60 * 60
+    static func startTime(_ started: (call: String, at: Date)?, call: String, now: Date) -> Date {
+        guard let started, started.call == call, started.at <= now,
+              now.timeIntervalSince(started.at) <= longestContact else { return now }
+        return started.at
+    }
+
     func focusCallsign() {
         view.window?.makeFirstResponder(callsignField)
     }
@@ -695,6 +717,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         correctingID = nil
         spotFields = [:]
         spottedPark = nil
+        startedAt = nil
         clubNumbers = nil
         serialSent = nil
         noBandWarnedFor = nil
@@ -1100,6 +1123,9 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         // up, and it would only find itself as a dupe.
         if let id = correctingID, let index = logbook.index(of: id), logbook.contacts[index].call == call { return }
         dupeWarning = correctingID == nil ? dupeText(for: call) : nil
+        // The contact starts now, unless this call was already started
+        // (leaving Callsign again doesn't restart it).
+        if correctingID == nil, Callsign.looksValid(call), startedAt?.call != call { startedAt = (call, Date()) }
         fillClubNumbers(for: call)
         fillParkFromSpots(for: call)
         let lookingUp = startLookup(for: call)

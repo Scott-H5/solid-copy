@@ -137,6 +137,11 @@ final class LogTableViewController: NSViewController,
         case "call": text = { $0.call }
         case "date": text = { $0.utcDateText }
         case "time": text = { $0.utcTimeText }
+        // The end date and QSL dates as the Date column has them
+        // ("2026-11-22"), the end time as the Time column ("1949"): not
+        // ADIF's raw 20261122 and 194945, which VoiceOver reads as numbers.
+        case "time_off": text = { QSL.shortTime($0["time_off"]) }
+        case _ where QSL.isDateField(id): text = { QSL.readableDate($0[id]) }
         // Line breaks (Notes, Address) shown as " / " to fit on one line.
         default: text = { $0[id].replacingOccurrences(of: "\n", with: " / ") }
         }
@@ -1182,8 +1187,25 @@ final class LogTextCell: NSTextFieldCell {
     // sounds like VO-Right didn't move. Apple's audit flagged these as
     // "no description" (16 November 2026). Cells with text keep the
     // usual reading: their text, with no label added.
+    // With Settings > Log Columns' "Say the column name with each value"
+    // on, the column's name comes first: "RST sent, 599", "Comment,
+    // blank". VoiceOver says a cell's value before its own heading, so
+    // heard as a run, each heading seemed to belong to the next value.
+    // The name goes into the value VoiceOver reads, not into a label
+    // beside it, so a cell is read once ("RST sent, 599"), not twice.
+    private var heading: String? {
+        guard Settings.logCellHeadings, let id = owner?.identifier?.rawValue else { return nil }
+        return LogTableViewController.columnTitle(for: id)
+    }
+
     override func accessibilityLabel() -> String? {
-        stringValue.isEmpty ? "blank" : super.accessibilityLabel()
+        if heading != nil { return nil }
+        return stringValue.isEmpty ? "blank" : super.accessibilityLabel()
+    }
+
+    override func accessibilityValue() -> Any? {
+        guard let heading else { return super.accessibilityValue() }
+        return "\(heading), \(stringValue.isEmpty ? "blank" : stringValue)"
     }
 
 }

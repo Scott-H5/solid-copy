@@ -97,11 +97,15 @@ and grid) and **Settings > CW** (name). **Set Up Station…** in Settings >
 Profiles shows this sheet again at any time. A profile with a callsign
 already never shows the sheet on its own.
 
-Then, to log a contact: type the callsign in the Callsign field and press
-Tab through the fields, then Command-Return to log it. The log keeps every
-contact as you go. (Settings > Logging Form, **Log a contact with**, can
-let plain Return log too; Command-Return only is the starting choice, so
-a stray Return never logs. Plain Return then says "Command-Return logs".)
+Then, to log a contact: type the callsign in the Callsign field and
+press Tab through the fields, then Command-Return to log it. The log
+keeps every contact as you go. Each contact gets a start time (when you
+finished typing the call: leaving Callsign, or picking a spot) and an
+end time (when you logged it), so you can see how long it lasted. A call
+left in the form for more than 2 hours starts when it's logged instead.
+(Settings > Logging Form, **Log a contact with**, can let plain Return
+log too; Command-Return only is the starting choice, so a stray Return
+never logs. Plain Return then says "Command-Return logs".)
 
 ## Using it
 
@@ -643,7 +647,14 @@ as before.
 **Settings > Logging Form** (Command-comma, then Command-3) lists every
 field you can put on the profile in use's form after Callsign; the
 Starting value field below it sets what the selected field starts as.
-**Settings > Log Columns** (Command-4) lists the log's columns. In either list, Space
+**Settings > Log Columns** (Command-4) lists the log's columns. Below
+the list, **Say the column name with each value** (on to start): VoiceOver
+says a cell's value before its column heading, so moving along a row,
+each heading can sound as if it belongs to the next value. With this on,
+each cell is read as "RST sent, 599". End dates and times read as the
+Date and Time columns do (2026-11-22, 1949), not as ADIF's raw numbers.
+
+In either list, Space
 shows or hides the selected item, which stays where it is, and
 Option-Command-Up and Down move it past the next item in use. QSL
 statuses and dates (cards, LoTW, eQSL, QRZ Logbook) aren't offered for
