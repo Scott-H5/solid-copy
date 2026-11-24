@@ -38,7 +38,8 @@ numbers, scores, and CW messages through a WinKeyer</li>
 you can send by email</li>
 <li>tracks awards: DXCC, WAS, WAZ and WPX (worked, confirmed and still
 needed, on each band and mode), SKCC Centurion, Tribune and Senator,
-and POTA parks hunted</li>
+POTA parks hunted, and members worked for each club you log numbers
+for, over the dates you choose and towards a goal you set</li>
 <li>works FT8 and other digital modes with WSJT-X: its decodes in a list
 VoiceOver reads, Return to answer a station, alerts for needed
 stations in the background, and contacts WSJT-X logs
@@ -1054,6 +1055,9 @@ modes, 300 for one mode.</li>
 members worked on CW (below).</li>
 <li>
 <strong>POTA Hunter</strong> (Parks on the Air): different parks worked (below).</li>
+<li>
+<strong>Club awards:</strong> different members worked of each club you log
+numbers for (below).</li>
 </ul>
 <p>For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
 the award." Only contacts confirmed by LoTW or a paper card count as
@@ -1111,6 +1115,41 @@ K-1333 counts as POTA's US-1333. This is your own count: pota.app gives
 hunters credit from the activators' uploaded logs, so its count is the
 official one, and a park may not show there until the activator
 uploads.</p>
+<h3 id="club-awards">Club awards</h3>
+<p>After the other awards comes one line for each club you log numbers
+for: your own club fields you've named in Settings &gt; Clubs, and SKCC,
+FISTS, LICW and CWops once your log has a number for them. Each counts
+the different members you've worked, with no QSL needed, since clubs
+credit a contact made. For example: "FISTS: 23 members worked; 27 more
+for your goal of 50."</p>
+<p>A member counts once, by their number: the one logged with the contact,
+or, for a call logged without one, the number from the club's member
+list (SKCC's, or a member list file you've given a club field in
+Settings &gt; Clubs). A contact with no number for the club isn't counted.
+SKCC numbers count as one member whatever letter they end with, so
+12345C and 12345T are the same member.</p>
+<p>Clubs run many awards and challenges, such as 100 members worked, or
+the most members worked in a month, so with a club chosen there are
+more choices after Show:</p>
+<ul>
+<li>
+<strong>Dates:</strong> all dates, this month, last month, this year, last year,
+or between dates. Between dates adds <strong>From</strong> and <strong>To</strong>, the first
+and last days counted. Dates are UTC, as the log is.</li>
+<li>
+<strong>Goal:</strong> the number of members you're aiming for, or empty for none.
+Each club keeps its own goal.</li>
+</ul>
+<p>Band and Mode work as for the other awards. Show is <strong>Worked</strong> (the
+members you've worked: "W1AAA, FISTS 1234: worked, 2 contacts"),
+<strong>Still needed</strong>, or <strong>All</strong>. Still needed lists the members on a
+club's member list file you haven't worked yet ("K3ABC, NAQCC 2345: not
+worked"), and its line says how many of the list you've worked: "NAQCC:
+40 members worked, 38 of the 312 on its list." A member list file is
+for your own club fields only. SKCC's member list holds tens of
+thousands of calls, so it isn't used for Still needed; SKCC's own
+awards are above. Each club's own rules, such as a kind of key or a
+minimum contact, are taken on trust.</p>
 <h2 id="callsign-lookups">Callsign lookups</h2>
 <p>Open <strong>Solid Copy &gt; Settings…</strong> (Command-comma), enter your QRZ.com
 username and password, and press <strong>Save and Test</strong>. The password is kept
@@ -1634,7 +1673,7 @@ hamlib's rigctl as the other program (needs <code>brew install hamlib</code>)</l
 <li>
 <code>tools/check-parks.sh</code>: parks</li>
 <li>
-<code>tools/check-awards.sh</code>: counting DXCC, WAS, WAZ and WPX</li>
+<code>tools/check-awards.sh</code>: counting DXCC, WAS, WAZ, WPX, SKCC, POTA and club awards</li>
 <li>
 <code>tools/check-rotor.sh</code>: rotor control, against a pretend rotctld (<code>--live</code> adds hamlib's dummy rotor)</li>
 <li>

@@ -24,7 +24,8 @@ Solid Copy is an everyday logger, used on the air with VoiceOver. It:
   you can send by email
 - tracks awards: DXCC, WAS, WAZ and WPX (worked, confirmed and still
   needed, on each band and mode), SKCC Centurion, Tribune and Senator,
-  and POTA parks hunted
+  POTA parks hunted, and members worked for each club you log numbers
+  for, over the dates you choose and towards a goal you set
 - works FT8 and other digital modes with WSJT-X: its decodes in a list
   VoiceOver reads, Return to answer a station, alerts for needed
   stations in the background, and contacts WSJT-X logs
@@ -802,6 +803,8 @@ awards, one line each:
 - **SKCC Centurion, Tribune and Senator** (Straight Key Century Club):
   members worked on CW (below).
 - **POTA Hunter** (Parks on the Air): different parks worked (below).
+- **Club awards:** different members worked of each club you log
+  numbers for (below).
 
 For example: "WAS: 38 states worked, 31 confirmed, 19 more confirmed for
 the award." Only contacts confirmed by LoTW or a paper card count as
@@ -863,6 +866,43 @@ K-1333 counts as POTA's US-1333. This is your own count: pota.app gives
 hunters credit from the activators' uploaded logs, so its count is the
 official one, and a park may not show there until the activator
 uploads.
+
+### Club awards
+
+After the other awards comes one line for each club you log numbers
+for: your own club fields you've named in Settings > Clubs, and SKCC,
+FISTS, LICW and CWops once your log has a number for them. Each counts
+the different members you've worked, with no QSL needed, since clubs
+credit a contact made. For example: "FISTS: 23 members worked; 27 more
+for your goal of 50."
+
+A member counts once, by their number: the one logged with the contact,
+or, for a call logged without one, the number from the club's member
+list (SKCC's, or a member list file you've given a club field in
+Settings > Clubs). A contact with no number for the club isn't counted.
+SKCC numbers count as one member whatever letter they end with, so
+12345C and 12345T are the same member.
+
+Clubs run many awards and challenges, such as 100 members worked, or
+the most members worked in a month, so with a club chosen there are
+more choices after Show:
+
+- **Dates:** all dates, this month, last month, this year, last year,
+  or between dates. Between dates adds **From** and **To**, the first
+  and last days counted. Dates are UTC, as the log is.
+- **Goal:** the number of members you're aiming for, or empty for none.
+  Each club keeps its own goal.
+
+Band and Mode work as for the other awards. Show is **Worked** (the
+members you've worked: "W1AAA, FISTS 1234: worked, 2 contacts"),
+**Still needed**, or **All**. Still needed lists the members on a
+club's member list file you haven't worked yet ("K3ABC, NAQCC 2345: not
+worked"), and its line says how many of the list you've worked: "NAQCC:
+40 members worked, 38 of the 312 on its list." A member list file is
+for your own club fields only. SKCC's member list holds tens of
+thousands of calls, so it isn't used for Still needed; SKCC's own
+awards are above. Each club's own rules, such as a kind of key or a
+minimum contact, are taken on trust.
 
 ## Callsign lookups
 
@@ -1386,7 +1426,7 @@ of them touch your Solid Copy log.
 - `tools/check-rigctl.sh`: sharing the radio with other programs, with
   hamlib's rigctl as the other program (needs `brew install hamlib`)
 - `tools/check-parks.sh`: parks
-- `tools/check-awards.sh`: counting DXCC, WAS, WAZ and WPX
+- `tools/check-awards.sh`: counting DXCC, WAS, WAZ, WPX, SKCC, POTA and club awards
 - `tools/check-rotor.sh`: rotor control, against a pretend rotctld (`--live` adds hamlib's dummy rotor)
 - `tools/check-spots.sh`: spots
 - `tools/check-bandplan.sh`: band plans, the US privileges and the out-of-band warning

@@ -153,7 +153,7 @@ struct AwardItem: Equatable {
     var key: String         // "TX", "5", "United States", "K3"
     var name: String        // "Texas", "Zone 5", "United States", "K3"
     var contacts = 0        // contacts that count for it
-    var confirmedBy: [String] = []   // "LoTW", "card": any confirmation; "SKCC": it counts
+    var confirmedBy: [String] = []   // "LoTW", "card": any confirmation; "SKCC", "club": it counts
     // For an SKCC member that doesn't count: why not.
     var why = ""
     // A park: there's no confirmation in the log to speak of (POTA credits
@@ -167,6 +167,8 @@ struct AwardItem: Equatable {
     var line: String {
         let times = contacts == 1 ? "1 contact" : "\(contacts) contacts"
         if confirmedBy == ["SKCC"] { return "\(name): counts, \(times)" }
+        // A club member worked (ClubAwards.swift): no QSL is needed.
+        if confirmedBy == ["club"] { return "\(name): worked, \(times)" }
         if noQSL { return "\(name): worked, \(times)" }
         if !why.isEmpty { return "\(name): doesn't count, \(why), \(times)" }
         if isConfirmed { return "\(name): confirmed by \(confirmedBy.joined(separator: " and ")), \(times)" }

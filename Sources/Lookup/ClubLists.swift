@@ -68,7 +68,9 @@ enum ClubLists {
     // The number for a call (already matched as lookups do), if the list has it.
     static func number(slot: Int, for key: String) -> String? { members(slot)?[key] }
 
-    private static func members(_ slot: Int) -> [String: String]? {
+    // Every member on the list for a slot (call -> number), or nil if
+    // there's no list: the club awards' Still needed (ClubAwards.swift).
+    static func members(_ slot: Int) -> [String: String]? {
         if let cached = cache[slot] { return cached }
         guard let url = fileURL(slot), let data = try? Data(contentsOf: url), data.count <= maximumBytes,
               let text = String(data: data, encoding: .utf8) else { return nil }

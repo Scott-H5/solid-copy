@@ -56,15 +56,21 @@ each file does and why, and has recipes for common changes.
     `ExportFormat` and they appear in the Export dialog's Format menu.
 - `Sources/App/ImportExport.swift`: the Import and Export dialogs and
   their summaries.
-- `Sources/Awards`: Window > Awards (DXCC, WAS, WAZ, WPX).
+- `Sources/Awards`: Window > Awards (DXCC, WAS, WAZ, WPX, SKCC, POTA
+  and club awards).
   - `Awards.swift`: the counting, with no windows, so
     `tools/check-awards.sh` can test it: what each contact counts for
     (LoTW's details first, then the contact's fields, then the call),
     WPX's prefix rules, and SKCC's Centurion, Tribune and Senator rules
     (from SKCCRoster.swift's dates for each member), and POTA parks
     hunted.
-  - `AwardsWindowController.swift`: the window: the awards, Band, Mode
-    and Show, and the chosen award's list.
+  - `ClubAwards.swift`: club awards, also with no windows: different
+    members worked per club, by number (logged, or from the club's
+    list), over a span of UTC dates (`ClubPeriod`), towards a goal, and
+    the list's members not worked yet.
+  - `AwardsWindowController.swift`: the window: the awards and clubs,
+    Band, Mode and Show, for a club Dates, From, To and Goal, and the
+    chosen award's list.
 - `Sources/Rotor`: turning the antenna through a rotctld you run.
   - `RotctldClient.swift`: the conversation with rotctld (where it
     points, turn, stop), and headings worked out (long path, how far

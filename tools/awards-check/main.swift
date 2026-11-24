@@ -196,6 +196,57 @@ func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !
     let lots = AwardProgress(award: .pota, mode: .mixed, items: (1...312).map { AwardItem(key: "US-\($0)", name: "", contacts: 1, noQSL: true) })
     check(lots.line == "POTA Hunter: 312 parks worked, enough for the 300 park award; 88 more for the 400 park award.",
           "higher levels: \(lots.line)")
+
+    // Club awards (ClubAwards.swift): different members worked.
+    let utc = ClubPeriod.utc
+    func day(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 12) -> Date {
+        utc.date(from: DateComponents(year: y, month: m, day: d, hour: h))!
+    }
+    var clubLog: [QSO] = []
+    func member(_ call: String, _ field: String, _ number: String, on date: Date, band: String = "20m", mode: String = "CW") {
+        var qso = QSO(call: call, timeOn: date)
+        qso["band"] = band; qso["mode"] = mode; qso[field] = number
+        clubLog.append(qso)
+    }
+    member("W1AAA", "fists", "1234", on: day(2026, 11, 2))
+    member("W1AAA", "fists", " 1234 ", on: day(2026, 11, 3), band: "40m")    // the same member again
+    member("W1BBB", "fists", "2345", on: day(2026, 10, 31, 23))            // last month, just
+    member("W1CCC", "fists", "3456", on: day(2026, 11, 30, 23), mode: "SSB")
+    member("W1DDD", "fists", "", on: day(2026, 11, 5))                      // no number: not counted
+    member("W1EEE", "skcc", "12345T", on: day(2026, 11, 6))
+    member("W1EEE/P", "skcc", "12345", on: day(2026, 11, 7))                // one SKCC member, two levels
+    let fists = ClubAwards.Club(field: "fists", title: "FISTS", goal: 5)
+    let all = ClubAwards.progress(fists, log: clubLog, band: nil, mode: .mixed, period: nil)
+    check(all.worked == 3 && all.items.first { $0.key == "1234" }?.contacts == 2,
+          "club: each member once, by number (\(all.worked) worked)")
+    check(all.items.first { $0.key == "1234" }!.line == "W1AAA, FISTS 1234: worked, 2 contacts", "club: a member's line")
+    check(all.line == "FISTS: 3 members worked; 2 more for your goal of 5.", "club: the line with a goal: \(all.line)")
+    let now = day(2026, 11, 24)
+    let november = ClubPeriod.thisMonth.interval(now: now, from: now, to: now)
+    check(ClubAwards.progress(fists, log: clubLog, band: nil, mode: .mixed, period: november).worked == 2,
+          "club: this month leaves out 31 October 23:00 UTC")
+    let october = ClubPeriod.lastMonth.interval(now: now, from: now, to: now)
+    check(ClubAwards.progress(fists, log: clubLog, band: nil, mode: .mixed, period: october).worked == 1, "club: last month")
+    let between = ClubPeriod.between.interval(now: now, from: day(2026, 11, 3), to: day(2026, 11, 2))
+    check(ClubAwards.progress(fists, log: clubLog, band: nil, mode: .mixed, period: between).worked == 1
+          && between?.end == day(2026, 11, 4, 0), "club: between two days, either order, the last day included")
+    check(ClubAwards.progress(fists, log: clubLog, band: "40m", mode: .mixed, period: nil).worked == 1
+          && ClubAwards.progress(fists, log: clubLog, band: nil, mode: .cw, period: nil).worked == 2,
+          "club: band and mode")
+    check(ClubPeriod.all.interval(now: now, from: now, to: now) == nil
+          && ClubPeriod.thisYear.interval(now: now, from: now, to: now)?.start == day(2026, 1, 1, 0),
+          "club: all dates, and this year")
+    let skccClub = ClubAwards.Club(field: "skcc", title: "SKCC")
+    check(ClubAwards.progress(skccClub, log: clubLog, band: nil, mode: .mixed, period: nil).worked == 1,
+          "club: SKCC 12345T and 12345 are one member")
+    // A member list: numbers for calls logged without one, and Still needed.
+    let listed = ["W1DDD": "4567", "W1AAA": "1234", "W1ZZZ": "9999"]
+    let withList = ClubAwards.Club(field: "fists", title: "NAQCC", goal: 3, listed: listed, number: { listed[$0] })
+    let fromList = ClubAwards.progress(withList, log: clubLog, band: nil, mode: .mixed, period: nil)
+    check(fromList.worked == 4, "club: the list gives a number for a call logged without one")
+    check(fromList.items.filter { !$0.isConfirmed }.map(\.line) == ["W1ZZZ, NAQCC 9999: not worked"],
+          "club: still needed is the list's members not worked")
+    check(fromList.line == "NAQCC: 4 members worked, 2 of the 3 on its list; your goal of 3 is reached.", "club: with a list: \(fromList.line)")
     print("All award checks passed.")
 }
 

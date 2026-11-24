@@ -23,12 +23,27 @@
 // POTA Hunter lists the parks worked ("US-1333, Big Pocono State Park,
 // Pennsylvania: worked, 3 contacts"); there's no confirmation to show, so
 // Show doesn't apply. pota.app keeps the official count.
+//
+// Club awards follow, one per club you log numbers for: SKCC, FISTS,
+// LICW, CWops and your own named club fields (ClubAwards.swift).
+//
+//   "NAQCC: 40 of 312 members worked; 10 more for your goal of 50."
+//   "W1XYZ, NAQCC 1234: worked, 2 contacts"
+//   "K3ABC, NAQCC 2345: not worked"
+//
+// With a club chosen, Show is Worked, Still needed (members on the club's
+// list not worked yet, for a club field with a member list file) or All,
+// and three more choices appear: Dates (all dates, this month, last month,
+// this year, last year, or between two dates you pick), the From and To
+// dates for Between dates, and Goal, a number of members you're aiming
+// for. A club's challenge, such as members worked in a month, is the
+// right Dates and a goal.
 //   Up, Down   move between awards, or through the list
 //   Return     from an award, to its list
 //   Escape     back to the logging window (this window stays open)
 //   Tab        the awards, Band, Mode, Show (still needed, worked but not
-//              confirmed, not worked, confirmed, or all), the list, then
-//              back
+//              confirmed, not worked, confirmed, or all), for a club
+//              Dates, From, To and Goal, the list, then back
 //
 // It counts again whenever the log changes (a contact logged, a LoTW sync),
 // and the line you're on stays selected. The choices are remembered.
@@ -36,7 +51,8 @@
 import AppKit
 
 @MainActor
-final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
+final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate,
+    NSTextFieldDelegate {
     var onEscape: (() -> Void)?
 
     // What the list shows of the chosen award.
@@ -64,6 +80,62 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         }
     }
 
+    // What the list shows of a club: members worked, members on its list
+    // not worked yet, or both.
+    enum ClubShow: String, CaseIterable {
+        case worked, needed, all
+
+        var title: String {
+            switch self {
+            case .worked: "Worked"
+            case .needed: "Still needed"
+            case .all: "All"
+            }
+        }
+
+        func includes(_ item: AwardItem) -> Bool {
+            switch self {
+            case .worked: item.isConfirmed
+            case .needed: !item.isConfirmed
+            case .all: true
+            }
+        }
+    }
+
+    // One line of the awards list: a fixed award or a club.
+    private enum Row {
+        case award(AwardProgress)
+        case club(ClubProgress)
+
+        var line: String {
+            switch self {
+            case .award(let progress): progress.line
+            case .club(let progress): progress.line
+            }
+        }
+        var items: [AwardItem] {
+            switch self {
+            case .award(let progress): progress.items
+            case .club(let progress): progress.items
+            }
+        }
+        // Remembered between launches: "dxcc", or "club:fists".
+        var id: String {
+            switch self {
+            case .award(let progress): progress.award.rawValue
+            case .club(let progress): "club:" + progress.field
+            }
+        }
+        var club: ClubProgress? {
+            if case .club(let progress) = self { return progress }
+            return nil
+        }
+        var award: Award? {
+            if case .award(let progress) = self { return progress.award }
+            return nil
+        }
+    }
+
     private static let bands = ["160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m", "6m", "2m", "70cm"]
 
     private let logbook: Logbook
@@ -73,8 +145,16 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
     private let bandMenu = NSPopUpButton()
     private let modeMenu = NSPopUpButton()
     private let showMenu = NSPopUpButton()
+    // For a club only.
+    private let periodMenu = NSPopUpButton()
+    private let fromPicker = NSDatePicker()
+    private let toPicker = NSDatePicker()
+    private let goalField = NSTextField()
+    private let clubControls = NSStackView()
+    // Whether Show holds a club's choices or an award's.
+    private var showIsForClub = false
 
-    private var progress: [AwardProgress] = []
+    private var rows: [Row] = []
     private var shownItems: [AwardItem] = []
 
     init(logbook: Logbook) {
@@ -119,8 +199,9 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         let note = NSTextField(wrappingLabelWithString:
             "Counts contacts confirmed by LoTW or a paper card, as ARRL and CQ do. SKCC awards need no QSL: "
             + "a member counts if both of you had joined, or reached the level, by the day of the contact, "
-            + "from SKCC's member list. Choose an award, then Tab to choose a band, a mode and what its list "
-            + "shows. Return goes to the list.")
+            + "from SKCC's member list. Club awards, after those, count different members worked, with no QSL "
+            + "needed, over the dates you choose and towards a goal you set. Choose an award, then Tab to choose "
+            + "a band, a mode and what its list shows. Return goes to the list.")
         note.preferredMaxLayoutWidth = 660
         note.isSelectable = true
         status.preferredMaxLayoutWidth = 660
@@ -133,15 +214,46 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         modeMenu.addItems(withTitles: AwardMode.allCases.map(\.title))
         modeMenu.setAccessibilityLabel("Mode")
         modeMenu.selectItem(at: AwardMode.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.mode") } ?? 0)
-        showMenu.addItems(withTitles: Show.allCases.map(\.title))
         showMenu.setAccessibilityLabel("Show")
-        showMenu.selectItem(at: Show.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.show") } ?? 0)
-        for menu in [bandMenu, modeMenu, showMenu] {
+        fillShowMenu(forClub: false)
+        periodMenu.addItems(withTitles: ClubPeriod.allCases.map(\.title))
+        periodMenu.setAccessibilityLabel("Dates")
+        periodMenu.selectItem(at: ClubPeriod.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.clubPeriod") } ?? 0)
+        for menu in [bandMenu, modeMenu, showMenu, periodMenu] {
             menu.target = self
             menu.action = #selector(filterChanged(_:))
         }
         let filters = NSStackView(views: [bandMenu, modeMenu, showMenu])
         filters.spacing = 16
+
+        // A club's dates (UTC, as the log is) and goal. Between dates
+        // starts as this month so far.
+        let utc = ClubPeriod.utc
+        let monthStart = utc.dateInterval(of: .month, for: Date())?.start ?? Date()
+        for (picker, label, key, start) in [(fromPicker, "From", "awards.clubFrom", monthStart),
+                                            (toPicker, "To", "awards.clubTo", Date())] {
+            picker.datePickerStyle = .textFieldAndStepper
+            picker.datePickerElements = .yearMonthDay
+            picker.timeZone = utc.timeZone
+            picker.calendar = utc
+            picker.dateValue = defaults.object(forKey: key) as? Date ?? start
+            picker.setAccessibilityLabel(label)
+            picker.target = self
+            picker.action = #selector(datesChanged(_:))
+        }
+        goalField.placeholderString = "None"
+        goalField.setAccessibilityLabel("Goal, members")
+        goalField.delegate = self
+        goalField.widthAnchor.constraint(equalToConstant: 70).isActive = true
+        let datesRow = NSStackView(views: [periodMenu, FieldLabel("From"), fromPicker, FieldLabel("To"), toPicker])
+        datesRow.spacing = 8
+        let goalRow = NSStackView(views: [FieldLabel("Goal"), goalField])
+        goalRow.spacing = 8
+        clubControls.setViews([datesRow, goalRow], in: .leading)
+        clubControls.orientation = .vertical
+        clubControls.alignment = .leading
+        clubControls.spacing = 8
+        clubControls.isHidden = true
 
         let awardsScroll = Self.scroll(for: awardsTable, label: "Awards", id: "award")
         awardsTable.dataSource = self
@@ -155,7 +267,6 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         }
         awardsTable.onEscape = { [weak self] in self?.onEscape?() }
         awardsTable.setAccessibilityLinkedUIElements([note])
-        let row = Award.allCases.firstIndex { $0.rawValue == defaults.string(forKey: "awards.award") } ?? 0
         awardsScroll.heightAnchor.constraint(equalToConstant: 170).isActive = true
 
         let itemsScroll = Self.scroll(for: itemsTable, label: "List", id: "item")
@@ -163,10 +274,12 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         itemsTable.delegate = self
         itemsTable.onEscape = { [weak self] in self?.onEscape?() }
 
-        let order: [NSView] = [awardsTable, bandMenu, modeMenu, showMenu, itemsTable]
+        // Hidden ones (a club's, when an award is chosen) are passed over.
+        let order: [NSView] = [awardsTable, bandMenu, modeMenu, showMenu, periodMenu, fromPicker, toPicker,
+                               goalField, itemsTable]
         for (index, view) in order.enumerated() { view.nextKeyView = order[(index + 1) % order.count] }
 
-        let stack = NSStackView(views: [heading, note, awardsScroll, filters, status, itemsScroll])
+        let stack = NSStackView(views: [heading, note, awardsScroll, filters, clubControls, status, itemsScroll])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -175,9 +288,8 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
             scroll.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -32).isActive = true
         }
         itemsScroll.setContentHuggingPriority(.defaultLow, for: .vertical)
-        // The award last chosen, selected once the rows exist.
-        awardsTable.reloadData()
-        awardsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        // The rows, and the award last chosen, come with the first count
+        // (reload).
         return stack
     }
 
@@ -195,28 +307,107 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         return scroll
     }
 
-    private var chosenAward: Award {
-        Award.allCases.indices.contains(awardsTable.selectedRow) ? Award.allCases[awardsTable.selectedRow] : .dxcc
-    }
+    private var chosenRow: Row? { rows.indices.contains(awardsTable.selectedRow) ? rows[awardsTable.selectedRow] : rows.first }
     private var chosenBand: String? {
         bandMenu.indexOfSelectedItem > 0 ? Self.bands[bandMenu.indexOfSelectedItem - 1] : nil
     }
     private var chosenMode: AwardMode { AwardMode.allCases[max(0, modeMenu.indexOfSelectedItem)] }
-    private var chosenShow: Show { Show.allCases[max(0, showMenu.indexOfSelectedItem)] }
+    private var chosenShow: Show {
+        Show.allCases.indices.contains(showMenu.indexOfSelectedItem) ? Show.allCases[showMenu.indexOfSelectedItem] : .needed
+    }
+    private var chosenClubShow: ClubShow {
+        ClubShow.allCases.indices.contains(showMenu.indexOfSelectedItem)
+            ? ClubShow.allCases[showMenu.indexOfSelectedItem] : .worked
+    }
+    private var chosenPeriod: ClubPeriod { ClubPeriod.allCases[max(0, periodMenu.indexOfSelectedItem)] }
+    private var chosenInterval: DateInterval? {
+        chosenPeriod.interval(now: Date(), from: fromPicker.dateValue, to: toPicker.dateValue)
+    }
+
+    // Show's choices: an award's, or a club's, each remembered apart.
+    private func fillShowMenu(forClub club: Bool) {
+        showIsForClub = club
+        showMenu.removeAllItems()
+        let saved = UserDefaults.standard.string(forKey: club ? "awards.clubShow" : "awards.show")
+        if club {
+            showMenu.addItems(withTitles: ClubShow.allCases.map(\.title))
+            showMenu.selectItem(at: ClubShow.allCases.firstIndex { $0.rawValue == saved } ?? 0)
+        } else {
+            showMenu.addItems(withTitles: Show.allCases.map(\.title))
+            showMenu.selectItem(at: Show.allCases.firstIndex { $0.rawValue == saved } ?? 0)
+        }
+    }
 
     @objc private func filterChanged(_ sender: Any?) {
         let defaults = UserDefaults.standard
         defaults.set(chosenBand ?? "", forKey: "awards.band")
         defaults.set(chosenMode.rawValue, forKey: "awards.mode")
-        defaults.set(chosenShow.rawValue, forKey: "awards.show")
+        if showIsForClub {
+            defaults.set(chosenClubShow.rawValue, forKey: "awards.clubShow")
+        } else {
+            defaults.set(chosenShow.rawValue, forKey: "awards.show")
+        }
+        defaults.set(chosenPeriod.rawValue, forKey: "awards.clubPeriod")
         reload()
-        // The new count of the chosen award, and what the list now shows.
-        let award = progress.first { $0.award == chosenAward }?.line ?? ""
-        Speaker.announce(award + " " + status.stringValue)
+        sayChosen()
     }
 
-    // Counts every award again, keeping the lines you're on.
-    private func reload() {
+    @objc private func datesChanged(_ sender: Any?) {
+        UserDefaults.standard.set(fromPicker.dateValue, forKey: "awards.clubFrom")
+        UserDefaults.standard.set(toPicker.dateValue, forKey: "awards.clubTo")
+        reload()
+    }
+
+    // The new count of the chosen award, and what the list now shows.
+    private func sayChosen() {
+        Speaker.announce((chosenRow?.line ?? "") + " " + status.stringValue)
+    }
+
+    // Goal: saved on Return or on leaving the field. Empty is no goal; a
+    // number that isn't one is refused and put back.
+    func controlTextDidEndEditing(_ notification: Notification) {
+        guard notification.object as? NSTextField === goalField, let club = chosenRow?.club else { return }
+        let typed = goalField.stringValue.trimmingCharacters(in: .whitespaces)
+        if typed.isEmpty {
+            guard ClubAwards.goal(for: club.field) != nil else { return }
+            ClubAwards.setGoal(nil, for: club.field)
+        } else if let goal = Int(typed), goal > 0, goal <= 1_000_000 {
+            guard ClubAwards.goal(for: club.field) != goal else { return }
+            ClubAwards.setGoal(goal, for: club.field)
+        } else {
+            NSSound.beep()
+            goalField.stringValue = ClubAwards.goal(for: club.field).map(String.init) ?? ""
+            Speaker.announce("The goal is a number of members, such as 50, or empty for none.")
+            return
+        }
+        reload()
+        Speaker.announce(chosenRow?.line ?? "")
+    }
+
+    // The clubs with an award line: your named club fields, and SKCC,
+    // FISTS, LICW and CWops once the log has a number for them (or, for
+    // SKCC, its member list is on).
+    private func clubs() -> [ClubAwards.Club] {
+        let log = logbook.contacts
+        let roster = SKCCRoster.shared
+        return LogField.clubNumberFields.compactMap { field in
+            let slot = LogField.named(field)?.clubSlot
+            if let slot {
+                guard !ClubNames.name(slot).isEmpty else { return nil }
+            } else if !(field == "skcc" && roster.isReady), !log.contains(where: { !$0[field].isEmpty }) {
+                return nil
+            }
+            let listed = slot.flatMap(ClubLists.members)
+            let number: (String) -> String? = field == "skcc" ? { roster.number(for: $0) }
+                : { call in slot.flatMap { ClubLists.number(slot: $0, for: call) } }
+            return ClubAwards.Club(field: field, title: ClubNumbers.shortName(field), goal: ClubAwards.goal(for: field),
+                                   listed: listed, number: number)
+        }
+    }
+
+    // Counts every award again, keeping the lines you're on. (Not private:
+    // tools/check-screen-size.sh counts with a club chosen.)
+    func reload() {
         let table = Countries.shared
         // One country look-up per call, not one per award.
         var cache: [String: Country?] = [:]
@@ -233,29 +424,60 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
         let skcc = roster.isReady ? Awards.SKCC(mine: roster.number(for: myCall).flatMap(roster.dates(forNumber:)),
                                                 number: roster.number(for:), dates: roster.dates(forNumber:)) : nil
         let parks = ParkList.shared
-        progress = Award.allCases.map {
-            Awards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode,
-                            country: country, allCountries: all, skcc: skcc,
-                            parkName: { parks.park($0)?.spoken })
+        // The line you're on, kept by what it is (club lines come and go).
+        let chosenID = chosenRow?.id ?? UserDefaults.standard.string(forKey: "awards.award")
+        let interval = chosenInterval
+        rows = Award.allCases.map {
+            .award(Awards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode,
+                                   country: country, allCountries: all, skcc: skcc,
+                                   parkName: { parks.park($0)?.spoken }))
+        } + clubs().map {
+            .club(ClubAwards.progress($0, log: logbook.contacts, band: chosenBand, mode: chosenMode, period: interval))
         }
-        let awardRow = max(0, awardsTable.selectedRow)
         awardsTable.reloadData()
-        awardsTable.selectRowIndexes(IndexSet(integer: awardRow), byExtendingSelection: false)
+        let row = rows.firstIndex { $0.id == chosenID } ?? 0
+        awardsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         reloadItems()
     }
 
     private func reloadItems() {
+        guard let chosen = chosenRow else { return }
         let selectedKey = shownItems.indices.contains(itemsTable.selectedRow) ? shownItems[itemsTable.selectedRow].key : nil
-        let award = chosenAward
-        let items = progress.first { $0.award == award }?.items ?? []
-        shownItems = award == .pota ? items : items.filter(chosenShow.includes)
+        // A club's choices, shown only for a club.
+        let club = chosen.club
+        if (club != nil) != showIsForClub { fillShowMenu(forClub: club != nil) }
+        clubControls.isHidden = club == nil
+        let between = chosenPeriod == .between
+        for view in clubControls.views.first.map({ ($0 as? NSStackView)?.views.dropFirst() ?? [] }) ?? [] {
+            view.isHidden = !between
+        }
+        if let club, goalField.currentEditor() == nil {
+            goalField.stringValue = club.goal.map(String.init) ?? ""
+        }
+        let items = chosen.items
+        if club != nil {
+            shownItems = items.filter(chosenClubShow.includes)
+        } else {
+            shownItems = chosen.award == .pota ? items : items.filter(chosenShow.includes)
+        }
         itemsTable.reloadData()
         if let selectedKey, let row = shownItems.firstIndex(where: { $0.key == selectedKey }) {
             itemsTable.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         }
-        UserDefaults.standard.set(award.rawValue, forKey: "awards.award")
+        UserDefaults.standard.set(chosen.id, forKey: "awards.award")
         let band = chosenBand.map { "on " + Bands.spoken($0) } ?? "on all bands"
         let count = shownItems.count == 1 ? "1 line" : "\(shownItems.count) lines"
+        if let club {
+            var text = "\(club.title) \(band), \(chosenMode.title.lowercased()), "
+                + "\(chosenPeriod.spoken(chosenInterval)). \(chosenClubShow.title): \(count)."
+            if club.listCount == nil, chosenClubShow != .worked {
+                text += " Still needed lists members not worked yet from a member list file, which your own "
+                    + "club fields can have (Settings > Clubs)."
+            }
+            status.stringValue = text
+            return
+        }
+        guard let award = chosen.award else { return }
         let mode = award.isSKCC ? "CW" : chosenMode.title.lowercased()
         var text = "\(award.title) \(band), \(mode). \(award == .pota ? "Parks worked" : chosenShow.title): \(count)."
         if award == .pota {
@@ -274,13 +496,14 @@ final class AwardsWindowController: NSWindowController, NSWindowDelegate, NSTabl
     }
 
     func numberOfRows(in tableView: NSTableView) -> Int {
-        tableView === awardsTable ? Award.allCases.count : shownItems.count
+        tableView === awardsTable ? rows.count : shownItems.count
     }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let text: String
         if tableView === awardsTable {
-            text = progress.indices.contains(row) ? progress[row].line : Award.allCases[row].title
+            guard rows.indices.contains(row) else { return nil }
+            text = rows[row].line
         } else {
             guard shownItems.indices.contains(row) else { return nil }
             text = shownItems[row].line

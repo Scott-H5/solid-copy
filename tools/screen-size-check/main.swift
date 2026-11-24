@@ -69,6 +69,36 @@ MainActor.assumeIsolated {
   fits("Log", LogBrowserWindowController(logbook: book).window)
   fits("WSJT-X Decodes", DecodesWindowController(logbook: book).window)
   fits("Awards", AwardsWindowController(logbook: book).window)
+  // With a club chosen, Between dates: its dates and goal show, and fit.
+  ClubNames.setName("NAQCC number", for: 1)
+  UserDefaults.standard.set("club:app_solidcopy_club1", forKey: "awards.award")
+  UserDefaults.standard.set("between", forKey: "awards.clubPeriod")
+  let clubAwards = AwardsWindowController(logbook: book)
+  clubAwards.reload()
+  func goalShown(_ view: NSView) -> Bool {
+    if let field = view as? NSTextField, field.accessibilityLabel() == "Goal, members" {
+      return !field.isHiddenOrHasHiddenAncestor
+    }
+    return view.subviews.contains(where: goalShown)
+  }
+  check(goalShown(clubAwards.window!.contentView!), "Awards: a club's dates and goal show when a club is chosen")
+  fits("Awards, a club chosen", clubAwards.window)
+  // Nothing in the dates row is squeezed below its own size at the least width.
+  func find(_ view: NSView, _ label: String) -> NSView? {
+    if view.accessibilityLabel() == label { return view }
+    for sub in view.subviews { if let found = find(sub, label) { return found } }
+    return nil
+  }
+  if let row = find(clubAwards.window!.contentView!, "Dates")?.superview {
+    let squeezed = row.subviews.filter { $0.frame.width + 0.5 < $0.fittingSize.width }
+    check(squeezed.isEmpty && row.frame.maxX <= clubAwards.window!.contentView!.frame.width,
+          "Awards: the dates row isn't squeezed (\(Int(row.fittingSize.width)) wide)")
+  }
+  UserDefaults.standard.set("dxcc", forKey: "awards.award")
+  let dxccAwards = AwardsWindowController(logbook: book)
+  dxccAwards.reload()
+  check(!goalShown(dxccAwards.window!.contentView!), "Awards: no club choices for DXCC")
+  ClubNames.setName("", for: 1)
   fits("Band Plan", BandPlanWindowController().window)
 
   // Settings, on every section (its sections scroll, but the sidebar and
