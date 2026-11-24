@@ -67,6 +67,14 @@ final class QSLCardSettingsViewController: NSViewController, NSTextFieldDelegate
         grid.rowSpacing = 8
         grid.rowAlignment = .firstBaseline
 
+        // Wraps like the notes: on one line it was 819 points wide, and
+        // made Settings need 1,005 of a small screen's 1,024 (found by
+        // tools/screen-size-check, 24 November 2026).
+        pictureStatus.lineBreakMode = .byWordWrapping
+        pictureStatus.usesSingleLineMode = false
+        pictureStatus.cell?.wraps = true
+        pictureStatus.maximumNumberOfLines = 0
+        pictureStatus.preferredMaxLayoutWidth = 520
         let pictureHeading = NSTextField(labelWithString: "Picture")
         pictureHeading.font = .boldSystemFont(ofSize: NSFont.systemFontSize + 1)
         chooseButton.target = self

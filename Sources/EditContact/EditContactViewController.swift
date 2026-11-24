@@ -54,6 +54,25 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
     // The park fields search POTA's park list.
     private let parkSearch = ParkSearch()
 
+    // The list of fields is 520 points tall, or less on a short screen,
+    // so Save and Cancel stay on it. (A small laptop with Displays set to
+    // Larger Text has about 570 points; the sheet with a 520-point list
+    // needed about 660, found 24 November 2026.) The rest of the sheet,
+    // its title bar and the main window's title above it take about 170.
+    private var fieldsHeight: NSLayoutConstraint?
+
+    override func viewWillAppear() {
+        super.viewWillAppear()
+        guard let screen = view.window?.screen ?? NSApp.mainWindow?.screen ?? NSScreen.main else { return }
+        fit(toScreenHeight: screen.visibleFrame.height)
+    }
+
+    // (Also used by tools/screen-size-check, which tries a small screen.)
+    func fit(toScreenHeight height: CGFloat) {
+        _ = view
+        fieldsHeight?.constant = min(520, max(200, height - 170))
+    }
+
     init(qso: QSO) {
         original = qso
         super.init(nibName: nil, bundle: nil)
@@ -189,7 +208,8 @@ final class EditContactViewController: NSViewController, NSTextFieldDelegate, NS
         fieldsScroll.drawsBackground = false
         document.translatesAutoresizingMaskIntoConstraints = false
         document.widthAnchor.constraint(equalTo: fieldsScroll.contentView.widthAnchor).isActive = true
-        fieldsScroll.heightAnchor.constraint(equalToConstant: 520).isActive = true
+        fieldsHeight = fieldsScroll.heightAnchor.constraint(equalToConstant: 520)
+        fieldsHeight?.isActive = true
         fieldsScroll.widthAnchor.constraint(greaterThanOrEqualToConstant: 540).isActive = true
 
         // Escape presses Cancel, and Command-Return presses Save, wherever

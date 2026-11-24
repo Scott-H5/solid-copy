@@ -76,6 +76,9 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
     // swapped for a new grid when the choices change).
     private var formGrid = NSGridView()
     private var mainStack: NSStackView?
+    // What the window scrolls when it's short (see loadView).
+    private var formScroll: NSScrollView?
+    private var focusWatch: NSKeyValueObservation?
 
     private func field(for adif: String) -> NSTextField {
         if let field = fieldsByName[adif] { return field }
@@ -295,8 +298,41 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         stack.edgeInsets = NSEdgeInsets(top: 20, left: 20, bottom: 20, right: 20)
         // Hidden parts keep their place (see setLookupLine).
         stack.detachesHiddenViews = false
-        view = stack
         mainStack = stack
+
+        // The window scrolls up and down when it's shorter than everything
+        // in it, so it fits any screen: a small laptop with Displays set to
+        // Larger Text has about 570 points of height, and the form and log
+        // need about 750 (measured 24 November 2026; before this, the
+        // bottom of the window was off the screen and couldn't be reached).
+        // With room to spare nothing scrolls, and the log takes the extra
+        // height: the stack is held to the window's height more firmly
+        // than the log keeps its size, but less firmly than everything
+        // keeps the room it needs (content hugging 250 < 500 < compression
+        // resistance 750).
+        let holder = FlippedView()
+        holder.translatesAutoresizingMaskIntoConstraints = false
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        holder.addSubview(stack)
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.drawsBackground = false
+        scroll.documentView = holder
+        let clip = scroll.contentView
+        let fill = holder.heightAnchor.constraint(equalTo: clip.heightAnchor)
+        fill.priority = NSLayoutConstraint.Priority(500)
+        NSLayoutConstraint.activate([
+            stack.topAnchor.constraint(equalTo: holder.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: holder.bottomAnchor),
+            stack.leadingAnchor.constraint(equalTo: holder.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: holder.trailingAnchor),
+            holder.topAnchor.constraint(equalTo: clip.topAnchor),
+            holder.widthAnchor.constraint(equalTo: clip.widthAnchor),
+            holder.heightAnchor.constraint(greaterThanOrEqualTo: clip.heightAnchor),
+            fill,
+        ])
+        view = scroll
+        formScroll = scroll
 
         // The log fills the window's width, and takes any extra height
         // when the window is made bigger.
@@ -322,6 +358,32 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         updateLogHeading()
         resetForm()
         radioChanged()
+    }
+
+    // When the window is short enough to scroll, keep whatever has focus
+    // in view, so Tab never moves to a control off the screen. (VoiceOver
+    // scrolls to its cursor anyway; this is for keyboard users who look.)
+    // NSWindow's firstResponder can be observed; a text field being typed
+    // in shows as the window's field editor, whose delegate is the field.
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        guard focusWatch == nil, let window = view.window else { return }
+        focusWatch = window.observe(\.firstResponder, options: [.new]) { [weak self] window, _ in
+            MainActor.assumeIsolated { self?.scrollToFocus(in: window) }
+        }
+    }
+
+    func scrollToFocus(in window: NSWindow) {
+        guard let scroll = formScroll, let holder = scroll.documentView else { return }
+        var focused = window.firstResponder as? NSView
+        if let editor = focused as? NSTextView, editor.isFieldEditor, let field = editor.delegate as? NSView {
+            focused = field
+        }
+        // Inside the log or the details, scroll to the table as a whole
+        // (its own scrolling looks after the row).
+        while let view = focused, let outer = view.enclosingScrollView, outer !== scroll { focused = outer }
+        guard let view = focused, view.isDescendant(of: holder) else { return }
+        view.scrollToVisible(view.bounds.insetBy(dx: 0, dy: -8))
     }
 
     // MARK: - Commands (also reachable from the Contact menu)

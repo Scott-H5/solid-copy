@@ -1,7 +1,10 @@
 # Solid Copy: Accessibility Contract
 
-These are the promises Solid Copy makes to someone using VoiceOver and
-the keyboard. Each one is written so it can be tested. When the app
+These are the promises Solid Copy makes to everyone who uses it:
+someone using VoiceOver and the keyboard, someone with low vision who
+zooms or uses larger text, and someone fully sighted. VoiceOver comes
+first, but the app has to work equally well for all three. Each
+promise is written so it can be tested. When the app
 changes, check it against this list. If a change breaks a rule, the
 change isn't done yet.
 
@@ -341,11 +344,43 @@ it's scheduled for.
     that is only spoken (an automatic upload, the log's shortcut menu)
     can be shown again with QSL > Show Last Upload Message.
 
+## Low vision and sight
+
+What people see on screen has to work as well as what VoiceOver says.
+Apple's accessibility audit doesn't test any of this: it looks at a
+window at the size it opens on the test Mac, and never at a smaller or
+zoomed screen. (The main window once needed 780 points of height and
+couldn't shrink, so its bottom was off a small screen; neither the
+audit nor VoiceOver noticed. Found 24 November 2026.)
+
+- **Every window fits a small, zoomed screen.** The size to fit is
+  1024 by 640 points with about 570 of usable height: a 13-inch laptop
+  with Displays set to Larger Text. A window shorter than its contents
+  scrolls, and nothing needed is off the screen or out of reach. Tested
+  by `bash tools/check-screen-size.sh` for every window and sheet.
+  **Done.**
+- **Every resizable window can go full screen** (Window > Enter Full
+  Screen, Control-Command-F), and its table or list gets the room.
+  **Done.**
+- **Focus stays in view.** Moving with Tab in a window that scrolls
+  brings the focused control into view. **Done** (the logging window).
+- **Nothing needed is cut off.** Headings and short values (calls,
+  dates, bands) have room. When the log's columns get too narrow, a note
+  under the log says so, and pointing at a cut-off value shows it in
+  full. **Done.**
+- **Standard colors, and never color alone.** The standard Mac colors
+  follow Dark Mode and Increase Contrast. Anything shown in color (an
+  error in red) also says it in words. **Done.**
+
 ## Testing
 
 Before each phase is finished:
 
 - Go through the full logging loop with VoiceOver on, keyboard only.
+- Go through it again looking at the screen: with Displays set to
+  Larger Text (or the window made small), and full screen.
+- Run `bash tools/check-screen-size.sh`: every window and sheet fits
+  a 1024 by 640 screen.
 - Check that each "Done" rule above still holds.
 - Run Apple's accessibility audit on every screen: `bash audit.sh`. It
   takes about 15 minutes and prints one "AUDIT:" line per finding.

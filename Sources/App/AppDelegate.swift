@@ -42,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // The CW menu (CW.swift): WinKeyer, messages F1 to F8.
     let cwMenu = NSMenu(title: "CW")
 
+    // Before the menus are made: macOS adds its own Enter Full Screen
+    // item unless told not to, and Window has one already (MainMenu.swift).
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        UserDefaults.standard.register(defaults: ["NSFullScreenMenuItemEverywhere": false])
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         Settings.registerDefaults()
 
@@ -192,6 +198,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.title = "Solid Copy"
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.setContentSize(NSSize(width: 980, height: 820))
+        // Small enough for any screen: shorter than its contents, the
+        // window scrolls (LogEntryViewController.loadView).
+        window.contentMinSize = NSSize(width: 600, height: 360)
         window.center()
         // Remember where you put the window, between launches. The name
         // changes when the window gains a part (the log table, then the
@@ -578,11 +587,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // error is often worth pasting into an email or a note.
     func showMessage(_ title: String, details: String) {
         guard let window else { return }
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = details
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "Copy")
+        let alert = MessageAlert.make(title: title, details: details)
         alert.beginSheetModal(for: window) { [weak self] response in
             if response == .alertSecondButtonReturn {
                 NSPasteboard.general.clearContents()

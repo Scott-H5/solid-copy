@@ -1,0 +1,100 @@
+// Every window and sheet fits a small, zoomed screen.
+//
+// Apple's accessibility audit doesn't test this: it looks at each window
+// at the size it opens on the test Mac, never on a smaller or zoomed
+// screen. So a window that couldn't shrink below 780 points of height,
+// with its bottom off a small laptop's screen, passed every audit (found
+// 24 November 2026). This check is what catches that now.
+//
+// The screen to fit: 1024 by 640 points, a 13-inch laptop with Displays
+// set to Larger Text, which people with low vision often use. Less the
+// menu bar and the Dock, about 570 points of height are left for a
+// window, title bar and all. Each window is asked to shrink to almost
+// nothing; Auto Layout stops it at the smallest its contents allow, and
+// that has to fit. (A window whose contents scroll can shrink further.)
+// A sheet hangs below its window's title bar, so it has 28 points less.
+//
+// Run it with:  bash tools/check-screen-size.sh
+
+import AppKit
+func check(_ ok: Bool, _ what: String) { print(ok ? "PASS" : "FAIL", what); if !ok { exit(1) } }
+
+let screenWidth: CGFloat = 1024, screenHeight: CGFloat = 570, titleBar: CGFloat = 28
+
+setvbuf(stdout, nil, _IOLBF, 0)
+MainActor.assumeIsolated {
+  _ = NSApplication.shared
+  let book = try! Logbook(database: LogDatabase(fileURL: URL(fileURLWithPath: CommandLine.arguments[1]).appendingPathComponent("L.sqlite")))
+
+  // The smallest a window's frame (title bar included) can be.
+  func smallest(_ window: NSWindow) -> NSSize {
+    window.setContentSize(NSSize(width: 100, height: 100)); window.layoutIfNeeded()
+    let content = window.contentView!.frame.size
+    let least = NSSize(width: max(content.width, window.contentMinSize.width),
+                       height: max(content.height, window.contentMinSize.height))
+    return window.frameRect(forContentRect: NSRect(origin: .zero, size: least)).size
+  }
+  func fits(_ name: String, _ window: NSWindow?, sheet: Bool = false) {
+    guard let window else { return check(false, "\(name): no window") }
+    let size = smallest(window)
+    let room = screenHeight - (sheet ? titleBar : 0)
+    check(size.width <= screenWidth && size.height <= room,
+          "\(name) fits a 1024 by 640 screen (smallest \(Int(size.width)) by \(Int(size.height)), room \(Int(screenWidth)) by \(Int(room)))")
+  }
+
+  // The logging window, as AppDelegate makes it.
+  let form = LogEntryViewController(logbook: book)
+  let main = NSWindow(contentViewController: form)
+  main.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+  main.contentMinSize = NSSize(width: 600, height: 360)
+  fits("The logging window", main)
+
+  // Edit Contact, sized for the small screen as it would be there.
+  let editor = EditContactViewController(qso: QSO(call: "N0CALL", timeOn: Date()))
+  editor.fit(toScreenHeight: screenHeight)
+  let sheet = NSWindow(contentViewController: editor)
+  sheet.styleMask = [.titled]
+  sheet.layoutIfNeeded()
+  let sheetSize = sheet.contentView!.fittingSize
+  check(sheetSize.height <= screenHeight - titleBar && sheetSize.width <= screenWidth,
+        "Edit Contact fits below the logging window's title (\(Int(sheetSize.width)) by \(Int(sheetSize.height)))")
+
+  // Set Up Station, the first-run window.
+  let firstRun = FirstRunSheet.contentsForChecks().fittingSize
+  check(firstRun.height + titleBar <= screenHeight && firstRun.width <= screenWidth,
+        "Set Up Station fits (\(Int(firstRun.width)) by \(Int(firstRun.height)))")
+
+  fits("Spots", SpotsWindowController(logbook: book).window)
+  fits("Activity", ActivityWindowController().window)
+  fits("Log", LogBrowserWindowController(logbook: book).window)
+  fits("WSJT-X Decodes", DecodesWindowController(logbook: book).window)
+  fits("Awards", AwardsWindowController(logbook: book).window)
+  fits("Band Plan", BandPlanWindowController().window)
+
+  // Settings, on every section (its sections scroll, but the sidebar and
+  // the window's least size still have to fit).
+  Keychain.readsAllowed = false  // never the real logins
+  let settings = SettingsWindowController()
+  _ = settings.window
+  check(settings.sectionTitles.count >= 14, "Settings has its sections (\(settings.sectionTitles.count))")
+  for title in settings.sectionTitles {
+    settings.showSection(named: title)
+    fits("Settings > \(title)", settings.window)
+    // And no section much wider than the others (one long unwrapped line
+    // once made Settings need nearly the whole screen's width).
+    check(smallest(settings.window!).width <= 760, "Settings > \(title) isn't made wide by one long line")
+  }
+
+  // A message (AppDelegate.showMessage) with a long report, as an import
+  // or upload with many problems gives: its OK and Copy buttons must
+  // stay on the screen.
+  let alert = MessageAlert.make(title: "Import finished.",
+                                details: (1...60).map { "Line \($0): N0CALL on 20 meters, 14.074 FT8, not added: already in the log." }.joined(separator: "\n"))
+  alert.layout()
+  let alertHeight = alert.window.frame.height
+  check(alertHeight <= screenHeight - titleBar, "a long message fits, buttons and all (\(Int(alertHeight)) points)")
+  check(alert.accessoryView != nil && alert.informativeText.contains("box below"),
+        "the long message is in a scrolling box, and the alert says so")
+  let short = MessageAlert.make(title: "Export finished.", details: "12 saved as Contest.adi.")
+  check(short.accessoryView == nil && short.informativeText == "12 saved as Contest.adi.", "a short message is the alert's own text, as before")
+}

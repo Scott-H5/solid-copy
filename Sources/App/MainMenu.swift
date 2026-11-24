@@ -312,6 +312,14 @@ enum MainMenu {
         let menu = NSMenu(title: "Window")
         menu.addItem(withTitle: "Minimize",
                      action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        // Control-Command-F, the Mac's usual full-screen keys. macOS names
+        // it Enter Full Screen or Exit Full Screen as the window is, and
+        // dims it for windows that can't (sheets, the first-run panel).
+        // (macOS's own copy of this item is turned off in AppDelegate, so
+        // there's only this one.)
+        let fullScreen = menu.addItem(withTitle: "Enter Full Screen",
+                                      action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
+        fullScreen.keyEquivalentModifierMask = [.control, .command]
         menu.addItem(.separator())
         // Command-0 brings the logging window back if it was closed.
         let logging = menu.addItem(withTitle: "Logging Window",

@@ -83,6 +83,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         let firstControl: () -> NSView?
     }
     private var sections: [Section] = []
+    // The sections' names, in order (for tools/screen-size-check).
+    var sectionTitles: [String] { sections.map(\.title) }
     private var current = 0
 
     // The sidebar, and the scrolling area the section is shown in.

@@ -122,6 +122,21 @@ MainActor.assumeIsolated {
     let form = LogEntryViewController(logbook: logbook)
     let main = NSWindow(contentViewController: form)
     main.layoutIfNeeded()
+    // The window fits a small screen: shorter than the form and log
+    // (about 750 points), it scrolls instead of running off the screen;
+    // taller, nothing scrolls and the log takes the extra height.
+    main.styleMask.insert(.resizable)
+    main.setContentSize(NSSize(width: 900, height: 520)); main.layoutIfNeeded()
+    let formScroll = form.view as? NSScrollView
+    let shortClip = formScroll?.contentView.bounds.height ?? 0
+    check(main.contentView!.frame.height <= 521 && (formScroll?.documentView?.frame.height ?? 0) > shortClip + 100,
+          "a 520-point window: the form scrolls (\(Int(formScroll?.documentView?.frame.height ?? 0)) points in \(Int(shortClip)))")
+    main.setContentSize(NSSize(width: 900, height: 1_100)); main.layoutIfNeeded()
+    let tallClip = formScroll?.contentView.bounds.height ?? 0
+    let logHeight = form.logTable.view.frame.height
+    check(abs((formScroll?.documentView?.frame.height ?? 0) - tallClip) <= 1 && logHeight > 300,
+          "a 1100-point window: nothing scrolls, and the log is taller (\(Int(logHeight)) points)")
+    main.setContentSize(NSSize(width: 980, height: 820)); main.layoutIfNeeded()
     form.useSpot(spots[0])
     check(form.callsignField.stringValue == "W1AW", "Return on a spot puts its call in Callsign")
     form.logContact(nil)

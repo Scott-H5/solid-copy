@@ -49,6 +49,10 @@ final class FirstRunSheet: NSObject {
         made.present()
     }
 
+    // The window's contents, built but not shown (for
+    // tools/screen-size-check).
+    static func contentsForChecks() -> NSView { FirstRunSheet().build() }
+
     // A window of its own, not a sheet: a sheet that doesn't attach to its
     // window can't be closed with Save or Skip.
     private func present() {

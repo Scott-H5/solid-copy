@@ -195,7 +195,13 @@ each file does and why, and has recipes for common changes.
 - `tools/check-profiles.sh`: old settings becoming Home, switching to
   Portable, starting values and station details on logged contacts.
 - `tools/check-log-table.sh`: checks the log table on its own: contacts
-  show when it opens, and narrowing to one call.
+  show when it opens, narrowing to one call, and fitting the columns in
+  the window (with the too-narrow note).
+- `tools/check-screen-size.sh`: every window, sheet, Settings section and
+  long message fits a small, zoomed screen (1024 by 640, about 570
+  points of height), for low-vision and sighted users. Apple's audit
+  doesn't test this. It never reads the Keychain (Keychain.readsAllowed).
+  Long messages go in a scrolling box (`Sources/Accessibility/MessageAlert.swift`).
 - `audit.sh` (in the main folder): Apple's accessibility audit of every
   screen, driven by `UITests/AccessibilityAuditTests.swift`. It needs
   Accessibility permission for the test runner the first time.

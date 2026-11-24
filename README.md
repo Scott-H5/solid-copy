@@ -129,6 +129,7 @@ end.
 | Command-0 | Bring back the logging window if it was closed (so does clicking Solid Copy in the Dock) |
 | Command-1 | Spots (who's on the air); see Spots below |
 | Command-backtick, Shift-Command-backtick | Next and previous window (the logging window, Spots and Settings) |
+| Control-Command-F | Full screen, and back (Window > Enter Full Screen) |
 | Command-F | Search the log (every word, in any field); Return or Down goes to the matches, Escape clears |
 | Option-Command-F | Show only contacts with the call in the form (or the selected call); Escape shows all |
 | Up, Down (in the log) | Move between contacts |
@@ -155,6 +156,13 @@ end.
 | Up, Down (in the details) | Move between fields |
 | Command-C (in the details) | Copy the selected field's value |
 | Escape, Tab or Shift-Tab (in the details) | Go back to the log |
+
+The logging window fits any screen, including a small laptop with
+Displays set to Larger Text: when the window is shorter than the form
+and log, it scrolls up and down, and moving with Tab brings each control
+into view. Made taller, or full screen, the log takes the extra room.
+Edit Contact's list of fields is shorter on a short screen, so Save and
+Cancel stay on it.
 
 The log's columns start in the order Call, Name, Date, Time, Band, Frequency, Mode,
 RST Sent, RST Received, Country, QSO notes. Every other field is in the

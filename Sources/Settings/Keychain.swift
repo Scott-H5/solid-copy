@@ -24,8 +24,13 @@ enum Keychain {
     static let eqslService = "Solid Copy: eQSL"
 
     // The password saved for this username, or nil if there isn't one.
+    // Off only in checks that build Settings (tools/screen-size-check):
+    // they mustn't read the author's real logins, and macOS would stop
+    // them to ask permission. Nothing outside this process can change it.
+    static var readsAllowed = true
+
     static func password(for account: String, service: String = service) -> String? {
-        guard !account.isEmpty else { return nil }
+        guard readsAllowed, !account.isEmpty else { return nil }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
