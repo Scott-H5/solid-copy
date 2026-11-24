@@ -236,34 +236,99 @@ final class LogTableViewController: NSViewController,
     // columns share the width, and there's no sideways scrolling, so
     // VoiceOver's heading for a cell is always the one above it. Off, the
     // columns keep their own widths and the log scrolls sideways.
+    //
+    // The sharing is done here, not by AppKit's "uniform" autoresizing,
+    // which changes every column by the same amount on each resize: after
+    // a few window sizes Date and Time were down to 39 points while
+    // Address had 162 (found 23 November 2026). Instead every fit starts
+    // from each column's own width (Self.column(for:)) and the window:
+    //   - Room for them all: each grows in proportion to its own width.
+    //   - Less room: each keeps at least its heading's width, and the
+    //     room above that is shared in proportion.
+    //   - Not even room for the headings: in proportion to those.
+    // While fitted, dragging a column's edge is off: the widths are the
+    // window's, and a drag would push the last columns out of sight.
+    private var fittedWidth: CGFloat = -1
+
     func applyFit() {
         let fit = Settings.logFitColumns
         tableView.enclosingScrollView?.hasHorizontalScroller = !fit
-        guard fit else {
-            tableView.columnAutoresizingStyle = .noColumnAutoresizing
-            arrangingColumns = true
-            for column in tableView.tableColumns {
-                column.width = Self.column(for: column.identifier.rawValue).width
-            }
+        tableView.allowsColumnResizing = !fit
+        tableView.columnAutoresizingStyle = .noColumnAutoresizing
+        let tableColumns = tableView.tableColumns
+        arrangingColumns = true
+        defer {
             arrangingColumns = false
+            updateNarrowNotice()
+        }
+        let wanted = tableColumns.map { Self.column(for: $0.identifier.rawValue).width }
+        guard fit else {
+            fittedWidth = -1
+            for (column, width) in zip(tableColumns, wanted) { column.width = width }
             return
         }
-        tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
-        arrangingColumns = true
-        tableView.sizeToFit()
+        guard let clip = tableView.enclosingScrollView?.contentView, !tableColumns.isEmpty else { return }
+        // Less the gap after each column, and any margin the table's style
+        // adds at the edges (4 points today: measured, as what's
+        // left of the last column's edge once the columns and gaps are
+        // counted).
+        let gaps = tableView.intercellSpacing.width * CGFloat(tableColumns.count)
+        let edge = tableView.rect(ofColumn: tableColumns.count - 1).maxX
+        let margin = max(0, edge - tableColumns.reduce(0) { $0 + $1.width } - gaps)
+        let room = clip.bounds.width - gaps - margin
+        guard room > 0 else { return }
+        // A column's own width is at least its heading's, even if it was
+        // dragged narrower while not fitted.
+        let floors = tableColumns.map { ceil($0.headerCell.cellSize.width) + 4 }
+        let own = zip(wanted, floors).map { max($0, $1) }
+        for (column, width) in zip(tableColumns, Self.share(room, wanted: own, floors: floors)) {
+            column.width = width
+        }
+        fittedWidth = clip.bounds.width
         // The table's own width follows the columns, so there's nothing
         // to scroll to beside them.
         tableView.tile()
-        arrangingColumns = false
+    }
+
+    // The widths for `room` points (see above), in whole points with what's
+    // left over given to the last column, so together they fill it exactly.
+    nonisolated static func share(_ room: CGFloat, wanted: [CGFloat], floors: [CGFloat]) -> [CGFloat] {
+        let wantedSum = wanted.reduce(0, +), floorSum = floors.reduce(0, +)
+        guard !wanted.isEmpty, wantedSum > 0 else { return wanted }
+        var widths: [CGFloat]
+        if room >= wantedSum || wantedSum - floorSum < 1 {
+            widths = wanted.map { $0 * room / wantedSum }
+        } else if room >= floorSum {
+            let part = (room - floorSum) / (wantedSum - floorSum)
+            widths = zip(floors, wanted).map { $0 + ($1 - $0) * part }
+        } else {
+            widths = floors.map { $0 * room / max(floorSum, 1) }
+        }
+        widths = widths.map { max(30, $0.rounded(.down)) }
+        // Left over: to the last column. Over (the 30-point least pushed
+        // some up): taken from the widest columns first.
+        var extra = room - widths.reduce(0, +)
+        if extra >= 0 { widths[widths.count - 1] += extra }
+        for index in widths.indices.sorted(by: { widths[$0] > widths[$1] }) where extra < 0 {
+            let take = min(-extra, widths[index] - 30)
+            widths[index] -= take
+            extra += take
+        }
+        return widths
+    }
+
+    // Fit again whenever the log's width changes: the window resized, or a
+    // vertical scroller came or went. (Watching the clip view's frame, not
+    // viewDidLayout: the clip view is sized after this controller's view.)
+    private func refitIfWidthChanged() {
+        guard Settings.logFitColumns, let clip = tableView.enclosingScrollView?.contentView,
+              abs(clip.bounds.width - fittedWidth) > 0.5 else { return }
+        applyFit()
     }
 
     override func viewDidLayout() {
         super.viewDidLayout()
-        // The window's width is known now (and after it changes).
-        if Settings.logFitColumns, let clip = tableView.enclosingScrollView?.contentView,
-           tableView.frame.width > clip.bounds.width + 1 {
-            applyFit()
-        }
+        refitIfWidthChanged()
     }
 
     // Remember a column's new width after you drag its edge (not while
@@ -272,6 +337,62 @@ final class LogTableViewController: NSViewController,
         guard !arrangingColumns, !Settings.logFitColumns, let column = notification.userInfo?["NSTableColumn"] as? NSTableColumn else { return }
         Settings.columnWidths[column.identifier.rawValue] = Double(column.width)
     }
+
+    // The note under the log when fitting has made columns too narrow to
+    // read on screen, for sighted people looking at the log: widen the
+    // window or hide some columns. VoiceOver reads every value in full
+    // whatever the width, so it isn't spoken; it's there to find after
+    // the log. (The author's idea, 23 November 2026, before showing the
+    // log to sighted users.)
+    //
+    // Too narrow means something is actually cut off: a column's heading,
+    // or a value on screen in a column of short values (Call, Date, Band,
+    // Frequency...). Not a width rule: equal widths for every column
+    // (how fitting shares the window) can be fine or not depending on
+    // what's in them. Comment, Notes and Address are left out, since a
+    // long one is cut short at any width.
+    private let narrowNotice = NSTextField(wrappingLabelWithString:
+        "Some columns are too narrow to read on screen. Widen the window, or hide columns in "
+        + "Settings > Log Columns. Pointing at a cut-off value shows it in full; VoiceOver reads it in full.")
+    private static let longTextColumns: Set<String> = ["comment", "notes", "address"]
+    private var narrowCheckPending = false
+
+    // Checked once after a change, not on each of the many resizes a
+    // window drag makes.
+    private func updateNarrowNotice() {
+        guard !narrowCheckPending else { return }
+        narrowCheckPending = true
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.narrowCheckPending = false
+                let narrow = Settings.logFitColumns && self.somethingCutOff()
+                // Only when it changes: showing or hiding it lays the window out again.
+                if self.narrowNotice.isHidden == narrow { self.narrowNotice.isHidden = !narrow }
+            }
+        }
+    }
+
+    private func somethingCutOff() -> Bool {
+        let rows = tableView.rows(in: tableView.visibleRect)
+        for (index, column) in tableView.tableColumns.enumerated() {
+            if column.headerCell.cellSize.width > column.width { return true }
+            guard !Self.longTextColumns.contains(column.identifier.rawValue) else { continue }
+            for row in rows.lowerBound..<rows.upperBound {
+                guard let label = (tableView.view(atColumn: index, row: row, makeIfNecessary: false)
+                    as? NSTableCellView)?.textField else { continue }
+                // 4 points of space each side of the text (LogCellView).
+                if label.intrinsicContentSize.width + 8 > column.width + 0.5 { return true }
+            }
+        }
+        return false
+    }
+
+    // True while the note is showing (for tools/log-table-check).
+    var isNarrowNoticeShown: Bool { !narrowNotice.isHidden }
+
+    // How many contacts the log is showing.
+    var shownRows: Int { tableView.numberOfRows }
 
     // Remember the new order after you drag a column heading.
     func tableViewColumnDidMove(_ notification: Notification) {
@@ -317,6 +438,11 @@ final class LogTableViewController: NSViewController,
         tableView.dataSource = self
         tableView.delegate = self
         tableView.usesAlternatingRowBackgroundColors = true
+        // 8 points between columns, not AppKit's 17: across 11 columns
+        // that's about 100 points more for the values themselves, which
+        // matters with every column fitted in the window. Each value also
+        // has 4 points of space either side (LogCellView).
+        tableView.intercellSpacing = NSSize(width: 8, height: tableView.intercellSpacing.height)
         // Several contacts can be selected (Shift-arrows), to delete together.
         tableView.allowsMultipleSelection = true
         tableView.setAccessibilityLabel("Log")
@@ -378,7 +504,21 @@ final class LogTableViewController: NSViewController,
         scrollView.hasVerticalScroller = true
         scrollView.borderType = .bezelBorder
         scrollView.heightAnchor.constraint(greaterThanOrEqualToConstant: 180).isActive = true
-        view = scrollView
+        // The log, with the too-narrow note under it (hidden until needed;
+        // a hidden view in a stack takes no room).
+        narrowNotice.isSelectable = true
+        narrowNotice.isHidden = true
+        let box = NSStackView(views: [scrollView, narrowNotice])
+        box.orientation = .vertical
+        box.alignment = .width
+        box.spacing = 6
+        view = box
+        let clip = scrollView.contentView
+        clip.postsFrameChangedNotifications = true
+        NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: clip, queue: .main) {
+            [weak self] _ in
+            MainActor.assumeIsolated { self?.refitIfWidthChanged() }
+        }
         applyFit()
 
         observeLogbook()
@@ -1182,6 +1322,8 @@ final class LogCellView: NSTableCellView {
         self.identifier = identifier
         let label = CellLabel(labelWithString: "")
         label.lineBreakMode = .byTruncatingTail
+        // Pointing at a value that's cut short shows all of it.
+        label.allowsExpansionToolTips = true
         label.translatesAutoresizingMaskIntoConstraints = false
         addSubview(label)
         textField = label

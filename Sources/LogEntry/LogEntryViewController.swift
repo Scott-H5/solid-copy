@@ -969,7 +969,7 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
 
     // How many contacts the log is showing.
     private var shownCount: Int {
-        ((logTable.view as? NSScrollView)?.documentView as? NSTableView)?.numberOfRows ?? 0
+        logTable.shownRows
     }
 
     // "No contacts match", "1 contact matches", "12 contacts match".

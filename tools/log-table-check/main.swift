@@ -24,7 +24,8 @@ MainActor.assumeIsolated {
   // A log that already has contacts when the window opens, as at launch.
   let table = LogTableViewController(logbook: book)
   let w = NSWindow(contentViewController: table); w.orderFrontRegardless(); w.layoutIfNeeded(); w.display()
-  let tv = (table.view as! NSScrollView).documentView as! NSTableView
+  // The log's view is the table's scroll view with a note under it.
+  let tv = table.view.subviews.compactMap { ($0 as? NSScrollView)?.documentView as? NSTableView }.first!
   check(tv.numberOfRows == 3, "contacts already in the log show when it opens (rows: \(tv.numberOfRows))")
 
   // VoiceOver gets the table's column headings (23 November 2026).
@@ -54,6 +55,29 @@ MainActor.assumeIsolated {
     let edge = tv.rect(ofColumn: tv.tableColumns.count - 1).maxX
     check(abs(edge - clip.bounds.width) <= 2, "the window at \(Int(width)): the columns still fill it exactly (\(Int(edge)) of \(Int(clip.bounds.width)))")
   }
+  // The too-narrow note: shown for sighted people when fitting has made
+  // columns too narrow to read, hidden again when the window is wide.
+  // (The note is checked on the next turn of the run loop.)
+  func settle() { RunLoop.main.run(until: Date().addingTimeInterval(0.05)); w.layoutIfNeeded(); w.display() }
+  // The starting columns at the main window's starting width (its log is
+  // about 940 points wide): nothing cut off, so no note.
+  let columnsBefore = Settings.logColumns
+  Settings.logColumns = Settings.defaultLogColumns
+  w.setContentSize(NSSize(width: 940, height: 400)); settle()
+  check(!table.isNarrowNoticeShown, "the starting columns in the main window's width: no too-narrow note")
+  check(tv.tableColumns.allSatisfy { $0.width >= $0.headerCell.cellSize.width }, "fitted, every heading has room")
+  Settings.logColumns = columnsBefore + ["name", "country", "comment", "notes", "address"].filter { !columnsBefore.contains($0) }
+  w.setContentSize(NSSize(width: 420, height: 400)); settle()
+  check(table.isNarrowNoticeShown, "a narrow window with many columns shows the too-narrow note")
+  w.setContentSize(NSSize(width: 2_400, height: 400)); settle()
+  check(!table.isNarrowNoticeShown, "a wide window hides the note again")
+  let edgeWide = tv.rect(ofColumn: tv.tableColumns.count - 1).maxX
+  check(abs(edgeWide - clip.bounds.width) <= 2, "with the note's box, the columns still fill the window (\(Int(edgeWide)) of \(Int(clip.bounds.width)))")
+  Settings.logFitColumns = false; w.layoutIfNeeded()
+  w.setContentSize(NSSize(width: 420, height: 400)); settle()
+  check(!table.isNarrowNoticeShown, "not fitted, the note never shows (the log scrolls sideways instead)")
+  Settings.logFitColumns = true
+  Settings.logColumns = columnsBefore
   w.setContentSize(NSSize(width: 700, height: 400)); w.layoutIfNeeded(); w.display()
   Settings.logFitColumns = false
   w.layoutIfNeeded(); w.display()

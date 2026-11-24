@@ -666,7 +666,13 @@ cell's heading by where the cell is on screen, and when VO-Right
 scrolled the row to show a cell, it said the heading of the column that
 had been there ("RST received, United States"). Fitted, each cell is
 said with its own heading. Long values are cut short on screen, but
-VoiceOver reads them in full. Turn it off to give each column its own
+VoiceOver reads them in full, and pointing at one shows it in full. The
+widths follow the window: each column shares the room in proportion to
+its usual width, keeping at least room for its heading. When something
+is still cut off (a heading, or a short value like a call or a date), a
+note under the log says so and suggests widening the window or hiding
+columns. It's for anyone reading the log on screen, so VoiceOver doesn't
+say it; you'll find it after the log. Turn it off to give each column its own
 width and scroll sideways. End dates and times read as the Date and Time
 columns do (2026-11-22, 1949), not as ADIF's raw numbers.
 

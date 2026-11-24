@@ -667,7 +667,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
             "With this on, the columns share the log's width and it never scrolls sideways, so as you move "
             + "along a row VoiceOver says each cell with its own column's heading. (VoiceOver finds a heading "
             + "by where the cell is on screen; when the row scrolled, it said the wrong one.) Long values are cut "
-            + "short on screen, but VoiceOver reads them in full. Off, each column keeps the width you give it.")
+            + "short on screen, but VoiceOver reads them in full. The widths follow the window, every heading "
+            + "keeping room, and if something is still cut off a note under the log says so, for anyone reading "
+            + "it on screen. Off, each column keeps the width you give it by dragging its edge.")
         fitNote.preferredMaxLayoutWidth = 520
         fitNote.isSelectable = true
         fitBox.setAccessibilityLinkedUIElements([fitNote])
