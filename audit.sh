@@ -4,10 +4,12 @@
 #
 #   bash audit.sh
 #
-# Solid Copy opens and moves through its screens by itself; this takes a
-# minute or two. The first time, macOS asks to let the test runner control
-# the computer (Privacy & Security > Accessibility); turn that off again
-# afterwards.
+# Solid Copy opens and moves through its screens by itself, taking over
+# the screen while it runs: 53 minutes on 2026-11-24, then 40 once the
+# test read each flagged element once per screen. It now remembers each
+# element across screens too (not yet timed). The first time, macOS asks
+# to let the test runner control the computer (Privacy & Security >
+# Accessibility); turn that off again afterwards.
 #
 # Only the findings are printed, one "AUDIT:" line each, then a summary.
 # The full log is build/audit.log; screenshots of each screen are in
