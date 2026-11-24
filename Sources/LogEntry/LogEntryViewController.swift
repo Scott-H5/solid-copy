@@ -318,6 +318,12 @@ final class LogEntryViewController: NSViewController, NSTextFieldDelegate, NSSea
         scroll.hasVerticalScroller = true
         scroll.drawsBackground = false
         scroll.documentView = holder
+        // VoiceOver doesn't hear this scroll area: the form's controls are
+        // right in the window, as they were before it scrolled, with no
+        // scroll area to interact with first. It still scrolls for anyone
+        // looking, and VoiceOver scrolls to its cursor by itself. (The log
+        // keeps its own scroll area, as every table does.)
+        scroll.setAccessibilityElement(false)
         let clip = scroll.contentView
         let fill = holder.heightAnchor.constraint(equalTo: clip.heightAnchor)
         fill.priority = NSLayoutConstraint.Priority(500)

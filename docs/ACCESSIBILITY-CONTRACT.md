@@ -364,6 +364,11 @@ audit nor VoiceOver noticed. Found 24 November 2026.)
   **Done.**
 - **Focus stays in view.** Moving with Tab in a window that scrolls
   brings the focused control into view. **Done** (the logging window).
+- **Scrolling for the eye adds no step for VoiceOver.** A scroll area
+  put in only so a short window fits is hidden from VoiceOver, so its
+  controls stay right in the window, with nothing to interact with
+  first. Tables and lists keep their own scroll areas. **Done** (the
+  logging window; tested by `bash tools/check-spots.sh`).
 - **Nothing needed is cut off.** Headings and short values (calls,
   dates, bands) have room. When the log's columns get too narrow, a note
   under the log says so, and pointing at a cut-off value shows it in

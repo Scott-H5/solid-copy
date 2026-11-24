@@ -136,6 +136,18 @@ MainActor.assumeIsolated {
     let logHeight = form.logTable.view.frame.height
     check(abs((formScroll?.documentView?.frame.height ?? 0) - tallClip) <= 1 && logHeight > 300,
           "a 1100-point window: nothing scrolls, and the log is taller (\(Int(logHeight)) points)")
+    // VoiceOver finds the form's controls right in the window, with no
+    // scroll area around them to interact with first. This walks what
+    // VoiceOver is given, from the window down, stopping at any scroll area.
+    func reachable(_ element: Any, _ depth: Int = 0) -> Bool {
+        // (AppKit hands VoiceOver a text field as its cell.)
+        if (element as AnyObject) === form.callsignField
+            || (element as? NSCell)?.controlView === form.callsignField { return true }
+        guard depth < 12, let item = element as? NSAccessibilityProtocol else { return false }
+        if depth > 0, item.accessibilityRole() == .scrollArea { return false }
+        return (item.accessibilityChildren() ?? []).contains { reachable($0, depth + 1) }
+    }
+    check(reachable(main), "VoiceOver reaches Callsign without a scroll area in the way")
     main.setContentSize(NSSize(width: 980, height: 820)); main.layoutIfNeeded()
     form.useSpot(spots[0])
     check(form.callsignField.stringValue == "W1AW", "Return on a spot puts its call in Callsign")
