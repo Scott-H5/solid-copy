@@ -19,6 +19,21 @@ protocol RadioLink: AnyObject, Sendable {
     func setFirst(of commands: [String]) throws -> String
     // Closes the connection. The next call opens it again.
     func disconnect()
+    // Which model the radio says it is, once it has been asked (the
+    // built-in driver asks when it connects). Nil until then, and always
+    // nil through rigctld, where rigctld is set up with the model.
+    var identity: RadioIdentity? { get }
+}
+
+extension RadioLink {
+    var identity: RadioIdentity? { nil }
+}
+
+// A radio's model as it named itself: hamlib's number for it and its name
+// ("Kenwood TS-890S"), as Settings keeps them (RadioSettings).
+struct RadioIdentity: Equatable, Sendable {
+    let model: Int
+    let name: String
 }
 
 // Why a radio call failed. RadioMonitor says each kind differently.

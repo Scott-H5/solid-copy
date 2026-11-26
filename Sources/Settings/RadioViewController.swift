@@ -6,14 +6,22 @@
 //
 // From top to bottom:
 //   - Radio in use: a pop-up menu of your radios, and No Radio.
-//   - New Radio (added and put in use, ready to set up) and Delete Radio.
+//   - New Radio (added and put in use, ready to set up), Delete Radio, and
+//     Move Up and Move Down: the order of your radios is the order of
+//     Control-Command-1, 2, ... in the Radio menu. A new radio not set up
+//     (no manufacturer or port) is cancelled by Escape, which stays in this
+//     section (SettingsWindowController.escape), and is taken off too when
+//     Settings closes or another radio is chosen, so an abandoned New
+//     Radio leaves nothing behind.
 //   - The radio in use:
 //     - Connect through: the built-in driver (Kenwood and Elecraft radios,
 //       talked to over the USB port, with nothing else to install), or
 //       "Hamlib NET rigctl": a rigctld you run yourself, at an IP address
-//       and port, for any other radio. The built-in driver offers only the
-//       Kenwood and Elecraft radios it knows.
-//     - Manufacturer and Model: the built-in driver's radios, in two menus.
+//       and port, for any other radio.
+//     - Manufacturer: Kenwood or Elecraft, for the built-in driver.
+//     - Model: not chosen, but shown: the radio says which it is when it
+//       connects (KenwoodClient.identify), so a TS-890 needs no menu entry
+//       of its own. Until then it says so.
 //     - Port: the radio's USB serial port. The list is fresh each time it
 //       opens, so a radio plugged in a moment ago is there.
 //     - Speed: the port's speed, which must match the radio's own setting.
@@ -36,10 +44,14 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     private let radioMenu = NSPopUpButton()
     private let deleteButton = NSButton(title: "Delete Radio", target: nil, action: nil)
+    private let upButton = NSButton(title: "Move Up", target: nil, action: nil)
+    private let downButton = NSButton(title: "Move Down", target: nil, action: nil)
     private let heading = NSTextField(labelWithString: "")
     private let connectionMenu = NSPopUpButton()
     private let makerMenu = NSPopUpButton()
-    private let modelMenu = NSPopUpButton()
+    // What the radio said it is ("TS-890S"), selectable so it can be read
+    // again and copied.
+    private let modelLabel = NSTextField(labelWithString: "")
     private let portMenu = NSPopUpButton()
     private let speedMenu = NSPopUpButton()
     private let ipField = NSTextField(string: "")
@@ -58,6 +70,9 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     // The radio shown, to tell when another is chosen elsewhere.
     private var shownID: UUID?
+    // A radio added with New Radio and not yet set up, and the one in use
+    // before it, to go back to if it's abandoned (dropUnfinished).
+    private var unfinished: (id: UUID, previous: UUID?)?
 
     var firstControl: NSView { radioMenu }
 
@@ -68,7 +83,11 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         let newButton = NSButton(title: "New Radio", target: self, action: #selector(newRadio(_:)))
         deleteButton.target = self
         deleteButton.action = #selector(deleteRadio(_:))
-        let buttons = NSStackView(views: [newButton, deleteButton])
+        upButton.target = self
+        upButton.action = #selector(moveRadioUp(_:))
+        downButton.target = self
+        downButton.action = #selector(moveRadioDown(_:))
+        let buttons = NSStackView(views: [newButton, deleteButton, upButton, downButton])
         buttons.spacing = 8
         let top = NSGridView(views: [[FieldLabel("Radio in use"), radioMenu]])
         top.rowAlignment = .firstBaseline
@@ -87,7 +106,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         }
 
         let controls: [(String, NSView)] = [("Connect through", connectionMenu), ("Manufacturer", makerMenu),
-                                            ("Model", modelMenu), ("Port", portMenu), ("Speed", speedMenu),
+                                            ("Model", modelLabel), ("Port", portMenu), ("Speed", speedMenu),
                                             ("IP address", ipField), ("Network port", netPortField)]
         for (label, control) in controls {
             control.setAccessibilityLabel(label)
@@ -96,6 +115,7 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
                 menu.action = #selector(changed(_:))
             }
         }
+        modelLabel.isSelectable = true
         grid = NSGridView(views: controls.map { [FieldLabel($0.0), $0.1] })
         grid.column(at: 0).xPlacement = .trailing
         grid.rowSpacing = 8
@@ -194,18 +214,35 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             item.nextKeyView = order[(index + 1) % order.count]
         }
 
+        // Settings closing (Escape, Command-W, its close button): a new radio
+        // never set up is taken off.
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: nil, queue: .main) {
+            [weak self] notification in
+            MainActor.assumeIsolated {
+                guard let self, let window = notification.object as? NSWindow, window === self.view.window else { return }
+                self.dropUnfinished()
+            }
+        }
         NotificationCenter.default.addObserver(forName: RadioMonitor.didChange, object: nil, queue: .main) {
             [weak self] _ in
             MainActor.assumeIsolated { self?.showStatus() }
         }
         // Another radio chosen elsewhere (the main window, the Radio menu):
-        // show it. A moment later, so a menu isn't refilled while macOS is
-        // still handling a choice from it.
+        // show it. Or the radio in use has said which model it is: show
+        // its new name. A moment later, so a menu isn't refilled while
+        // macOS is still handling a choice from it.
         NotificationCenter.default.addObserver(forName: Settings.didChange, object: nil, queue: .main) {
             [weak self] _ in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    if let self, Settings.currentRadio?.id != self.shownID { self.refresh() }
+                    guard let self else { return }
+                    let radio = Settings.currentRadio
+                    if radio?.id != self.shownID {
+                        self.refresh()
+                    } else if let radio, self.title(of: radio) != self.heading.stringValue {
+                        self.showTitles(radio)
+                        self.showModel(radio)
+                    }
                 }
             }
         }
@@ -265,23 +302,31 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         let radios = Settings.radios
         let radio = Settings.currentRadio
         shownID = radio?.id
+        // Items added one by one: addItems(withTitles:) drops any title
+        // already there (see RadioSettings.titles).
         radioMenu.removeAllItems()
-        radioMenu.addItems(withTitles: radios.map(\.name) + ["No Radio"])
+        for title in RadioSettings.titles(radios) + ["No Radio"] { radioMenu.menu?.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: "")) }
         radioMenu.selectItem(at: radios.firstIndex { $0.id == radio?.id } ?? radios.count)
         deleteButton.isEnabled = radio != nil
+        let place = radios.firstIndex { $0.id == radio?.id }
+        upButton.isEnabled = (place ?? 0) > 0
+        downButton.isEnabled = place.map { $0 < radios.count - 1 } ?? false
         // The details only when there's a radio in use.
         details.isHidden = radio == nil
         guard let radio else { return showStatus() }
 
-        heading.stringValue = radio.name
+        heading.stringValue = title(of: radio)
         connectionMenu.selectItem(at: radio.builtIn ? 0 : 1)
-        // Manufacturers, then the chosen one's models.
+        // The manufacturer, then the model the radio said it is.
         makerMenu.removeAllItems()
         makerMenu.addItem(withTitle: "Choose a manufacturer")
-        makerMenu.addItems(withTitles: Self.unique(offeredModels.map(\.maker)))
-        let model = offeredModels.first { $0.number == radio.model }
-        if let model { makerMenu.selectItem(withTitle: model.maker) } else { makerMenu.selectItem(at: 0) }
-        fillModels(selecting: model?.number)
+        makerMenu.addItems(withTitles: RadioModels.makers.map(\.name))
+        if let maker = RadioModels.maker(of: radio.model) {
+            makerMenu.selectItem(withTitle: maker)
+        } else {
+            makerMenu.selectItem(at: 0)
+        }
+        showModel(radio)
         fillPorts()
         speedMenu.selectItem(at: RadioSettings.speeds.firstIndex(of: radio.baud) ?? 3)
         // The saved address split into its two fields; the defaults show
@@ -299,26 +344,37 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
 
     // MARK: - Filling the menus
 
-    // The radios offered: the built-in driver's (KenwoodRadio). Hamlib NET
-    // rigctl doesn't pick a model here; its rigctld is set up separately.
-    private var offeredModels: [RadioModels.Model] { RadioModels.builtIn }
+    // A radio's title in this list of radios (its name, or with its port
+    // when another has the same name).
+    private func title(of radio: RadioSettings) -> String {
+        RadioSettings.title(of: radio, among: Settings.radios)
+    }
 
-    // The chosen manufacturer's models, after "Choose a model" (so choosing
-    // a manufacturer doesn't pick one of its radios for you).
-    private func fillModels(selecting number: Int?) {
-        modelMenu.removeAllItems()
-        modelMenu.addItem(withTitle: "Choose a model")
-        let maker = makerMenu.titleOfSelectedItem ?? ""
-        for model in offeredModels where model.maker == maker {
-            modelMenu.addItem(withTitle: model.name)
-            modelMenu.lastItem?.tag = model.number
+    // The heading and the Radio in use items, after a name or port changed:
+    // every item, since one radio's change can make another's title need
+    // (or no longer need) its port.
+    private func showTitles(_ radio: RadioSettings) {
+        heading.stringValue = title(of: radio)
+        for (index, title) in RadioSettings.titles(Settings.radios).enumerated() {
+            radioMenu.item(at: index)?.title = title
         }
-        if let number, modelMenu.indexOfItem(withTag: number) >= 0 {
-            modelMenu.selectItem(withTag: number)
+    }
+
+    // The model, as the radio named itself ("TS-890S", the saved name
+    // without its maker), or what happens until it has.
+    private func showModel(_ radio: RadioSettings) {
+        let maker = RadioModels.maker(of: radio.model)
+        let named = RadioModels.makers.allSatisfy { $0.model != radio.model }
+        if maker == nil {
+            modelLabel.stringValue = "Choose a manufacturer first."
+        } else if named, let maker, radio.modelName.hasPrefix(maker + " ") {
+            modelLabel.stringValue = String(radio.modelName.dropFirst(maker.count + 1))
+        } else if radio.modelName.hasPrefix("Kenwood (ID") {
+            modelLabel.stringValue = radio.modelName + ", used with the TS-590's settings"
         } else {
-            modelMenu.selectItem(at: 0)
+            modelLabel.stringValue = "Found when the radio connects."
         }
-        modelMenu.isEnabled = makerMenu.indexOfSelectedItem > 0
+        modelLabel.setAccessibilityValue(modelLabel.stringValue)
     }
 
     // The serial ports there now ("usbserial-XXXX"), plus the saved
@@ -367,24 +423,105 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
         let radios = Settings.radios
         let index = radioMenu.indexOfSelectedItem
         let chosen = radios.indices.contains(index) ? radios[index] : nil
+        // Leaving a new radio not set up takes it off (not when it's the
+        // one chosen again).
+        if let unfinished, chosen?.id != unfinished.id {
+            self.unfinished = nil
+            if let radio = radios.first(where: { $0.id == unfinished.id }), !Self.isSetUp(radio) {
+                Settings.radios = radios.filter { $0.id != unfinished.id }
+            }
+        }
         Settings.useRadio(chosen?.id)
         refresh()
-        Speaker.announce(chosen.map { "\($0.name)." } ?? "No radio.")
+        Speaker.announce(chosen.map { "\(title(of: $0))." } ?? "No radio.")
     }
 
-    // A new radio, put in use, with focus on its manufacturer.
+    // A new radio, put in use, with focus on its manufacturer. It starts
+    // on the built-in driver, the first choice in Connect through, so the
+    // Manufacturer menu that gets focus is shown. (Made as RadioSettings'
+    // own default, Hamlib NET rigctl, it hid that menu with focus in it,
+    // so VoiceOver lost its place; found 26 November 2026.)
     @objc private func newRadio(_ sender: Any?) {
-        Settings.currentRadio = RadioSettings(model: 0, modelName: "")
+        dropUnfinished(saying: false)
+        let previous = Settings.currentRadio?.id
+        let radio = RadioSettings(model: 0, modelName: "", builtIn: true)
+        Settings.currentRadio = radio
+        unfinished = (radio.id, previous)
         refresh()
         view.window?.makeFirstResponder(makerMenu)
-        Speaker.announce("New radio. Choose its manufacturer, model and port.")
+        Speaker.announce("New radio. Choose its manufacturer and port. Solid Copy finds the model when it connects. "
+            + "Escape cancels it and stays here.")
+    }
+
+    // Escape in Settings > Radio: a new radio not set up yet is cancelled,
+    // and focus goes to Radio in use, showing the radio back in use.
+    // Returns false when there's nothing to cancel (Escape then closes
+    // Settings).
+    func cancelNewRadio() -> Bool {
+        guard let unfinished, let radio = Settings.radios.first(where: { $0.id == unfinished.id }),
+              !Self.isSetUp(radio) else { return false }
+        dropUnfinished()
+        view.window?.makeFirstResponder(radioMenu)
+        return true
+    }
+
+    // Set up enough to keep: the built-in driver with a manufacturer and a
+    // port, or Hamlib NET rigctl (chosen on purpose, as a new radio starts
+    // on the built-in driver).
+    private static func isSetUp(_ radio: RadioSettings) -> Bool {
+        !radio.builtIn || radio.isComplete
+    }
+
+    // A new radio abandoned before it was set up: taken off, and the radio
+    // in use before it is used again. Said, unless New Radio is pressed
+    // again (which says its own).
+    func dropUnfinished(saying: Bool = true) {
+        guard let unfinished else { return }
+        self.unfinished = nil
+        let radios = Settings.radios
+        guard let radio = radios.first(where: { $0.id == unfinished.id }), !Self.isSetUp(radio) else { return }
+        let remaining = radios.filter { $0.id != unfinished.id }
+        Settings.radios = remaining
+        let back = remaining.first { $0.id == unfinished.previous }
+        Settings.useRadio(back?.id)
+        if view.window?.isVisible == true { refresh() }
+        guard saying else { return }
+        Speaker.announce("New radio cancelled. "
+            + (back.map { "Using \(RadioSettings.title(of: $0, among: remaining))." } ?? "No radio."))
+    }
+
+    // Move Up and Move Down: the radio in use one place earlier or later
+    // in your list, and so in Control-Command-1, 2, ... (Radio menu).
+    @objc private func moveRadioUp(_ sender: Any?) { move(by: -1) }
+    @objc private func moveRadioDown(_ sender: Any?) { move(by: 1) }
+
+    private func move(by step: Int) {
+        var radios = Settings.radios
+        guard let radio = Settings.currentRadio, let index = radios.firstIndex(where: { $0.id == radio.id }),
+              radios.indices.contains(index + step) else { return }
+        radios.swapAt(index, index + step)
+        Settings.radios = radios
+        refresh()
+        // Focus stays on the button pressed, unless it can't be pressed
+        // again (top or bottom): then on the other one.
+        let pressed = step < 0 ? upButton : downButton
+        if !pressed.isEnabled { view.window?.makeFirstResponder(step < 0 ? downButton : upButton) }
+        let place = index + step + 1
+        let title = RadioSettings.title(of: radio, among: radios)
+        Speaker.announce("\(title) is now \(Self.ordinal(place)) of \(radios.count)"
+            + (place <= 9 ? ", Control-Command-\(place)." : "."))
+    }
+
+    private static func ordinal(_ number: Int) -> String {
+        let words = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth"]
+        return words.indices.contains(number - 1) ? words[number - 1] : "number \(number)"
     }
 
     // Deletes the radio in use, after asking (there's no Undo here).
     @objc private func deleteRadio(_ sender: Any?) {
         guard let radio = Settings.currentRadio, let window = view.window else { return }
         let alert = NSAlert()
-        alert.messageText = "Delete \(radio.name)?"
+        alert.messageText = "Delete \(title(of: radio))?"
         alert.informativeText = "Its settings will be gone. Contacts already logged with it aren't changed."
         alert.addButton(withTitle: "Delete")
         alert.addButton(withTitle: "Cancel")
@@ -394,14 +531,13 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             Settings.radios = remaining
             Settings.useRadio(remaining.first?.id)
             self?.refresh()
-            Speaker.announce("Deleted. " + (remaining.first.map { "Now using \($0.name)." } ?? "No radio."))
+            Speaker.announce("Deleted. " + (remaining.first.map { "Now using \(RadioSettings.title(of: $0, among: remaining))." } ?? "No radio."))
         }
     }
 
     // MARK: - Saving
 
     @objc private func changed(_ sender: NSPopUpButton) {
-        if sender === makerMenu { fillModels(selecting: nil) }
         save()
         // The built-in driver offers fewer radios, so the lists are made
         // again (refresh also shows the rows that apply).
@@ -441,30 +577,23 @@ final class RadioViewController: NSViewController, NSTextFieldDelegate, NSMenuDe
             netPortField.stringValue = String(port)
         } else {
             radio.address = ""
-            // A manufacturer but no model yet: keep the old model until
-            // one is chosen.
-            if let model = offeredModels.first(where: { $0.number == modelMenu.selectedItem?.tag }),
-               modelMenu.indexOfSelectedItem > 0 {
-                radio.model = model.number
-                radio.modelName = "\(model.maker) \(model.name)"
+            // Another manufacturer: its own model until the radio says which
+            // it is. The same one keeps the model the radio named.
+            if let maker = RadioModels.makers.first(where: { $0.name == makerMenu.titleOfSelectedItem }),
+               RadioModels.maker(of: radio.model) != maker.name {
+                radio.model = maker.model
+                radio.modelName = maker.name
             }
             radio.port = portMenu.selectedItem?.representedObject as? String ?? ""
             radio.baud = RadioSettings.speeds[max(0, speedMenu.indexOfSelectedItem)]
         }
         guard radio != Settings.currentRadio else { return }
-        let renamed = radio.name != Settings.currentRadio?.name
         Settings.currentRadio = radio
-        // A new name (a model chosen): the list and heading show it.
-        if renamed {
-            heading.stringValue = radio.name
-            let index = radioMenu.indexOfSelectedItem
-            radioMenu.item(at: index)?.title = radio.name
-        }
-    }
-
-    private static func unique(_ names: [String]) -> [String] {
-        var seen: Set<String> = []
-        return names.filter { seen.insert($0).inserted }
+        if unfinished?.id == radio.id, Self.isSetUp(radio) { unfinished = nil }
+        // A new name (a manufacturer chosen) or port: the list and heading
+        // show it.
+        showTitles(radio)
+        showModel(radio)
     }
 
     // Escape closes Settings from the address field too.

@@ -115,6 +115,70 @@ MainActor.assumeIsolated {
     check(smallest(settings.window!).width <= 760, "Settings > \(title) isn't made wide by one long line")
   }
 
+  // Settings > Radio, New Radio: focus goes to the Manufacturer menu, and
+  // that menu is shown. (A new radio made for Hamlib NET rigctl hid it with
+  // focus in it, so VoiceOver lost its place; 26 November 2026.)
+  ["radios", "currentRadio"].forEach(UserDefaults.standard.removeObject(forKey:))
+  settings.showSection(named: "Radio")
+  func views(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(views) }
+  let radioViews = views(settings.window!.contentView!)
+  let newRadio = radioViews.compactMap { $0 as? NSButton }.first { $0.title == "New Radio" }
+  let maker = radioViews.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityLabel() == "Manufacturer" }
+  newRadio?.performClick(nil)
+  check(maker != nil && settings.window!.firstResponder === maker && maker?.isHiddenOrHasHiddenAncestor == false
+        && Settings.currentRadio?.builtIn == true,
+        "Settings > Radio: New Radio puts focus on the Manufacturer menu, which is shown")
+  maker?.selectItem(withTitle: "Kenwood")
+  if let maker { _ = maker.sendAction(maker.action, to: maker.target) }
+  check(Settings.currentRadio?.name == "Kenwood" && settings.window!.firstResponder === maker
+        && maker?.isHiddenOrHasHiddenAncestor == false,
+        "and choosing Kenwood keeps focus there, naming the radio Kenwood")
+
+  // Move Up and Move Down set the order, which is Control-Command-1, 2, ...
+  // in the Radio menu.
+  ["radios", "currentRadio"].forEach(UserDefaults.standard.removeObject(forKey:))
+  let ts590 = RadioSettings(model: 2037, modelName: "Kenwood TS-590SG", port: "/dev/cu.a", builtIn: true)
+  let kx3 = RadioSettings(model: 2045, modelName: "Elecraft KX3", port: "/dev/cu.b", builtIn: true)
+  Settings.radios = [kx3, ts590]
+  Settings.useRadio(ts590.id)
+  settings.showSection(named: "Radio")
+  // Settings > Radio shows a change a moment later (it waits for menus).
+  RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+  let moveUp = radioViews.compactMap { $0 as? NSButton }.first { $0.title == "Move Up" }
+  let moveDown = radioViews.compactMap { $0 as? NSButton }.first { $0.title == "Move Down" }
+  check(moveUp?.isEnabled == true && moveDown?.isEnabled == false, "Settings > Radio: the last radio can move up, not down")
+  moveUp?.performClick(nil)
+  check(Settings.radios.map(\.id) == [ts590.id, kx3.id] && Settings.currentRadio?.id == ts590.id
+        && RadioMenu.choices(withShortcuts: true).first?.keyEquivalent == "1"
+        && RadioMenu.choices(withShortcuts: true).first?.title == "Kenwood TS-590SG",
+        "Move Up makes the TS-590SG first, Control-Command-1")
+  check(moveUp?.isEnabled == false && settings.window!.firstResponder === moveDown,
+        "and focus goes to Move Down, as Move Up can't be pressed again")
+
+  // New Radio, then Escape before it's set up: it's cancelled, Settings
+  // stays open on Radio, and the radio in use before it is used again.
+  settings.show()
+  settings.showSection(named: "Radio")
+  let inUseMenu = radioViews.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityLabel() == "Radio in use" }
+  newRadio?.performClick(nil)
+  settings.window!.cancelOperation(nil)
+  check(settings.window!.isVisible && Settings.radios.map(\.id) == [ts590.id, kx3.id]
+        && Settings.currentRadio?.id == ts590.id && settings.window!.firstResponder === inUseMenu,
+        "Escape cancels a new radio and stays in Settings > Radio, on Radio in use, with the TS-590SG back")
+  settings.window!.cancelOperation(nil)
+  check(!settings.window!.isVisible, "and Escape again, with nothing to cancel, closes Settings")
+  settings.show()
+  settings.showSection(named: "Radio")
+
+  // New Radio, then Settings closed before it's set up: it's taken off,
+  // and the radio in use before it is used again.
+  newRadio?.performClick(nil)
+  check(Settings.radios.count == 3, "New Radio adds a radio")
+  settings.window!.close()
+  check(Settings.radios.map(\.id) == [ts590.id, kx3.id] && Settings.currentRadio?.id == ts590.id,
+        "closing Settings before the new radio is set up takes it off, and the TS-590SG is in use again")
+  ["radios", "currentRadio"].forEach(UserDefaults.standard.removeObject(forKey:))
+
   // A message (AppDelegate.showMessage) with a long report, as an import
   // or upload with many problems gives: its OK and Copy buttons must
   // stay on the screen.

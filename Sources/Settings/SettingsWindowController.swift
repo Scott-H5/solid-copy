@@ -271,11 +271,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         window.contentView = buildWindow()
         window.initialFirstResponder = sidebar
         window.center()
-        window.onEscape = { [weak self] in self?.window?.performClose(nil) }
+        window.onEscape = { [weak self] in self?.escape() }
         window.onTabNumber = { [weak self] number in self?.showTab(number: number) }
     }
 
     required init?(coder: NSCoder) { fatalError("Not used") }
+
+    // Escape stops what you're in the middle of, if anything, and stays:
+    // in Settings > Radio, a new radio not set up yet is cancelled, and
+    // you're back in that section. Otherwise Escape closes Settings, as
+    // it always has (the author, 26 November 2026: cancelling a new radio
+    // shouldn't drop you back at the log).
+    private func escape() {
+        if sections.indices.contains(current), sections[current].title == "Radio", radio.cancelNewRadio() { return }
+        window?.performClose(nil)
+    }
 
     // Shows the window with current settings, focus in the sidebar on the
     // section last shown.
@@ -343,7 +353,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate, NSTe
         profiles.onEscape = { [weak self] in self?.window?.performClose(nil) }
         reloadFormList()
         reloadColumnList()
-        radio.onEscape = { [weak self] in self?.window?.performClose(nil) }
+        radio.onEscape = { [weak self] in self?.escape() }
         let speechView = buildSpeech()
         let spotsView = buildSpots()
         _ = uploads.view

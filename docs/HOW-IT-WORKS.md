@@ -114,11 +114,17 @@ each file does and why, and has recipes for common changes.
   - `KenwoodClient.swift`: the built-in driver's serial conversation
     with a Kenwood or Elecraft radio's own USB port, with the same time
     limits. It asks a question, or sends changes followed by "ID;", and
-    waits for the answer.
+    waits for the answer. When it opens the port it asks the radio
+    which model it is ("ID;", and "OM;" for an Elecraft), and uses that
+    model's settings; RadioMonitor saves the model and its name, so
+    Settings > Radio asks only for the maker.
   - `KenwoodCAT.swift`: the words themselves, with no port in it: turns
     RadioControl's commands ("F 7025300", "M CW 500") into Kenwood's
-    ("FA00007025300", "MD3", "FW0050"), and reads answers. Kept apart so
-    `tools/radio-check` can test it with canned answers.
+    ("FA00007025300", "MD3", "FW0050"), and reads answers. Also each
+    model's settings (`KenwoodRadio`: power, preamp, attenuator levels,
+    how it numbers its AGC) and which model an ID answer means
+    (`identify`). Kept apart so `tools/radio-check` can test it with
+    canned answers.
   - `RigctlServer.swift`: the other way round: Solid Copy answering
     rigctld's network commands at 127.0.0.1 port 4532, so WSJT-X
     can use the radio through the built-in driver (Settings >

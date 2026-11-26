@@ -20,8 +20,10 @@ enum RadioMenu {
     static func choices(withShortcuts: Bool) -> [NSMenuItem] {
         let current = Settings.currentRadio?.id
         var items: [NSMenuItem] = []
-        for (index, radio) in Settings.radios.enumerated() {
-            let item = NSMenuItem(title: radio.name, action: chooseRadio,
+        let radios = Settings.radios
+        let titles = RadioSettings.titles(radios)
+        for (index, radio) in radios.enumerated() {
+            let item = NSMenuItem(title: titles[index], action: chooseRadio,
                                   keyEquivalent: withShortcuts && index < 9 ? "\(index + 1)" : "")
             item.keyEquivalentModifierMask = [.command, .control]
             item.representedObject = radio.id

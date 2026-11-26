@@ -380,11 +380,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func chooseRadio(_ sender: NSMenuItem) {
         let id = sender.representedObject as? UUID
         if id == Settings.currentRadio?.id {
-            Speaker.announce("Already using \(Settings.currentRadio?.name ?? "no radio").")
+            Speaker.announce("Already using \(Settings.currentRadio.map { RadioSettings.title(of: $0, among: Settings.radios) } ?? "no radio").")
             return
         }
         Settings.useRadio(id)
-        Speaker.announce(Settings.currentRadio.map { "\($0.name)." } ?? "No radio.")
+        Speaker.announce(Settings.currentRadio.map { "\(RadioSettings.title(of: $0, among: Settings.radios))." } ?? "No radio.")
     }
 
     // Radio > Radio Status (Command-R): says what the radio is doing.

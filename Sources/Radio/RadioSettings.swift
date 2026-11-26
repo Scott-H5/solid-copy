@@ -10,7 +10,9 @@ import Foundation
 struct RadioSettings: Codable, Equatable {
     var id = UUID()
     // hamlib's number for the radio model (2037 is the Kenwood TS-590SG,
-    // 2045 the Elecraft KX3), and its name, for the screen. Kept for a
+    // 2045 the Elecraft KX3), and its name, for the screen. For the
+    // built-in driver, the maker's own (KenwoodRadio.someKenwood) until the
+    // radio has said which model it is. Kept for a
     // Hamlib NET rigctl radio too, where it picks the Elecraft and TS-590
     // commands (see RigctldClient).
     var model: Int
@@ -39,9 +41,10 @@ struct RadioSettings: Codable, Equatable {
     // The speeds offered in Settings.
     static let speeds = [4_800, 9_600, 19_200, 38_400, 57_600, 115_200]
 
-    // Its name in menus and speech: "Kenwood TS-590SG", or "rigctld at
+    // Its name in menus and speech: "Kenwood TS-590SG", or just "Kenwood"
+    // until the radio has said which model it is, or "rigctld at
     // 127.0.0.1:4532" for a Hamlib NET rigctl radio, or "New radio" until
-    // a model is chosen.
+    // a maker is chosen.
     var name: String {
         if !builtIn {
             let (host, port) = hostAndPort
@@ -55,6 +58,36 @@ struct RadioSettings: Codable, Equatable {
     var isComplete: Bool {
         guard builtIn else { return true }
         return !port.isEmpty && KenwoodRadio.forModel(model) != nil
+    }
+}
+
+// What each radio is called in menus and speech. Usually its name, but two
+// radios can share one (the same model twice, or a radio added again once
+// it has named itself), and then the port is added: "Kenwood TS-590SG on
+// usbserial-8410". So they can be told apart by eye and by VoiceOver, and
+// a pop-up menu keeps both: it keeps only one item of each title, which
+// left Settings > Radio's "Radio in use" showing nothing chosen (found 26
+// November 2026). Any still alike get a number: "Kenwood (2)".
+extension RadioSettings {
+    static func titles(_ radios: [RadioSettings]) -> [String] {
+        var counts: [String: Int] = [:]
+        radios.forEach { counts[$0.name, default: 0] += 1 }
+        let named = radios.map { radio -> String in
+            guard counts[radio.name, default: 0] > 1, radio.builtIn, !radio.port.isEmpty else { return radio.name }
+            let port = radio.port.hasPrefix("/dev/cu.") ? String(radio.port.dropFirst(8)) : radio.port
+            return "\(radio.name) on \(port)"
+        }
+        var seen: [String: Int] = [:]
+        return named.map { title in
+            seen[title, default: 0] += 1
+            let count = seen[title]!
+            return count == 1 ? title : "\(title) (\(count))"
+        }
+    }
+
+    // This radio's title among `radios` (its name, if it isn't one of them).
+    static func title(of radio: RadioSettings, among radios: [RadioSettings]) -> String {
+        radios.firstIndex { $0.id == radio.id }.map { titles(radios)[$0] } ?? radio.name
     }
 }
 
@@ -78,21 +111,19 @@ extension RadioSettings {
     }
 }
 
-// The radios the Settings menus offer. Only the built-in driver's five
-// (KenwoodRadio), by hamlib's model number, which saved radios are keyed on.
-// Any other radio goes through Hamlib NET rigctl, with a rigctld you run.
+// The makers Settings > Radio offers for the built-in driver. Only the
+// maker is chosen: the radio says which model it is when it connects
+// (KenwoodClient.identify), and that model is saved in place of the
+// maker's. Any other radio goes through Hamlib NET rigctl, with a
+// rigctld you run.
 enum RadioModels {
-    struct Model {
-        let number: Int
-        let maker: String
-        let name: String
-    }
-
-    static let builtIn: [Model] = [
-        Model(number: 2031, maker: "Kenwood", name: "TS-590S"),
-        Model(number: 2037, maker: "Kenwood", name: "TS-590SG"),
-        Model(number: 2029, maker: "Elecraft", name: "K3"),
-        Model(number: 2044, maker: "Elecraft", name: "KX2"),
-        Model(number: 2045, maker: "Elecraft", name: "KX3"),
+    static let makers: [(name: String, model: Int)] = [
+        ("Kenwood", KenwoodRadio.someKenwood),
+        ("Elecraft", KenwoodRadio.someElecraft),
     ]
+
+    // A saved model's maker, or nil for one the built-in driver doesn't know.
+    static func maker(of model: Int) -> String? {
+        KenwoodRadio.forModel(model).map { $0.isElecraft ? "Elecraft" : "Kenwood" }
+    }
 }

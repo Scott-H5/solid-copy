@@ -142,6 +142,40 @@ MainActor.assumeIsolated {
           "RF gain, volume and squelch as fractions of each radio's scale; L NR is refused")
     check(sent("X 1", kenwood590) == nil && sent("F", kenwood590) == nil, "a command the driver doesn't know is refused")
 
+    // Only the maker is chosen; the radio says which model it is. Kenwood's
+    // ID answers and Elecraft's OM, as hamlib's kenwood.c and elecraft.c
+    // read them.
+    let found = { KenwoodCAT.identify(id: $0, om: $1) }
+    check(found("024", nil) == RadioIdentity(model: 2041, name: "Kenwood TS-890S")
+          && found("023", nil) == RadioIdentity(model: 2037, name: "Kenwood TS-590SG")
+          && found("022", nil).name == "Kenwood TS-990S" && found("021", nil).model == 2031,
+          "a Kenwood is named by its ID answer: 024 the TS-890S, 023 the TS-590SG")
+    check(found("017", "AP---F-----02") == RadioIdentity(model: 2045, name: "Elecraft KX3")
+          && found("017", "AP-----------01") == RadioIdentity(model: 2044, name: "Elecraft KX2")
+          && found("017", "APXSDF--") == RadioIdentity(model: 2029, name: "Elecraft K3")
+          && found("017", "APXSDFR-").name == "Elecraft K3S",
+          "an Elecraft (always ID 017) by the end of its OM answer: 02 the KX3, 01 the KX2, otherwise a K3")
+    check(found("030", nil) == RadioIdentity(model: KenwoodRadio.someKenwood, name: "Kenwood (ID 030)")
+          && found("017", nil).model == KenwoodRadio.someKenwood,
+          "a Kenwood not in the list is named by its number, with the general settings")
+    check(KenwoodRadio.forModel(KenwoodRadio.someKenwood) == kenwood590
+          && KenwoodRadio.forModel(KenwoodRadio.someElecraft)?.isElecraft == true
+          && KenwoodRadio.forModel(2028) == kenwood590 && KenwoodRadio.forModel(2041) != nil,
+          "a Kenwood before it has said, or one without settings of its own, is used as a TS-590")
+    check(RadioModels.maker(of: 2041) == "Kenwood" && RadioModels.maker(of: 2045) == "Elecraft"
+          && RadioModels.maker(of: 1) == nil, "a saved model's maker, for Settings")
+    // The TS-890S's own settings (hamlib's ts890s.c): three attenuator
+    // levels with one digit, AGC with a medium, no receiver digit.
+    let ts890 = KenwoodRadio.forModel(2041)!
+    check(sent("L ATT 6", ts890) == ["RA1"] && sent("L ATT 18", ts890) == ["RA3"] && sent("L ATT 0", ts890) == ["RA0"]
+          && sent("L ATT 10", ts890) == nil, "TS-890 attenuator: RA1 to RA3 for 6, 12 and 18 dB")
+    check(sent("L AGC 3", ts890) == ["GC1"] && sent("L AGC 5", ts890) == ["GC2"] && sent("L AGC 2", ts890) == ["GC3"]
+          && sent("L AGC 0", ts890) == ["GC0"], "TS-890 AGC: GC1 slow, GC2 medium, GC3 fast, with no GC3 first")
+    check(sent("L AF 0.5", ts890) == ["AG128"] && sent("L SQL 0.5", ts890) == ["SQ128"]
+          && sent("L AF 0.5", kenwood590) == ["AG0128"] && sent("L SQL 0.5", kenwood590) == ["SQ0128"],
+          "volume and squelch: the TS-890 names no receiver, the TS-590 does (0)")
+    check(KenwoodRadio.forModel(2039)?.maxWatts == 200 && ts890.maxWatts == 100, "TS-990S 200 watts, TS-890S 100")
+
     // Canned answers, read a byte at a time as the serial port gives them.
     func answer(_ text: String) -> String? {
         var bytes: [UInt8] = []
@@ -511,6 +545,68 @@ MainActor.assumeIsolated {
     monitor.stop()
     check((try? RigctldClient(host: "127.0.0.1", port: 4600).reading()) != nil,
           "stopping (as Solid Copy quits) leaves a rigctld you run alone")
+
+    // Two radios with one name (the same model twice, or a radio added
+    // again) are told apart by port, and a pop-up keeps both.
+    let first590 = RadioSettings(model: 2037, modelName: "Kenwood TS-590SG", port: "/dev/cu.usbserial-8410", builtIn: true)
+    let second590 = RadioSettings(model: 2037, modelName: "Kenwood TS-590SG", port: "/dev/cu.usbserial-A1", builtIn: true)
+    let kx3Radio = RadioSettings(model: 2045, modelName: "Elecraft KX3", port: "/dev/cu.usbserial-B2", builtIn: true)
+    check(RadioSettings.titles([first590, kx3Radio]) == ["Kenwood TS-590SG", "Elecraft KX3"],
+          "radios with their own names are called by them")
+    check(RadioSettings.titles([first590, kx3Radio, second590])
+          == ["Kenwood TS-590SG on usbserial-8410", "Elecraft KX3", "Kenwood TS-590SG on usbserial-A1"],
+          "two TS-590SGs are told apart by port")
+    var samePort = second590
+    samePort.port = first590.port
+    let alike = RadioSettings.titles([first590, samePort])
+    check(alike == ["Kenwood TS-590SG on usbserial-8410", "Kenwood TS-590SG on usbserial-8410 (2)"],
+          "the same radio added twice gets a number")
+    let popUp = NSPopUpButton()
+    for title in RadioSettings.titles([first590, samePort, kx3Radio]) + ["No Radio"] {
+        popUp.menu?.addItem(NSMenuItem(title: title, action: nil, keyEquivalent: ""))
+    }
+    popUp.selectItem(at: 3)
+    check(popUp.numberOfItems == 4 && popUp.titleOfSelectedItem == "No Radio", "a pop-up of them keeps every one")
+
+    // A radio with only its maker chosen: a pretend TS-890S on a pretend
+    // serial port, answering as hamlib says one does. Solid Copy asks it
+    // which model it is, says "connected" with its name, and saves it.
+    let radioPort = posix_openpt(O_RDWR | O_NOCTTY)
+    check(radioPort >= 0 && grantpt(radioPort) == 0 && unlockpt(radioPort) == 0, "a pretend TS-890S's serial port")
+    // It refuses its first question, as a radio often does just after its
+    // port opens (left-over bytes): the ID question is asked again.
+    let answers = ["ID": "ID024", "FR": "FR0", "FA": "FA00007025000", "MD": "MD3", "FW": "FW0500", "PC": "PC100"]
+    Thread.detachNewThread {
+        var byte: UInt8 = 0
+        var command = ""
+        var first = true
+        while read(radioPort, &byte, 1) == 1 {
+            guard byte != UInt8(ascii: ";") else {
+                let reply = Array(((first ? "?" : answers[command] ?? "?") + ";").utf8)
+                first = false
+                _ = write(radioPort, reply, reply.count)
+                command = ""
+                continue
+            }
+            command.append(Character(UnicodeScalar(byte)))
+        }
+    }
+    var heard: [String] = []
+    RadioMonitor.say = { heard.append($0) }
+    let kenwood = RadioSettings(model: KenwoodRadio.someKenwood, modelName: "Kenwood",
+                                port: String(cString: ptsname(radioPort)), baud: 38_400, builtIn: true)
+    check(kenwood.name == "Kenwood" && kenwood.isComplete, "a Kenwood with no model yet is ready to try")
+    Settings.currentRadio = kenwood
+    monitor.use(kenwood)
+    check(waitFor("named", seconds: 15) { heard.contains { $0.hasPrefix("Kenwood TS-890S connected") } },
+          "it's said connected with the model it named, after refusing its first question: \(heard)")
+    check(Settings.currentRadio?.model == 2041 && Settings.currentRadio?.modelName == "Kenwood TS-890S"
+          && Settings.currentRadio?.id == kenwood.id && monitor.radioName == "Kenwood TS-890S",
+          "and that model is saved, for when it's off")
+    check(!heard.contains { $0.hasPrefix("Kenwood connected") }, "never said connected as plain Kenwood: \(heard)")
+    monitor.use(nil)
+    Settings.currentRadio = nil
+    close(radioPort)
 
     // A radio that's off but whose port stays (the KX3, whose USB chip is
     // in its cable): a pretend serial port that never answers, for the

@@ -16,7 +16,13 @@ import Foundation
 final class KenwoodClient: RadioLink, @unchecked Sendable {
     private let path: String
     private let baud: Int
-    private let radio: KenwoodRadio
+    // The radio's settings: the chosen maker's at first, then its own
+    // model's once it has said which it is (identify()).
+    private var radio: KenwoodRadio
+    // Which model it said it is. Asked once each time the port is opened,
+    // so a different radio on the same port is noticed.
+    private(set) var identity: RadioIdentity?
+    private var asked = false
     // Opened on the first call, and closed when the port goes or Solid Copy
     // is told to disconnect (RadioMonitor does that when the port is gone).
     private var port: SerialPort?
@@ -40,11 +46,51 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
     func disconnect() {
         port?.close()
         port = nil
+        // Asked again when it's next opened: it may be another radio.
+        asked = false
+        unsupported = []
+    }
+
+    // Asks the radio which model it is ("ID;", and "OM;" for an Elecraft;
+    // see KenwoodCAT.identify), and uses that model's settings from then
+    // on. No answer at all is thrown, as any other question's would be, and
+    // asked again next time.
+    //
+    // A refusal ("?;") is asked again, up to three times: the first
+    // question after the port opens is often refused, from bytes left over
+    // in the radio (the TS-590SG did, and stayed plain "Kenwood"; 26
+    // November 2026). It went unnoticed before, as that first question was
+    // FR, whose refusal is ignored. A radio that refuses all three keeps
+    // the chosen maker's settings.
+    private func identify() throws {
+        guard !asked else { return }
+        var answer: String?
+        for _ in 0..<3 where answer == nil {
+            do {
+                answer = try ask("ID")
+            } catch RadioFailure.rejected {
+                continue
+            }
+        }
+        guard let id = answer else {
+            asked = true
+            return
+        }
+        let om = id == "017" ? try? ask("OM") : nil
+        asked = true
+        // 017 without an OM answer, from a radio chosen as an Elecraft: an
+        // Elecraft that wouldn't say which, so its maker's settings are
+        // kept (Kenwood's mode numbers differ).
+        if id == "017", om == nil, radio.isElecraft { return }
+        let found = KenwoodCAT.identify(id: id, om: om)
+        identity = found
+        if let settings = KenwoodRadio.forModel(found.model) { radio = settings }
     }
 
     // Frequency, mode, filter width and power. The frequency is of the VFO
     // that receives (FR says which), as the radio shows it.
     func reading() throws -> RadioReading {
+        try identify()
         let vfoB = (try? ask("FR")) == "1"   // FR refused: the VFO A
         guard let hertz = KenwoodCAT.hertz(try ask(vfoB ? "FB" : "FA")) else { throw RadioFailure.notAnswering }
         let modeBody = try ask("MD")
@@ -114,14 +160,25 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         if let transmit = try value("FT"), let receive { status.split = transmit != receive }
         // "RA01" is on and "RA00" off, so the whole number is read: the body
         // "01" starts with a 0 and would read as off by its first digit.
-        status.attenuatorDB = try value("RA").flatMap { Int($0) }.map { $0 > 0 ? radio.attenuatorDB : 0 }
+        // The attenuator's number is its place in the radio's list of
+        // levels (RA2 is the TS-890's 12 dB). A number past the list (a
+        // longer answer than expected) is taken as the first level.
+        status.attenuatorDB = try value("RA").flatMap { Int($0) }.map { number in
+            number == 0 ? 0 : radio.attenuatorSteps.indices.contains(number - 1)
+                ? radio.attenuatorSteps[number - 1] : radio.attenuatorDB
+        }
         status.preampDB = try value("PA").flatMap { Int($0) }.map { $0 > 0 ? radio.preampDB : 0 }
-        // The AGC: the TS-590's GC (0 off, 1 slow, 2 fast), or the Elecraft's
-        // GT, whose first three digits are the speed (2 fast, 4 slow).
-        if radio.isElecraft {
+        // The AGC, as hamlib numbers it (0 off, 2 fast, 3 slow, 5 medium):
+        // the TS-590's GC (0 off, 1 slow, 2 fast), the TS-890's (0 off, 1
+        // slow, 2 medium, 3 fast), or the Elecraft's GT, whose first three
+        // digits are the speed (2 fast, 4 slow).
+        switch radio.agc {
+        case .elecraft:
             status.agc = try value("GT").flatMap { Int($0.prefix(3)) }.map { $0 == 2 ? 2 : 3 }
-        } else {
+        case .ts590:
             status.agc = try value("GC").flatMap { Int($0) }.flatMap { [0: 0, 1: 3, 2: 2][$0] }
+        case .numbered:
+            status.agc = try value("GC").flatMap { Int($0) }.flatMap { [0: 0, 1: 3, 2: 5, 3: 2][$0] }
         }
         status.noiseBlanker = try value("NB").map(KenwoodCAT.isOn)
         status.noiseReduction = try value("NR").map(KenwoodCAT.isOn)
@@ -136,8 +193,9 @@ final class KenwoodClient: RadioLink, @unchecked Sendable {
         status.rfGain = try value("RG").flatMap { Int($0) }.map { Double($0) / Double(radio.rfGainMax) }
         // The TS-590 reads volume as "AG0;" (the 0 is the main receiver, and
         // its setting is "AG0nnn;"); a bare "AG;" is refused, which left the
-        // volume unknown and the slider silent.
-        status.audioGain = try value(radio.isElecraft ? "AG" : "AG0").flatMap { Int($0) }
+        // volume unknown and the slider silent. The TS-890 and Elecraft
+        // radios name no receiver (namesReceiver).
+        status.audioGain = try value(radio.namesReceiver ? "AG0" : "AG").flatMap { Int($0) }
             .map { Double($0) / Double(radio.audioMax) }
         if mode.uppercased().contains("FM") {
             status.squelch = try value("SQ").flatMap { Int($0) }.map { Double($0) / Double(radio.squelchMax) }

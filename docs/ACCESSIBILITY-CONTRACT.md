@@ -344,6 +344,14 @@ it's scheduled for.
     that is only spoken (an automatic upload, the log's shortcut menu)
     can be shown again with QSL > Show Last Upload Message.
 
+42. **Focus never goes to a hidden control.** When a button puts focus
+    somewhere (New Radio, to its Manufacturer menu), that control is
+    shown first; hiding a row never leaves focus inside it. A hidden
+    control with focus is silent for VoiceOver and invisible on screen,
+    so it seems focus has jumped away (the author, 26 November 2026:
+    adding a radio was nearly impossible). *Checked for New Radio by
+    tools/check-screen-size.sh.*
+
 ## Low vision and sight
 
 What people see on screen has to work as well as what VoiceOver says.

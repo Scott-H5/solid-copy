@@ -56,6 +56,11 @@ yourself, from Homebrew or hamlib's own instructions, and choose
 GPL-3.0; Hamlib's licence (GPL-2.0-or-later for rigctld, LGPL for its
 library) applies to Hamlib itself, which isn't part of Solid Copy.
 Hamlib's source code is at https://github.com/Hamlib/Hamlib.
+The built-in driver's list of Kenwood ID answers and Elecraft models, and
+the TS-890S and TS-990S settings (attenuator levels, AGC numbers), were
+looked up in Hamlib's drivers (rigs/kenwood: kenwood.c, elecraft.c,
+ts890s.c, ts990s.c, November 2026). They're facts about the radios, written
+in Solid Copy's own code; no Hamlib code is copied.
 When Solid Copy shipped a copy of rigctld (up to v1.2), Hamlib's
 maintainers were asked (Hamlib-developer mailing list, 19 November 2026):
 a maintainer saw no issue, and asked for a mention and link back to

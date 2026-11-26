@@ -377,19 +377,37 @@ From HAMQSL.com, N0NBH, updated 1814 UTC.
 ## The radio
 
 Solid Copy reads frequency, band, mode and power from the radio. For
-Kenwood and Elecraft radios (TS-590S, TS-590SG, K3, KX3, KX2) it uses its
-own built-in driver, which talks to the radio's USB port directly, so
-nothing else needs installing. Any other radio works through hamlib's
-`rigctld`, which you run yourself (see "Hamlib NET rigctl" below).
+Kenwood and Elecraft radios it uses its own built-in driver, which talks
+to the radio's USB port directly, so nothing else needs installing. Any
+other radio works through hamlib's `rigctld`, which you run yourself (see
+"Hamlib NET rigctl" below).
 
 Add your radios in **Settings > Radio** (Command-comma, Command-5):
-**New Radio**, then its connection, manufacturer, model, USB port and
-speed (the TS-590SG uses 115200, the KX3 38400). One radio is in use at a
-time, whatever the profile.
+**New Radio**, then its connection, manufacturer (Kenwood or Elecraft),
+USB port and speed (the TS-590SG uses 115200, the KX3 38400). There's no
+model to choose: when the radio connects, Solid Copy asks it which model
+it is, names it ("Kenwood TS-890S connected"), and uses what it knows
+about that model. Settings > Radio shows the model it found. Escape before
+choosing the manufacturer and port cancels the new radio and leaves you
+in Settings > Radio (Escape again closes Settings); closing Settings
+cancels it too. One radio is in use at a time, whatever the profile.
+
+Your radios are in Control-Command-1, 2, 3 ... (Radio menu) in the order
+they're listed. To change it, choose a radio in **Radio in use** and press
+**Move Up** or **Move Down**: Solid Copy says where it is now ("Kenwood
+TS-590SG is now first of 2, Control-Command-1").
+
+The built-in driver knows the Kenwood TS-590S, TS-590SG, TS-890S,
+TS-990S, TS-480 and TS-2000, and the Elecraft K3, K3S, KX2 and KX3. It has
+been tried on the TS-590SG and KX3, and a tester's TS-890S connects; what
+it knows of the others comes from hamlib's drivers for them, so reports
+are welcome. Another Kenwood
+is named by the number it gives ("Kenwood (ID 030)") and used like a
+TS-590; please report it, with its name, so it can be added.
 
 - **Band scan** (Radio > Band Scan, Control-Command-C) starts the radio's
   own band scan; press it again to stop. It says when it starts and stops
-  (with the frequency it stopped on), not at each step. The TS-590 only,
+  (with the frequency it stopped on), not at each step. Kenwood radios only,
   through the built-in driver. The scan's speed is set on the radio, with
   the knob that also sets RIT and XIT; Solid Copy has no command for it.
 - **Switch radios** in the middle of a session: **Control-Command-1, 2…**

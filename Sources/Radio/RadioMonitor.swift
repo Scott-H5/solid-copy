@@ -209,6 +209,13 @@ final class RadioMonitor {
         guard newSettings != settings else { return }
         stopScan(saying: false)
         settings = newSettings
+        // The old radio lets go of its port now, on the queue, before the
+        // new one's first question (the queue runs one call at a time),
+        // rather than whenever the old connection happens to be freed. A
+        // port is held exclusively, so another radio on the same port (one
+        // added again, to name itself) can only open it once the old one
+        // has let go.
+        if let old = client { queue.async { old.disconnect() } }
         client = newSettings.flatMap { settings -> RadioLink? in
             if settings.builtIn {
                 // No model the built-in driver knows: no client, and
@@ -264,8 +271,9 @@ final class RadioMonitor {
 
     // MARK: - Words
 
-    // The radio's name: "Kenwood TS-590SG".
-    var radioName: String { settings?.name ?? "Radio" }
+    // The radio's name: "Kenwood TS-590SG", with its port if another of
+    // your radios has the same name (RadioSettings.titles).
+    var radioName: String { settings.map { RadioSettings.title(of: $0, among: Settings.radios) } ?? "Radio" }
     // When the radio last gave a reading (the rigctl server tells a gap
     // from a refusal by it).
     var lastAnswerTime: Date { lastReading }
@@ -273,18 +281,25 @@ final class RadioMonitor {
     // The radio in use's settings (the rigctl server reports its model).
     var settingsInUse: RadioSettings? { settings }
 
-    // The TS-590 has no audio peak filter (the Elecraft radios do).
-    var hasPeakFilter: Bool { !(settings.map { [2031, 2037].contains($0.model) } ?? false) }
+    // A Kenwood the built-in driver knows (TS-590, TS-890 and the rest), by
+    // its saved model, as opposed to an Elecraft or a radio through rigctld
+    // with some other model.
+    private var isKenwood: Bool { settings.flatMap { KenwoodRadio.forModel($0.model) }.map { !$0.isElecraft } ?? false }
+
+    // The TS-590 has no audio peak filter (the Elecraft radios do), and the
+    // built-in driver has no peak filter command for any Kenwood.
+    var hasPeakFilter: Bool { !isKenwood }
 
     // The TS-590 refuses the width command in SSB (checked on the radio), so
-    // its SSB width is set on the radio.
-    var canSetSSBWidth: Bool { !(settings.map { [2031, 2037].contains($0.model) } ?? false) }
+    // its SSB width is set on the radio; other Kenwoods are taken to be the
+    // same until one is checked.
+    var canSetSSBWidth: Bool { !isKenwood }
 
     // For the screen and for Command-R.
     var stateText: String {
         switch state {
         case .none: return ""
-        case .needsSetup: return "Choose its model and port in Settings, Radio."
+        case .needsSetup: return "Choose its manufacturer and port in Settings, Radio."
         case .portMissing: return "Off or unplugged. Waiting for it."
         case .portInUse: return "Another app has the radio's port. Quit that app; Solid Copy keeps trying."
         case .starting: return "Connecting…"
@@ -342,9 +357,12 @@ final class RadioMonitor {
         queue.async {
             let result = Result { try client.reading() }
             let status = wantStatus ? (try? result.get()).flatMap { try? client.status(mode: $0.mode) } : nil
+            let identity = client.identity
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     if let status, client === RadioMonitor.shared.client { RadioMonitor.shared.status = status }
+                    // Before "connected" is said, so it's said with the radio's own name.
+                    if let identity { RadioMonitor.shared.identified(identity, from: client) }
                     RadioMonitor.shared.finished(result, from: client)
                 }
             }
@@ -416,7 +434,7 @@ final class RadioMonitor {
 
     private func startScan() {
         guard let reading else { return Speaker.announce(notConnectedText) }
-        guard settings?.builtIn == true, settings.map({ [2031, 2037].contains($0.model) }) == true else {
+        guard settings?.builtIn == true, isKenwood else {
             return Speaker.announce("\(radioName) can't band scan from Solid Copy.")
         }
         change("SCAN 1") { [self] newReading in
@@ -554,6 +572,31 @@ final class RadioMonitor {
     static func sMeterText(_ decibels: Int) -> String {
         if decibels > 0 { return "S 9 plus \(decibels) dB" }
         return "S \(max(0, 9 + Int((Double(decibels) / 6).rounded())))"
+    }
+
+    // The built-in driver has asked the radio which model it is. A model
+    // other than the saved one (a new radio with only its maker chosen, or
+    // another radio on the same port) is saved, with its name, so Settings,
+    // the menus and speech use it, even while the radio is off. It's
+    // listed in Window > Activity, which is where a tester finds a model
+    // Solid Copy doesn't know yet ("Kenwood (ID 030)").
+    func identified(_ identity: RadioIdentity, from client: RadioLink) {
+        guard client === self.client, var radio = settings, radio.builtIn,
+              radio.model != identity.model || radio.modelName != identity.name else { return }
+        radio.model = identity.model
+        radio.modelName = identity.name
+        // Kept here first, so the change Settings then reports is no
+        // change to use() and doesn't start the connection again.
+        settings = radio
+        var all = Settings.radios
+        if let index = all.firstIndex(where: { $0.id == radio.id }) {
+            all[index] = radio
+            Settings.radios = all
+        }
+        let known = identity.model != KenwoodRadio.someKenwood
+        Activity.shared.record("Radio", identity.name, ok: true, latest: known
+            ? "The radio says it's a \(identity.name)."
+            : "A Kenwood model Solid Copy doesn't know yet, so it's used with the TS-590's settings.")
     }
 
     private func finished(_ result: Result<RadioReading, Error>, from client: RadioLink) {
